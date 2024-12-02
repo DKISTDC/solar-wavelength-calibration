@@ -1,0 +1,103 @@
+image: python:3.11
+definitions:
+  steps:
+    - step: &lint
+        caches:
+          - pip
+        name: Lint
+        script:
+          - pip install pre-commit
+          - pre-commit install
+          - pre-commit run --all-files
+    - step: &scan
+        caches:
+          - pip
+        name: Scan
+        script:
+          - pip install -e .
+          - pip freeze | grep -v @ > requirements.txt
+          - cat requirements.txt
+          - echo $SNYK_VERSION
+          - curl -L -o snyk https://github.com/snyk/snyk/releases/download/$SNYK_VERSION/snyk-linux
+          - chmod 755 snyk
+          - ./snyk -d auth $SNYK_TOKEN
+          - echo $SNYK_IGNORE
+          - for id in $SNYK_IGNORE; do echo Ignoring $id; ./snyk ignore $id; done
+          - cat .snyk || echo "No .snyk found. Probably because there was nothing to ignore."
+          - echo $SNYK_CLI_COMMAND
+          - $SNYK_CLI_COMMAND
+    - step: &changelog
+        caches:
+          - pip
+        name: Changelog
+        script:
+          - pip install towncrier
+          # We need to fetch the main branch to compare against
+          - git remote set-branches --add origin main
+          - git fetch origin main
+          - towncrier check --compare-with origin/main
+    - step: &test
+        caches:
+          - pip
+        name: Test
+        script:
+          - pip install .[test]
+          - pytest -v -n auto --cov -m "not development" dkist_processing_wavecal
+    - step: &docs
+        name: Test Docs
+        caches:
+          - pip
+        script:
+          - apt update && apt -y install graphviz
+          - pip install .[docs]
+          - sphinx-build --color -W --keep-going -b html docs docs/_build/html
+    - step: &push
+        caches:
+          - pip
+        name: Push
+        script:
+          - pip install -U pip
+          - pip install build twine
+          - python -m build --outdir wheelhouse .
+          - python -m twine upload --skip-existing wheelhouse/*
+    - step: &check_changelog
+        name: Check for updated CHANGELOG
+        script:
+          - ./check_changelog_updated.sh
+
+pipelines:
+  default:
+    - parallel:
+      - step: *lint
+      - step: *changelog
+    - parallel:
+      - step: *scan
+      - step: *test
+      - step: *docs
+  custom:
+    build_rc:  # I.e. skip the doc check (because we might have rc dependencies)
+      - variables:
+        - name: BITBUCKET_TAG
+          description: "Tag version to build (e.g., 'vX.Y.ZrcR')"
+      - step:
+          name: Validate Bitbucket pipeline input
+          script:
+            - git tag | grep -q ${BITBUCKET_TAG} || { echo Tag ${BITBUCKET_TAG} not found!; exit 1; }
+            - echo ${BITBUCKET_TAG} | grep -q "rc[0-9]\+$" || { echo Tag ${BITBUCKET_TAG} is not an rc. SHAME!; exit 1; }
+      - parallel:
+        - step: *changelog
+        - step: *lint
+      - parallel:
+        - step: *scan
+        - step: *test
+      - step: *push
+  tags:
+    'v*':
+      - parallel:
+        - step: *check_changelog
+        - step: *lint
+      - parallel:
+        - step: *scan
+        - step: *test
+        - step: *docs
+      - step: *push
