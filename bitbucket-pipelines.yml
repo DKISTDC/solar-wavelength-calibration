@@ -36,13 +36,43 @@ definitions:
           - git remote set-branches --add origin main
           - git fetch origin main
           - towncrier check --compare-with origin/main
-    - step: &test
+    - step: &test311
+      caches:
+        - pip
+      name: Test Python 3.11
+      script:
+        - pip install -U pip
+        - pip install tox
+        - tox -e py311
+
+        # Upload test coverage to codecov
+        - curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --keyring trustedkeys.gpg --import
+        - curl -Os https://uploader.codecov.io/latest/linux/codecov
+        - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+        - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+        - gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
+        - shasum -a 256 -c codecov.SHA256SUM
+        - chmod +x codecov
+        - ./codecov -t ${CODECOV_TOKEN}
+    - step: &test310
+        image: python:3.10
         caches:
           - pip
-        name: Test
+        name: Test Python 3.10
         script:
-          - pip install .[test]
-          - pytest -v -n auto --cov -m "not development" dkist_processing_wavecal
+          - pip install -U pip
+          - pip install tox
+          - tox run -e py310
+    - step: &test310-min
+        image: python:3.10
+        caches:
+          - pip
+        name: Test Python 3.10 - Minimum
+        script:
+          - pip install -U pip
+          - pip install tox
+          - tox run -e py310-min
+
     - step: &docs
         name: Test Docs
         caches:
@@ -72,25 +102,10 @@ pipelines:
       - step: *changelog
     - parallel:
       - step: *scan
-      - step: *test
+      - step: *test311
+      - step: *test310
+      - step: *test310-min
       - step: *docs
-  custom:
-    build_rc:  # I.e. skip the doc check (because we might have rc dependencies)
-      - variables:
-        - name: BITBUCKET_TAG
-          description: "Tag version to build (e.g., 'vX.Y.ZrcR')"
-      - step:
-          name: Validate Bitbucket pipeline input
-          script:
-            - git tag | grep -q ${BITBUCKET_TAG} || { echo Tag ${BITBUCKET_TAG} not found!; exit 1; }
-            - echo ${BITBUCKET_TAG} | grep -q "rc[0-9]\+$" || { echo Tag ${BITBUCKET_TAG} is not an rc. SHAME!; exit 1; }
-      - parallel:
-        - step: *changelog
-        - step: *lint
-      - parallel:
-        - step: *scan
-        - step: *test
-      - step: *push
   tags:
     'v*':
       - parallel:
@@ -98,6 +113,8 @@ pipelines:
         - step: *lint
       - parallel:
         - step: *scan
-        - step: *test
+        - step: *test311
+        - step: *test310
+        - step: *test310-min
         - step: *docs
       - step: *push

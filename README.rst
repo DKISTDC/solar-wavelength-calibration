@@ -1,8 +1,9 @@
 dkist-processing-wavecal
 ========================
-A package for calibrating wavelength data from the DKIST.
 
-It is primarily a library used by the DKIST automated processing pipelines.
+|codecov|
+
+A package for calibrating wavelength data from the DKIST.
 
 Deployment
 ----------
