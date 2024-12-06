@@ -10,15 +10,16 @@ find = {}
 [project]
 dynamic = ["version"]
 name = "dkist-processing-wavecal"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 description = "A package for calibrating wavelength data from the DKIST"
 readme = "README.rst"
 authors = [ {name = "NSO / AURA", email = "dkistdc@nso.edu"} ]
 license = {text = "BSD-3-Clause"}
 classifiers = [
-  "Programming Language :: Python",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
 ]
 dependencies = []
 
