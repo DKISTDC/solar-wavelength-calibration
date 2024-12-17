@@ -1,5 +1,6 @@
 """Wavelength calibration task."""
-
+import numpy as np
+from astropy.io import fits
 
 class WaveCal:
     """Task class for correcting the dispersion axis wavelength values."""
@@ -15,10 +16,10 @@ class WaveCal:
         None
         """
         # Load intermediate 1d characteristic measured_spectra for beam 1."
-        # spectrum = self.load_1d_char_spectrum()
+        spectrum = self.load_1d_char_spectrum()
 
         # Grab a header from a random solar gain frame to be used to find a rough initial wavelength estimate.
-        # solar_header = self.load_header()
+        solar_header = self.load_header()
 
         # Compute theoretical dispersion value using the grating equation.
         # dispersion, order, alpha = self.get_theoretical_dispersion()
@@ -62,3 +63,26 @@ class WaveCal:
 
         # Save the fit results to disk to later be used to update the l1 headers."
         # self.write_fit_results(spectrum, order, fit_result)
+
+    def load_1d_char_spectrum(self) -> np.ndarray:
+        """Load intermediate 1d characteristic measured_spectra for beam 1."""
+        # Only fitting with the left beam.
+        beam = 1
+        # TODO: how to load char spectra in
+        array_generator = self.intermediate_frame_load_intermediate_arrays(
+            tags=[CryonirspTag.task("SOLAR_CHAR_SPEC"), CryonirspTag.beam(beam)]
+        )
+
+        return next(array_generator)
+
+    def load_header(self) -> fits.header.Header:
+        """Grab a header from a random solar gain frame to be used to find a rough initial wavelength estimate."""
+        # Only fitting with the left beam.
+        beam = 1
+        # TODO: how to grab a header
+        solar_header = next(
+            self.linearized_frame_fits_access_generator(
+                tags=[CryonirspTag.task("SOLAR_GAIN")], beam=beam
+            )
+        ).header
+        return solar_header
