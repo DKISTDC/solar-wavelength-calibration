@@ -54,46 +54,46 @@ definitions:
           - shasum -a 256 -c codecov.SHA256SUM
           - chmod +x codecov
           - ./codecov -t ${CODECOV_TOKEN}
-      - step: &test310
-          image: python:3.10
-          caches:
-            - pip
-          name: Test Python 3.10
-          script:
-            - pip install -U pip
-            - pip install tox
-            - tox run -e py310
-      - step: &test310-min
-          image: python:3.10
-          caches:
-            - pip
-          name: Test Python 3.10 - Minimum
-          script:
-            - pip install -U pip
-            - pip install tox
-            - tox run -e py310-min
+    - step: &test310
+        image: python:3.10
+        caches:
+          - pip
+        name: Test Python 3.10
+        script:
+          - pip install -U pip
+          - pip install tox
+          - tox run -e py310
+    - step: &test310-min
+        image: python:3.10
+        caches:
+          - pip
+        name: Test Python 3.10 - Minimum
+        script:
+          - pip install -U pip
+          - pip install tox
+          - tox run -e py310-min
 
-      - step: &docs
-          name: Test Docs
-          caches:
-            - pip
-          script:
-            - apt update && apt -y install graphviz
-            - pip install .[docs]
-            - sphinx-build --color -W --keep-going -b html docs docs/_build/html
-      - step: &push
-          caches:
-            - pip
-          name: Push
-          script:
-            - pip install -U pip
-            - pip install build twine
-            - python -m build --outdir wheelhouse .
-            - python -m twine upload --skip-existing wheelhouse/*
-      - step: &check_changelog
-          name: Check for updated CHANGELOG
-          script:
-            - ./check_changelog_updated.sh
+    - step: &docs
+        name: Test Docs
+        caches:
+          - pip
+        script:
+          - apt update && apt -y install graphviz
+          - pip install .[docs]
+          - sphinx-build --color -W --keep-going -b html docs docs/_build/html
+    - step: &push
+        caches:
+          - pip
+        name: Push
+        script:
+          - pip install -U pip
+          - pip install build twine
+          - python -m build --outdir wheelhouse .
+          - python -m twine upload --skip-existing wheelhouse/*
+    - step: &check_changelog
+        name: Check for updated CHANGELOG
+        script:
+          - ./check_changelog_updated.sh
 
 pipelines:
   default:
