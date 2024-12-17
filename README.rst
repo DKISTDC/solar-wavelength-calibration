@@ -1,4 +1,4 @@
-dkist-processing-wavecal
+dkist-wavelength-calibration
 ========================
 
 |codecov|
@@ -7,17 +7,17 @@ A package for calibrating wavelength data from the DKIST.
 
 Deployment
 ----------
-dkist-processing-wavecal is deployed to `PyPI <https://pypi.org/project/dkist-processing-wavecal/>`_
+dkist-wavelength-calibration is deployed to `PyPI <https://pypi.org/project/dkist-wavelength-calibration/>`_
 
 Development
 -----------
 .. code-block:: bash
 
-    git clone git@bitbucket.org:dkistdc/dkist-processing-wavecal.git
-    cd dkist-proessing-wavecal
+    git clone git@bitbucket.org:dkistdc/dkist-wavelength-calibration.git
+    cd dkist-wavelength-calibration
     pre-commit install
     pip install -e .[test]
-    pytest -v --cov dkist_processing_wavcal
+    pytest -v --cov dkist-wavelength-calibration
 
 Changelog
 #########
