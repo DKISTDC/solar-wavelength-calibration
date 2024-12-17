@@ -37,23 +37,23 @@ definitions:
           - git fetch origin main
           - towncrier check --compare-with origin/main
     - step: &test311
-      caches:
-        - pip
-      name: Test Python 3.11
-      script:
-        - pip install -U pip
-        - pip install tox
-        - tox -e py311
+        caches:
+          - pip
+        name: Test Python 3.11
+        script:
+          - pip install -U pip
+          - pip install tox
+          - tox -e py311
 
-        # Upload test coverage to codecov
-        - curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --keyring trustedkeys.gpg --import
-        - curl -Os https://uploader.codecov.io/latest/linux/codecov
-        - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
-        - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
-        - gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
-        - shasum -a 256 -c codecov.SHA256SUM
-        - chmod +x codecov
-        - ./codecov -t ${CODECOV_TOKEN}
+          # Upload test coverage to codecov
+          - curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --keyring trustedkeys.gpg --import
+          - curl -Os https://uploader.codecov.io/latest/linux/codecov
+          - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          - gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
+          - shasum -a 256 -c codecov.SHA256SUM
+          - chmod +x codecov
+          - ./codecov -t ${CODECOV_TOKEN}
     - step: &test310
         image: python:3.10
         caches:
