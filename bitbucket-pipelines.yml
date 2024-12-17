@@ -108,12 +108,12 @@ pipelines:
   tags:
     'v*':
       - parallel:
-        - step: *check_changelog
-        - step: *lint
-        - step: *scan
-        - step: *test311
-        - step: *test310
-        - step: *test310-min
-        - step: *docs
+          - step: *lint
+          - step: *changelog
+          - step: *scan
+          - step: *test311
+          - step: *test310
+          - step: *test310-min
+          - step: *docs
       - step: *push
 
