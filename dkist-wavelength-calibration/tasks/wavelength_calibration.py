@@ -22,7 +22,7 @@ class WaveCal:
         solar_header = self.load_header()
 
         # Compute theoretical dispersion value using the grating equation.
-        # dispersion, order, alpha = self.get_theoretical_dispersion()
+        dispersion, order, alpha = self.get_theoretical_dispersion()
 
         # Compute the expected wavelength vector based on the header information.
         # expected_wavelength_vector = self.compute_expected_wavelength_vector(spectrum, solar_header)
@@ -86,3 +86,30 @@ class WaveCal:
             )
         ).header
         return solar_header
+
+    def get_theoretical_dispersion(self) -> tuple[u.Quantity, int, float]:
+        """Compute theoretical dispersion value using the following grating equation.
+
+        m = d/lambda * (sin(alpha) + sin(beta))
+
+        where
+        m = order
+        d = grating spacing
+        lambda = wavelength
+        alpha = incident angle
+        beta = diffraction angle
+
+        """
+        wavelength = self.constants.wavelength * u.nanometer
+        grating_position_angle_phi = np.deg2rad(self.constants.grating_position_deg)
+        grating_littrow_angle_theta = np.deg2rad(self.constants.grating_littrow_angle_deg)
+        alpha = grating_position_angle_phi + grating_littrow_angle_theta
+        beta = grating_position_angle_phi - grating_littrow_angle_theta
+        grating_spacing_distance = (1.0 / self.constants.grating_constant) * u.millimeter
+        order = int(grating_spacing_distance / wavelength * (np.sin(alpha) + np.sin(beta)))
+        camera_mirror_focal_length = self.parameters.camera_mirror_focal_length_mm
+        pixpitch = self.parameters.pixel_pitch_micron
+        linear_disp = order / (grating_spacing_distance * np.cos(beta)) * camera_mirror_focal_length
+        theoretical_dispersion = (pixpitch / linear_disp).to(u.nanometer)
+
+        return theoretical_dispersion, order, alpha
