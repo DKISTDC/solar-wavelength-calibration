@@ -1,4 +1,4 @@
-"""Library that supports wavelength calibration in DKIST processing pipelines."""
+"""Library that supports wavelength calibration."""
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version
 

@@ -11,7 +11,7 @@ from packaging.version import Version
 
 # Need a name for the overall repo
 # __name__ where this code executes is "builtins" so that is no help
-repo_name = "dkist-wavelength-calibration"
+repo_name = "solar-wavelength-calibration"
 package_name = repo_name.replace("-", "_")
 
 dist = distribution(package_name)
@@ -36,7 +36,7 @@ intersphinx_mapping = create_intersphinx_mapping(repo_name)
 # Remaining sphinx settings are in dkist-sphinx-theme conf.py
 
 # -- Project information -------------------------------------------------------
-project = "DKIST-WAVELENGTH-CALIBRATION"
+project = "SOLAR-WAVELENGTH-CALIBRATION"
 
 # The full version, including alpha/beta/rc tags
 dkist_version = Version(dist.version)

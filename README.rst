@@ -1,23 +1,23 @@
-dkist-wavelength-calibration
+solar-wavelength-calibration
 ========================
 
 |codecov|
 
-A package for calibrating wavelength data from the DKIST.
+A package for calibrating wavelength data.
 
 Deployment
 ----------
-dkist-wavelength-calibration is deployed to `PyPI <https://pypi.org/project/dkist-wavelength-calibration/>`_
+solar-wavelength-calibration is deployed to `PyPI <https://pypi.org/project/solar-wavelength-calibration/>`_
 
 Development
 -----------
 .. code-block:: bash
 
-    git clone git@bitbucket.org:dkistdc/dkist-wavelength-calibration.git
-    cd dkist-wavelength-calibration
+    git clone git@bitbucket.org:dkistdc/solar-wavelength-calibration.git
+    cd solar-wavelength-calibration
     pre-commit install
     pip install -e .[test]
-    pytest -v --cov dkist-wavelength-calibration
+    pytest -v --cov solar-wavelength-calibration
 
 Changelog
 #########
