@@ -24,7 +24,8 @@ classifiers = [
 dependencies = [
     "astropy == 6.1.0",
     "numpy == 1.26.4",
-    "dkist-processing-common == 10.5.3",]
+    "dkist-service-configuration == 2.2",
+    "scipy == 1.13.1",]
 
 [project.urls]
 Homepage = "https://nso.edu/dkist/data-center/"
