@@ -11,7 +11,7 @@ from packaging.version import Version
 
 # Need a name for the overall repo
 # __name__ where this code executes is "builtins" so that is no help
-repo_name = "solar-wavelength-calibration"
+repo_name = "solar_wavelength_calibration"
 package_name = repo_name.replace("-", "_")
 
 dist = distribution(package_name)
