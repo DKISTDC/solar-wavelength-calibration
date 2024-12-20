@@ -1,7 +1,7 @@
 """Wavelength calibration task."""
+import astropy.units as u
 import numpy as np
 from astropy import constants as const
-from astropy.units import Quantity as u
 from astropy.wcs import WCS
 from dkist_service_configuration.logging import logger
 from scipy.ndimage import gaussian_filter1d
