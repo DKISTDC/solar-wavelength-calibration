@@ -6,26 +6,23 @@ definitions:
           - pip
         name: Lint
         script:
-          - pip install pre-commit
-          - pre-commit install
-          - pre-commit run --all-files
+          - echo "Retrieving and Executing Lint Script"
+          - curl -fL https://getcli.jfrog.io | sh
+          - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/lint_python.sh
+          - cat ci_scripts/latest/lint_python.sh
+          - chmod 755 ci_scripts/latest/lint_python.sh
+          - ./ci_scripts/latest/lint_python.sh
     - step: &scan
         caches:
           - pip
         name: Scan
         script:
-          - pip install -e .
-          - pip freeze | grep -v @ > requirements.txt
-          - cat requirements.txt
-          - echo $SNYK_VERSION
-          - curl -L -o snyk https://github.com/snyk/snyk/releases/download/$SNYK_VERSION/snyk-linux
-          - chmod 755 snyk
-          - ./snyk -d auth $SNYK_TOKEN
-          - echo $SNYK_IGNORE
-          - for id in $SNYK_IGNORE; do echo Ignoring $id; ./snyk ignore $id; done
-          - cat .snyk || echo "No .snyk found. Probably because there was nothing to ignore."
-          - echo $SNYK_CLI_COMMAND
-          - $SNYK_CLI_COMMAND
+          - echo "Retrieving and Executing Scan Script"
+          - curl -fL https://getcli.jfrog.io | sh
+          - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/scan_python.sh
+          - cat ci_scripts/latest/scan_python.sh
+          - chmod 755 ci_scripts/latest/scan_python.sh
+          - ./ci_scripts/latest/scan_python.sh
     - step: &changelog
         caches:
           - pip
