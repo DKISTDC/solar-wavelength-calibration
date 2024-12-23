@@ -61,15 +61,6 @@ definitions:
           - pip install -U pip
           - pip install tox
           - tox run -e py310
-    - step: &test310-min
-        image: python:3.10
-        caches:
-          - pip
-        name: Test Python 3.10 - Minimum
-        script:
-          - pip install -U pip
-          - pip install tox
-          - tox run -e py310-min
 
     - step: &docs
         name: Test Docs
@@ -96,7 +87,6 @@ pipelines:
     - parallel:
       - step: *test311
       - step: *test310
-      - step: *test310-min
       - step: *docs
     - step: *scan
   tags:
@@ -107,7 +97,6 @@ pipelines:
           - step: *scan
           - step: *test311
           - step: *test310
-          - step: *test310-min
           - step: *docs
       - step: *push
 
