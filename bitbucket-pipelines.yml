@@ -30,10 +30,10 @@ definitions:
         script:
           - echo "Retrieving and Executing Changelog Script"
           - curl -fL https://getcli.jfrog.io | sh
-          - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/scan_python.sh
-          - cat ci_scripts/src/check_changelog.sh
-          - chmod 755 ci_scripts/src/check_changelog.sh
-          - ./ci_scripts/src/check_changelog.sh
+          - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/check_changelog.sh
+          - cat ci_scripts/latest/check_changelog.sh
+          - chmod 755 ci_scripts/latest/check_changelog.sh
+          - ./ci_scripts/latest/check_changelog.sh
     - step: &test311
         caches:
           - pip
@@ -88,10 +88,6 @@ definitions:
           - pip install build twine
           - python -m build --outdir wheelhouse .
           - python -m twine upload --skip-existing wheelhouse/*
-    - step: &check_changelog
-        name: Check for updated CHANGELOG
-        script:
-          - ./check_changelog_updated.sh
 
 pipelines:
   default:
