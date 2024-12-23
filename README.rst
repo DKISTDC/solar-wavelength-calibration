@@ -1,5 +1,5 @@
 solar-wavelength-calibration
-========================
+============================
 
 |codecov|
 
