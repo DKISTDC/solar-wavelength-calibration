@@ -1,1 +1,0 @@
-# git deps for read the docs

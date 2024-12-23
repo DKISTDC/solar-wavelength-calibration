@@ -1,6 +1,5 @@
 solar-wavelength-calibration
-========================
-
+----------------------------
 |codecov|
 
 A package for calibrating wavelength data.
@@ -75,3 +74,6 @@ then the Bitbucket pipeline will fail. To be able to use the same tag you must d
     # Re-tag with the same version
     git tag vWHATEVER.THE.VERSION
     git push --tags origin main
+
+.. |codecov| image:: https://codecov.io/bb/dkistdc/solar-wavelength-calibration/branch/main/graph/badge.svg
+    :target: https://codecov.io/bb/dkistdc/solar-wavelength-calibration
