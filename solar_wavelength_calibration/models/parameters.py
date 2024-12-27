@@ -18,7 +18,7 @@ class WavecalParameters(ParameterBase, ParameterWavelengthMixin, ParameterArmIdM
         - wavelength in nanometers
         - transmission at given wavelength
         """
-        param_dict = self._find_most_recent_past_value("cryonirsp_solar_atlas")
+        param_dict = self._find_most_recent_past_value("solar_atlas")
         return self._load_param_value_from_numpy_save(param_dict)
 
     @cached_property
@@ -29,5 +29,5 @@ class WavecalParameters(ParameterBase, ParameterWavelengthMixin, ParameterArmIdM
         - wavelength in nanometers
         - transmission at given wavelength
         """
-        param_dict = self._find_most_recent_past_value("cryonirsp_telluric_atlas")
+        param_dict = self._find_most_recent_past_value("telluric_atlas")
         return self._load_param_value_from_numpy_save(param_dict)

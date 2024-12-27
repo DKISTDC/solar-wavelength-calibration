@@ -2,6 +2,7 @@
 import astropy.units as u
 import numpy as np
 from astropy import constants as const
+from astropy.coordinates.spectral_coordinate import SpectralCoord
 from astropy.wcs import WCS
 from dkist_service_configuration.logging import logger
 from scipy.ndimage import gaussian_filter1d
@@ -71,16 +72,19 @@ class WaveCal:
             self.grating_constant,
         )
 
-        # Save the fit results to disk to later be used to update the l1 headers."
-        # self.write_fit_results(spectrum, order, fit_result)
-
     def load_and_resample_fts_atlas(
         self, expected_wavelength_vector: u.Quantity
     ) -> tuple[u.Quantity, np.ndarray, u.Quantity, np.ndarray]:
         """Load telluric and non-telluric FTS atlas data, resample both atlases to be on the same, linear wavelength grid, select the portion of atlas that pertains to bandpass used."""
-        solar_atlas_wavelength, solar_atlas_transmission = self.parameters.solar_atlas
+        # solar_atlas_wavelength, solar_atlas_transmission = self.parameters.solar_atlas
+        solar_atlas_wavelength, solar_atlas_transmission = np.load(
+            "/Users/alysaderks/Globus_data/new_Cryo_data/parameters/cryonirsp_solar_atlas.npy"
+        )
         solar_atlas_wavelength = solar_atlas_wavelength * u.nm
-        telluric_atlas_wavelength, telluric_atlas_transmission = self.parameters.telluric_atlas
+        # telluric_atlas_wavelength, telluric_atlas_transmission = self.parameters.telluric_atlas
+        telluric_atlas_wavelength, telluric_atlas_transmission = np.load(
+            "/Users/alysaderks/Globus_data/new_Cryo_data/parameters/cryonirsp_telluric_atlas.npy"
+        )
         telluric_atlas_wavelength = telluric_atlas_wavelength * u.nm
 
         expected_wavelength_range = (
@@ -107,6 +111,39 @@ class WaveCal:
             solar_atlas_wavelength,
             solar_atlas_transmission,
         )
+
+    def initial_alignment(
+        self,
+        spectrum: np.ndarray,
+        expected_wavelength_vector: SpectralCoord,
+        solar_atlas_wave_air: u.Quantity,
+        solar_atlas_trans_flipped: np.ndarray,
+        telluric_atlas_wave: u.Quantity,
+        telluric_atlas_trans: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Determine a shift of the preliminary wavelength vector so that it generally aligns with the data itself."""
+        shifts = np.linspace(-2, 2, 550) * u.nm
+        merit = np.zeros(len(shifts))
+        for n, shift in enumerate(shifts):
+            preliminary_wavelength = expected_wavelength_vector + shift
+            fts_solar = np.interp(
+                preliminary_wavelength, solar_atlas_wave_air, solar_atlas_trans_flipped
+            )
+            fts_telluric = np.interp(
+                preliminary_wavelength, telluric_atlas_wave, telluric_atlas_trans
+            )
+            # calculate a merit value to be minimized
+            merit[n] = np.std(spectrum - fts_solar * fts_telluric)
+
+        # get minimum
+        shift = shifts[np.argmin(merit)]
+
+        # recalculate spectral axis and atlas spectrum for the best shift value
+        fts_wave = expected_wavelength_vector + shift
+        fts_solar = np.interp(fts_wave, solar_atlas_wave_air, solar_atlas_trans_flipped)
+        fts_telluric = np.interp(fts_wave, telluric_atlas_wave, telluric_atlas_trans)
+
+        return fts_wave.value, fts_solar, fts_telluric
 
     @staticmethod
     def fitness(
