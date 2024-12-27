@@ -11,7 +11,7 @@ from packaging.version import Version
 
 # Need a name for the overall repo
 # __name__ where this code executes is "builtins" so that is no help
-repo_name = "solar_wavelength_calibration"
+repo_name = "solar-wavelength-calibration"
 package_name = repo_name.replace("-", "_")
 
 dist = distribution(package_name)
@@ -29,7 +29,8 @@ if missing_requirements["docs"]:
 # auto api parameters that cannot be moved into the theme:
 autoapi_dirs = [Path(package.__file__).parent]
 # Uncomment this for debugging
-autoapi_keep_files = True
+# autoapi_keep_files = True
+suppress_warnings = ["autoapi.python_import_resolution"]
 
 # -- Options for intersphinx extension -----------------------------------------
 intersphinx_mapping = create_intersphinx_mapping(repo_name)
