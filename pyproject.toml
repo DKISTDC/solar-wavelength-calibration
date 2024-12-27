@@ -62,7 +62,7 @@ omit = [
 show_missing = true
 
 [tool.towncrier]
-    package = "solar-wavelength-calibration"
+    package = "solar_wavelength_calibration"
     filename = "CHANGELOG.rst"
     directory = "changelog/"
     issue_format = "`#{issue} <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/{issue}>`__"
