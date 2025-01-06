@@ -13,7 +13,9 @@ from scipy.optimize import OptimizeResult
 class WaveCal:
     """Task class for correcting the dispersion axis wavelength values."""
 
-    def __init__(
+    record_provenence = True
+
+    def do_calibration(
         self,
         spectrum: np.ndarray,
         expected_wavelength_vector: u.Quantity,
@@ -23,23 +25,12 @@ class WaveCal:
         order: int,
         grating_constant: float,
     ):
-        self.spectrum = spectrum
-        self.expected_wavelength_vector = expected_wavelength_vector
-        self.dispersion = dispersion
-        self.alpha = alpha
-        self.doppler_shift = doppler_shift
-        self.order = order
-        self.grating_constant = grating_constant
-
-    record_provenence = True
-
-    def run(self):
         """
-        Run method for the task.
+        Wavelength calibration task.
 
         Returns
         -------
-        None
+        fit_result
         """
         # Load telluric and non-telluric FTS atlas data, resample both atlases to be on the same, linear wavelength grid, select the portion of atlas that pertains to bandpass used
         (
@@ -47,12 +38,12 @@ class WaveCal:
             telluric_atlas_trans,
             solar_atlas_wave_air,
             solar_atlas_trans_flipped,
-        ) = self.load_and_resample_fts_atlas(self.expected_wavelength_vector)
+        ) = self.load_and_resample_fts_atlas(expected_wavelength_vector)
 
         # Determine a shift of the preliminary wavelength vector so that it generally aligns with the data itself.
         (fts_wave, fts_solar, fts_telluric) = self.initial_alignment(
-            self.spectrum,
-            self.expected_wavelength_vector,
+            spectrum,
+            expected_wavelength_vector,
             solar_atlas_wave_air,
             solar_atlas_trans_flipped,
             telluric_atlas_wave,
@@ -64,13 +55,15 @@ class WaveCal:
             fts_wave,
             fts_telluric,
             fts_solar,
-            self.dispersion,
-            self.alpha,
-            self.doppler_shift,
-            self.spectrum,
-            self.order,
-            self.grating_constant,
+            dispersion,
+            alpha,
+            doppler_shift,
+            spectrum,
+            order,
+            grating_constant,
         )
+
+        return fit_result
 
     def load_and_resample_fts_atlas(
         self, expected_wavelength_vector: u.Quantity
