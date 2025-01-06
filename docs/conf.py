@@ -45,4 +45,5 @@ is_release = not (dkist_version.is_prerelease or dkist_version.is_devrelease)
 # We want to ignore all warnings in a release version.
 if is_release:
     warnings.simplefilter("ignore")
-    extensions += ["dkist_sphinx_theme.create_requirements_table"]
+# Extensions so we can create the reqmts table
+extensions += ["dkist_sphinx_theme.create_requirements_table"]
