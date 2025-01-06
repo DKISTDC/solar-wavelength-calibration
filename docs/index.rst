@@ -6,4 +6,5 @@
 
     self
     autoapi/index
+    requirements_table
     changelog

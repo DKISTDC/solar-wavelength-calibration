@@ -82,18 +82,20 @@ definitions:
 
 pipelines:
   default:
-    - step: *lint
-    - step: *changelog
+    - parallel:
+      - step: *lint
+      - step: *changelog
     - parallel:
       - step: *test311
       - step: *test310
       - step: *docs
-    - step: *scan
+      - step: *scan
   tags:
     'v*':
       - parallel:
           - step: *lint
           - step: *changelog
+      - parallel:
           - step: *scan
           - step: *test311
           - step: *test310
