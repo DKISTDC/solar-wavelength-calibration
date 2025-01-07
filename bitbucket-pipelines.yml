@@ -52,15 +52,6 @@ definitions:
           - shasum -a 256 -c codecov.SHA256SUM
           - chmod +x codecov
           - ./codecov -t ${CODECOV_TOKEN}
-    - step: &test310
-        image: python:3.10
-        caches:
-          - pip
-        name: Test Python 3.10
-        script:
-          - pip install -U pip
-          - pip install tox
-          - tox run -e py310
 
     - step: &docs
         name: Test Docs
@@ -87,7 +78,6 @@ pipelines:
       - step: *changelog
     - parallel:
       - step: *test311
-      - step: *test310
       - step: *docs
       - step: *scan
   tags:
@@ -98,7 +88,6 @@ pipelines:
       - parallel:
           - step: *scan
           - step: *test311
-          - step: *test310
           - step: *docs
       - step: *push
 
