@@ -10,7 +10,7 @@ find = {}
 [project]
 dynamic = ["version"]
 name = "solar-wavelength-calibration"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 description = "A package for calibrating wavelength data."
 readme = "README.rst"
 authors = [ {name = "NSO / AURA", email = "dkistdc@nso.edu"} ]
