@@ -1,0 +1,113 @@
+image: python:3.11
+definitions:
+  steps:
+    - step: &lint
+        caches:
+          - pip
+        name: Lint
+        script:
+          - echo "Retrieving and Executing Lint Script"
+          - curl -fL https://getcli.jfrog.io | sh
+          - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/lint_python.sh
+          - cat ci_scripts/latest/lint_python.sh
+          - chmod 755 ci_scripts/latest/lint_python.sh
+          - ./ci_scripts/latest/lint_python.sh
+    - step: &scan
+        caches:
+          - pip
+        name: Scan
+        script:
+          - echo "Retrieving and Executing Scan Script"
+          - curl -fL https://getcli.jfrog.io | sh
+          - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/scan_python.sh
+          - cat ci_scripts/latest/scan_python.sh
+          - chmod 755 ci_scripts/latest/scan_python.sh
+          - ./ci_scripts/latest/scan_python.sh
+    - step: &changelog
+        caches:
+          - pip
+        name: Changelog
+        script:
+          - echo "Retrieving and Executing Changelog Script"
+          - curl -fL https://getcli.jfrog.io | sh
+          - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/check_changelog.sh
+          - cat ci_scripts/latest/check_changelog.sh
+          - chmod 755 ci_scripts/latest/check_changelog.sh
+          - ./ci_scripts/latest/check_changelog.sh
+    - step: &test311
+        caches:
+          - pip
+        name: Test Python 3.11
+        script:
+          - pip install -U pip
+          - pip install tox
+          - tox -e py311
+
+          # Upload test coverage to codecov
+          - curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --keyring trustedkeys.gpg --import
+          - curl -Os https://uploader.codecov.io/latest/linux/codecov
+          - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          - gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
+          - shasum -a 256 -c codecov.SHA256SUM
+          - chmod +x codecov
+          - ./codecov -t ${CODECOV_TOKEN}
+    - step: &test311-min
+        caches:
+          - pip
+        name: Test Python 3.11 with minimum dependencies
+        script:
+          - pip install -U pip
+          - pip install tox
+          - tox -e py311-min
+
+          # Upload test coverage to codecov
+          - curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --keyring trustedkeys.gpg --import
+          - curl -Os https://uploader.codecov.io/latest/linux/codecov
+          - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+          - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+          - gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
+          - shasum -a 256 -c codecov.SHA256SUM
+          - chmod +x codecov
+          - ./codecov -t ${CODECOV_TOKEN}
+
+    - step: &docs
+        name: Test Docs
+        caches:
+          - pip
+        script:
+          - apt update && apt -y install graphviz
+          - pip install .[docs]
+          - sphinx-build --color -W --keep-going -b html docs docs/_build/html
+    - step: &push
+        caches:
+          - pip
+        name: Push
+        script:
+          - pip install -U pip
+          - pip install build twine
+          - python -m build --outdir wheelhouse .
+          - python -m twine upload --skip-existing wheelhouse/*
+
+pipelines:
+  default:
+    - parallel:
+      - step: *lint
+      - step: *changelog
+    - parallel:
+      - step: *test311
+      - step: *test311-min
+      - step: *docs
+      - step: *scan
+  tags:
+    'v*':
+      - parallel:
+          - step: *lint
+          - step: *changelog
+      - parallel:
+          - step: *scan
+          - step: *test311
+          - step: *test311-min
+          - step: *docs
+      - step: *push
+
