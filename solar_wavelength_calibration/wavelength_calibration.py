@@ -2,7 +2,6 @@
 import astropy.units as u
 import numpy as np
 from astropy import constants as const
-from astropy.coordinates.spectral_coordinate import SpectralCoord
 from astropy.wcs import WCS
 from dkist_service_configuration.logging import logger
 from scipy.ndimage import gaussian_filter1d
@@ -23,6 +22,23 @@ def do_calibration(
 ):
     """
     Wavelength calibration task.
+
+    Parameters
+    ----------
+    spectrum : np.ndarray
+        The input spectrum to be calibrated.
+    expected_wavelength_vector : u.Quantity
+        The expected wavelength vector.
+    dispersion : u.Quantity
+        The dispersion of the grating.
+    alpha : float
+        The angle of incidence of the grating.
+    doppler_shift : u.Quantity
+        The doppler shift of the spectrum (from .
+    order : int
+        The order of the spectrum.
+    grating_constant : float
+        The grating constant.
 
     Returns
     -------
@@ -103,7 +119,7 @@ def load_and_resample_fts_atlas(
 
 def initial_alignment(
     spectrum: np.ndarray,
-    expected_wavelength_vector: SpectralCoord,
+    expected_wavelength_vector: u.Quantity,
     solar_atlas_wave_air: u.Quantity,
     solar_atlas_trans_flipped: np.ndarray,
     telluric_atlas_wave: u.Quantity,
@@ -306,7 +322,7 @@ def fit_dispersion_axis_to_FTS(
             f"Parameter: {parameter_names[p]},   Fit Result: {fit_result.x[p]},    Bounds: {bounds[p]}"
         )
 
-    fit_amplitude = fitness(
+    """fit_amplitude = fitness(
         fit_result.x,
         spectrum,
         fts_wave,
@@ -315,6 +331,6 @@ def fit_dispersion_axis_to_FTS(
         order,
         grating_constant,
         doppler_shift.value,
-    )
+    )"""
 
     return fit_result
