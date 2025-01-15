@@ -23,8 +23,6 @@ classifiers = [
 dependencies = [
     "astropy >= 6.1",
     "numpy == 1.26.4",
-    "scipy == 1.13.1",
-    "dkist_service_configuration == 2.2",
     "pooch == 1.8.2",
 ]
 
