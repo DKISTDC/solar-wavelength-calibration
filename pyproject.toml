@@ -21,7 +21,11 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "astropy >=6.1",
+    "astropy >= 6.1",
+    "numpy == 1.26.4",
+    "scipy == 1.13.1",
+    "dkist_service_configuration == 2.2",
+    "pooch == 1.8.2",
 ]
 
 [project.urls]

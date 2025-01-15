@@ -1,8 +1,8 @@
 """Wavelength calibration task."""
 import astropy.units as u
 import numpy as np
+import pooch
 from astropy import constants as const
-from astropy.coordinates.spectral_coordinate import SpectralCoord
 from astropy.wcs import WCS
 from dkist_service_configuration.logging import logger
 from scipy.ndimage import gaussian_filter1d
@@ -23,6 +23,23 @@ def do_calibration(
 ):
     """
     Wavelength calibration task.
+
+    Parameters
+    ----------
+    spectrum : np.ndarray
+        The input spectrum to be calibrated.
+    expected_wavelength_vector : u.Quantity
+        The expected wavelength vector.
+    dispersion : u.Quantity
+        The dispersion of the grating.
+    alpha : float
+        The angle of incidence of the grating.
+    doppler_shift : u.Quantity
+        The doppler shift of the spectrum (from .
+    order : int
+        The order of the spectrum.
+    grating_constant : float
+        The grating constant.
 
     Returns
     -------
@@ -66,15 +83,18 @@ def load_and_resample_fts_atlas(
     expected_wavelength_vector: u.Quantity,
 ) -> tuple[u.Quantity, np.ndarray, u.Quantity, np.ndarray]:
     """Load telluric and non-telluric FTS atlas data, resample both atlases to be on the same, linear wavelength grid, select the portion of atlas that pertains to bandpass used."""
-    # solar_atlas_wavelength, solar_atlas_transmission = self.parameters.solar_atlas
-    solar_atlas_wavelength, solar_atlas_transmission = np.load(
-        "/Users/alysaderks/Globus_data/new_Cryo_data/parameters/cryonirsp_solar_atlas.npy"
+    solar_atlas_filepath = pooch.retrieve(
+        url="doi:10.5281/zenodo.14641640/solar_reference_atlas.npy",
+        known_hash="md5:84ab4c50689ef235fe5ed4f7ee905ca0",
     )
+    solar_atlas_wavelength, solar_atlas_transmission = np.load(solar_atlas_filepath)
     solar_atlas_wavelength = solar_atlas_wavelength * u.nm
-    # telluric_atlas_wavelength, telluric_atlas_transmission = self.parameters.telluric_atlas
-    telluric_atlas_wavelength, telluric_atlas_transmission = np.load(
-        "/Users/alysaderks/Globus_data/new_Cryo_data/parameters/cryonirsp_telluric_atlas.npy"
+
+    telluric_atlas_filepath = pooch.retrieve(
+        url="doi:10.5281/zenodo.14646787/telluric_reference_atlas.npy",
+        known_hash="md5:8db5e12508b293bca3495d81a0747447",
     )
+    telluric_atlas_wavelength, telluric_atlas_transmission = np.load(telluric_atlas_filepath)
     telluric_atlas_wavelength = telluric_atlas_wavelength * u.nm
 
     expected_wavelength_range = expected_wavelength_vector.max() - expected_wavelength_vector.min()
@@ -103,7 +123,7 @@ def load_and_resample_fts_atlas(
 
 def initial_alignment(
     spectrum: np.ndarray,
-    expected_wavelength_vector: SpectralCoord,
+    expected_wavelength_vector: u.Quantity,
     solar_atlas_wave_air: u.Quantity,
     solar_atlas_trans_flipped: np.ndarray,
     telluric_atlas_wave: u.Quantity,
@@ -306,7 +326,7 @@ def fit_dispersion_axis_to_FTS(
             f"Parameter: {parameter_names[p]},   Fit Result: {fit_result.x[p]},    Bounds: {bounds[p]}"
         )
 
-    fit_amplitude = fitness(
+    """fit_amplitude = fitness(
         fit_result.x,
         spectrum,
         fts_wave,
@@ -315,6 +335,6 @@ def fit_dispersion_axis_to_FTS(
         order,
         grating_constant,
         doppler_shift.value,
-    )
+    )"""
 
     return fit_result
