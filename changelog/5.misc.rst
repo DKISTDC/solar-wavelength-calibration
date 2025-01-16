@@ -1,1 +1,1 @@
-Now retrieving FTS Atlases from Zenodo using the Pooch package.
+Adding framework to retrieve FTS Atlases from Zenodo using the Pooch package. Unless otherwise specified, the default retrieval location is https://zenodo.org/records/14674504.
