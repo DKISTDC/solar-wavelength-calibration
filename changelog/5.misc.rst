@@ -1,0 +1,1 @@
+Now retrieving FTS Atlases from Zenodo using the Pooch package.
