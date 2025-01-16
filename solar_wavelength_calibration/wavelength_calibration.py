@@ -8,8 +8,21 @@ import pooch
 record_provenence = True
 
 
-def load_fts_atlases():
-    """Load telluric and non-telluric FTS atlas data."""
+def load_fts_atlases() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Load telluric and non-telluric FTS atlas data.
+
+    Returns
+    -------
+    telluric_atlas_wavelength : np.ndarray
+        Telluric atlas wavelength array in nm
+    telluric_atlas_transmission : np.ndarray
+        Telluric atlas intensity array
+    solar_atlas_wavelength : np.ndarray
+        Solar atlas wavelength array in nm
+    solar_atlas_transmission : np.ndarray
+        Solar atlas intensity array
+    """
     # Define a Pooch object
     my_pooch = pooch.create(
         path=pooch.os_cache("pooch"),
