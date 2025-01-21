@@ -22,8 +22,9 @@ classifiers = [
 ]
 dependencies = [
     "astropy >= 6.1",
-    "numpy == 1.26.4",
-    "pooch == 1.8.2",
+    "numpy >= 1.26.4",
+    "pooch >= 1.8.0",
+    "pydantic >= 2.0",
 ]
 
 [project.urls]
@@ -37,8 +38,11 @@ test = [
     "pytest",
     "pytest-cov",
     "pytest-xdist",
+    "pytest-mock",
     "towncrier",
     "tox>=4",
+    "os",
+    "unittest",
 ]
 docs = [
   "sphinx",
