@@ -8,10 +8,12 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.optimize import differential_evolution
 from scipy.optimize import OptimizeResult
 
+from solar_wavelength_calibration.atlas import Atlas
+
 record_provenence = True
 
 
-def do_calibration(
+def calibrate_wavelength(
     spectrum: np.ndarray,
     expected_wavelength_vector: u.Quantity,
     dispersion: u.Quantity,
@@ -19,6 +21,7 @@ def do_calibration(
     doppler_shift: u.Quantity,
     order: int,
     grating_constant: float,
+    atlas: Atlas,
 ):
     """
     Wavelength calibration task.
@@ -39,28 +42,21 @@ def do_calibration(
         The order of the spectrum.
     grating_constant : float
         The grating constant.
+    atlas : Atlas
+        The FTS atlas to use for wavelength calibration.
 
     Returns
     -------
     fit_result
     """
-    # Load telluric and non-telluric FTS atlas data, resample both atlases to be on the same, linear wavelength grid, select the portion of atlas that pertains to bandpass used
-    (
-        telluric_atlas_wave,
-        telluric_atlas_trans,
-        solar_atlas_wave_air,
-        solar_atlas_trans_flipped,
-    ) = load_fts_atlases()
+    # Resample atlas to be on the same, linear wavelength grid, select the portion of atlas that pertains to bandpass used
     (
         cropped_telluric_atlas_wave,
         cropped_telluric_atlas_trans,
         cropped_solar_atlas_wave_air,
         cropped_solar_atlas_trans_flipped,
     ) = resample_fts_atlases(
-        telluric_atlas_wave,
-        telluric_atlas_trans,
-        solar_atlas_wave_air,
-        solar_atlas_trans_flipped,
+        atlas,
         expected_wavelength_vector,
     )
 
@@ -90,34 +86,17 @@ def do_calibration(
     return fit_result
 
 
-def load_fts_atlases():
-    """Load telluric and non-telluric FTS atlas data."""
-    solar_atlas_wavelength, solar_atlas_transmission = np.load(
-        "/Users/alysaderks/Globus_data/new_Cryo_data/parameters/cryonirsp_solar_atlas.npy"
-    )
-
-    telluric_atlas_wavelength, telluric_atlas_transmission = np.load(
-        "/Users/alysaderks/Globus_data/new_Cryo_data/parameters/cryonirsp_telluric_atlas.npy"
-    )
-
-    return (
-        telluric_atlas_wavelength,
-        telluric_atlas_transmission,
-        solar_atlas_wavelength,
-        solar_atlas_transmission,
-    )
-
-
 def resample_fts_atlases(
-    telluric_atlas_wavelength: np.ndarray,
-    telluric_atlas_transmission: np.ndarray,
-    solar_atlas_wavelength: np.ndarray,
-    solar_atlas_transmission: np.ndarray,
+    atlas: Atlas,
     expected_wavelength_vector: u.Quantity,
 ) -> tuple[u.Quantity, np.ndarray, u.Quantity, np.ndarray]:
     """Resample both atlases to be on the same, linear wavelength grid and select the portion of atlas that pertains to bandpass used."""
-    solar_atlas_wavelength = solar_atlas_wavelength * u.nm
-    telluric_atlas_wavelength = telluric_atlas_wavelength * u.nm
+    solar_atlas_wavelength = atlas.solar_atlas_wavelength * u.nm
+    telluric_atlas_wavelength = atlas.telluric_atlas_wavelength * u.nm
+    print(solar_atlas_wavelength)
+    print(telluric_atlas_wavelength)
+    print("a")
+    assert 1 == 13
 
     expected_wavelength_range = expected_wavelength_vector.max() - expected_wavelength_vector.min()
     min_wavelength = expected_wavelength_vector.min() - 0.25 * expected_wavelength_range
@@ -127,13 +106,13 @@ def resample_fts_atlases(
         telluric_atlas_wavelength < max_wavelength
     )
     cropped_telluric_atlas_wavelength = telluric_atlas_wavelength[cropped_telluric_mask]
-    cropped_telluric_atlas_transmission = telluric_atlas_transmission[cropped_telluric_mask]
+    cropped_telluric_atlas_transmission = atlas.telluric_atlas_transmission[cropped_telluric_mask]
 
     cropped_solar_mask = (solar_atlas_wavelength > min_wavelength) * (
         solar_atlas_wavelength < max_wavelength
     )
     cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask]
-    cropped_solar_atlas_transmission = solar_atlas_transmission[cropped_solar_mask]
+    cropped_solar_atlas_transmission = atlas.solar_atlas_transmission[cropped_solar_mask]
 
     return (
         cropped_telluric_atlas_wavelength,
