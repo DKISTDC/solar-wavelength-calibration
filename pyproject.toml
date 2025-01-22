@@ -41,8 +41,6 @@ test = [
     "pytest-mock",
     "towncrier",
     "tox>=4",
-    "os",
-    "unittest",
 ]
 docs = [
   "sphinx",
@@ -61,8 +59,8 @@ markers = [
 
 [tool.coverage.run]
 omit = [
-    "solar-wavelength-calibration/tests/*",
-    "solar-wavelength-calibration/__init__.py",
+    "solar_wavelength_calibration/tests/*",
+    "solar_wavelength_calibration/__init__.py",
 ]
 
 [tool.coverage.report]
