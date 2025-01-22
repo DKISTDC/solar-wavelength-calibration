@@ -20,7 +20,7 @@ def cache_dir(request, tmp_path) -> Path:
     if override_cache_dir:
         os.environ[CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR] = str(tmp_path)
         return tmp_path
-    return pooch.os_cache("pooch")
+    return pooch.os_cache(__package__)
 
 
 @pytest.fixture(
