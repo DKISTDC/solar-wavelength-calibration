@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from solar_wavelength_calibration.atlas.base import AtlasBase
 
 CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR = "FTS_ATLAS_DATA_DIR"
+DEFAULT_POOCH_CACHE_DIR = "pooch_solar_wave_cal"
 
 logger = logging.getLogger(__name__)
 
@@ -49,15 +50,11 @@ class Atlas(AtlasBase):
             config = default_config
         self.config = config
         self.pooch = pooch.create(
-            path=pooch.os_cache("pooch_solar_wave_cal"),
+            path=pooch.os_cache(DEFAULT_POOCH_CACHE_DIR),
             base_url=self.config.base_url,
             registry=self.config.registry,
             env=CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR,
         )
-        self.local_telluric_atlas_path = self.pooch.fetch(
-            self.config.telluric_reference_atlas_file_name
-        )
-        self.local_solar_atlas_path = self.pooch.fetch(self.config.solar_reference_atlas_file_name)
 
     @cached_property
     def _telluric_atlas(self) -> tuple[np.ndarray, np.ndarray]:
@@ -69,7 +66,8 @@ class Atlas(AtlasBase):
         oxygen, and carbon dioxide.
         :return:
         """
-        return np.load(self.local_telluric_atlas_path)
+        path = self.pooch.fetch(self.config.telluric_reference_atlas_file_name)
+        return np.load(path)
 
     @cached_property
     def _solar_atlas(self) -> tuple[np.ndarray, np.ndarray]:
@@ -79,7 +77,8 @@ class Atlas(AtlasBase):
         It provides detailed measurements across a wide range of wavelengths,
         capturing the spectral features of the Sun with exceptional precision.
         """
-        return np.load(self.local_solar_atlas_path)
+        path = self.pooch.fetch(self.config.solar_reference_atlas_file_name)
+        return np.load(path)
 
     @property
     def telluric_atlas_wavelength(self) -> np.ndarray:
