@@ -10,6 +10,7 @@ from solar_wavelength_calibration.atlas import Atlas
 from solar_wavelength_calibration.atlas import default_config
 from solar_wavelength_calibration.atlas import DownloadConfig
 from solar_wavelength_calibration.atlas.atlas import CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR
+from solar_wavelength_calibration.atlas.atlas import DEFAULT_POOCH_CACHE_DIR
 
 
 @pytest.fixture(
@@ -20,7 +21,7 @@ def cache_dir(request, tmp_path) -> Path:
     if override_cache_dir:
         os.environ[CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR] = str(tmp_path)
         return tmp_path
-    return pooch.os_cache("pooch_solar_wave_cal")
+    return pooch.os_cache(DEFAULT_POOCH_CACHE_DIR)
 
 
 @pytest.fixture(

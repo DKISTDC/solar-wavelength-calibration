@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from solar_wavelength_calibration.atlas.base import AtlasBase
 
 CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR = "FTS_ATLAS_DATA_DIR"
+DEFAULT_POOCH_CACHE_DIR = "pooch_solar_wave_cal"
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class Atlas(AtlasBase):
             config = default_config
         self.config = config
         self.pooch = pooch.create(
-            path=pooch.os_cache("pooch_solar_wave_cal"),
+            path=pooch.os_cache(DEFAULT_POOCH_CACHE_DIR),
             base_url=self.config.base_url,
             registry=self.config.registry,
             env=CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR,
