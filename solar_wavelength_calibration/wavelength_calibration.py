@@ -9,6 +9,7 @@ from scipy.optimize import differential_evolution
 from scipy.optimize import OptimizeResult
 
 from solar_wavelength_calibration.atlas import Atlas
+from solar_wavelength_calibration.atlas.base import AtlasBase
 
 record_provenence = True
 
@@ -21,7 +22,7 @@ def calibrate_wavelength(
     doppler_shift: u.Quantity,
     order: int,
     grating_constant: float,
-    atlas: Atlas,
+    atlas: AtlasBase | None = None,
 ):
     """
     Wavelength calibration task.
@@ -49,6 +50,9 @@ def calibrate_wavelength(
     -------
     fit_result
     """
+    # Load atlas
+    atlas = atlas or Atlas()
+
     # Resample atlas to be on the same, linear wavelength grid, select the portion of atlas that pertains to bandpass used
     (
         cropped_telluric_atlas_wave,
@@ -87,7 +91,7 @@ def calibrate_wavelength(
 
 
 def resample_fts_atlases(
-    atlas: Atlas,
+    atlas: AtlasBase,
     expected_wavelength_vector: u.Quantity,
 ) -> tuple[u.Quantity, np.ndarray, u.Quantity, np.ndarray]:
     """Resample both atlases to be on the same, linear wavelength grid and select the portion of atlas that pertains to bandpass used."""
