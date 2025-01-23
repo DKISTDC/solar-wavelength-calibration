@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
 
+CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR = "FTS_ATLAS_DATA_DIR"
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +39,6 @@ default_config = DownloadConfig(
     solar_reference_atlas_hash_id="md5:84ab4c50689ef235fe5ed4f7ee905ca0",
 )
 
-CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR = "FTS_ATLAS_DATA_DIR"
-
 
 class Atlas(AtlasBase):
     """Reference atlas file class."""
@@ -49,57 +48,58 @@ class Atlas(AtlasBase):
             logger.info(f"Using default configuration for FTS atlas: {default_config}")
             config = default_config
         self.config = config
-        self.telluric_atlas_file_name = self.config.telluric_reference_atlas_file_name
-        self.solar_atlas_file_name = self.config.solar_reference_atlas_file_name
         self.pooch = pooch.create(
-            path=pooch.os_cache("pooch"),
+            path=pooch.os_cache("pooch_solar_wave_cal"),
             base_url=self.config.base_url,
             registry=self.config.registry,
             env=CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR,
         )
+        self.local_telluric_atlas_path = self.pooch.fetch(
+            self.config.telluric_reference_atlas_file_name
+        )
+        self.local_solar_atlas_path = self.pooch.fetch(self.config.solar_reference_atlas_file_name)
 
     @cached_property
-    def telluric_atlas(self) -> tuple[np.ndarray, np.ndarray]:
+    def _telluric_atlas(self) -> tuple[np.ndarray, np.ndarray]:
         """
         High-resolution telluric atlas.
 
         The atlas provides detailed spectral measurements of Earth's atmosphere,
         capturing the absorption features caused by atmospheric molecules such as water vapor,
         oxygen, and carbon dioxide.
+        :return:
         """
-        telluric_atlas = self.pooch.fetch(self.telluric_atlas_file_name)
-        return np.load(telluric_atlas)
-
-    @property
-    def telluric_atlas_wavelength(self) -> np.ndarray:
-        """Return the wavelength array of the telluric atlas."""
-        return self.telluric_atlas[0]
-
-    @property
-    def telluric_atlas_transmission(self) -> np.ndarray:
-        """Return the transmission array of the telluric atlas."""
-        return self.telluric_atlas[1]
+        return np.load(self.local_telluric_atlas_path)
 
     @cached_property
-    def solar_atlas(self) -> tuple[np.ndarray, np.ndarray]:
+    def _solar_atlas(self) -> tuple[np.ndarray, np.ndarray]:
         """
-        High-resolution solar atlas.
+        Wavelength array of the high-resolution solar atlas.
 
         It provides detailed measurements across a wide range of wavelengths,
         capturing the spectral features of the Sun with exceptional precision.
         """
-        solar_atlas = self.pooch.fetch(self.solar_atlas_file_name)
-        return np.load(solar_atlas)
+        return np.load(self.local_solar_atlas_path)
+
+    @property
+    def telluric_atlas_wavelength(self) -> np.ndarray:
+        """Return the wavelength array of the telluric atlas."""
+        return self._telluric_atlas[0]
+
+    @property
+    def telluric_atlas_transmission(self) -> np.ndarray:
+        """Return the transmission array of the telluric atlas."""
+        return self._telluric_atlas[1]
 
     @property
     def solar_atlas_wavelength(self) -> np.ndarray:
-        """Return the wavelength array of the solar atlas."""
-        return self.solar_atlas[0]
+        """Return the wavelength array of the high-resolution solar atlas."""
+        return self._solar_atlas[0]
 
     @property
     def solar_atlas_transmission(self) -> np.ndarray:
-        """Return the wavelength array of the solar atlas."""
-        return self.solar_atlas[1]
+        """Return the transmission array of the high-resolution solar atlas."""
+        return self._solar_atlas[1]
 
     def __repr__(self):
         return f"Atlas(config={self.config!r})"
