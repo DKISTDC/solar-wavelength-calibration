@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
 
+CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR = "FTS_ATLAS_DATA_DIR"
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +39,6 @@ default_config = DownloadConfig(
     solar_reference_atlas_hash_id="md5:84ab4c50689ef235fe5ed4f7ee905ca0",
 )
 
-CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR = "FTS_ATLAS_DATA_DIR"
-
 
 class Atlas(AtlasBase):
     """Reference atlas file class."""
@@ -50,7 +49,7 @@ class Atlas(AtlasBase):
             config = default_config
         self.config = config
         self.pooch = pooch.create(
-            path=pooch.os_cache(__package__),
+            path=pooch.os_cache("pooch_solar_wave_cal"),
             base_url=self.config.base_url,
             registry=self.config.registry,
             env=CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR,
@@ -58,50 +57,48 @@ class Atlas(AtlasBase):
         self.local_telluric_atlas_path = self.pooch.fetch(
             self.config.telluric_reference_atlas_file_name
         )
-        self._telluric_atlas = np.load(self.local_telluric_atlas_path)
         self.local_solar_atlas_path = self.pooch.fetch(self.config.solar_reference_atlas_file_name)
-        self._solar_atlas = np.load(self.local_solar_atlas_path)
 
-    @property
-    def telluric_atlas_wavelength(self) -> np.ndarray:
+    @cached_property
+    def _telluric_atlas(self) -> tuple[np.ndarray, np.ndarray]:
         """
-        Wavelength array of the high-resolution telluric atlas.
+        High-resolution telluric atlas.
 
         The atlas provides detailed spectral measurements of Earth's atmosphere,
         capturing the absorption features caused by atmospheric molecules such as water vapor,
         oxygen, and carbon dioxide.
+        :return:
         """
-        return self._telluric_atlas[0]
+        return np.load(self.local_telluric_atlas_path)
 
-    @property
-    def telluric_atlas_transmission(self) -> np.ndarray:
-        """
-        Transmission array of the high-resolution telluric atlas.
-
-        The atlas provides detailed spectral measurements of Earth's atmosphere,
-        capturing the absorption features caused by atmospheric molecules such as water vapor,
-        oxygen, and carbon dioxide.
-        """
-        return self._telluric_atlas[1]
-
-    @property
-    def solar_atlas_wavelength(self) -> np.ndarray:
+    @cached_property
+    def _solar_atlas(self) -> tuple[np.ndarray, np.ndarray]:
         """
         Wavelength array of the high-resolution solar atlas.
 
         It provides detailed measurements across a wide range of wavelengths,
         capturing the spectral features of the Sun with exceptional precision.
         """
+        return np.load(self.local_solar_atlas_path)
+
+    @property
+    def telluric_atlas_wavelength(self) -> np.ndarray:
+        """Return the wavelength array of the telluric atlas."""
+        return self._telluric_atlas[0]
+
+    @property
+    def telluric_atlas_transmission(self) -> np.ndarray:
+        """Return the transmission array of the telluric atlas."""
+        return self._telluric_atlas[1]
+
+    @property
+    def solar_atlas_wavelength(self) -> np.ndarray:
+        """Return the wavelength array of the high-resolution solar atlas."""
         return self._solar_atlas[0]
 
     @property
     def solar_atlas_transmission(self) -> np.ndarray:
-        """
-        Transmission array of the high-resolution solar atlas.
-
-        It provides detailed measurements across a wide range of wavelengths,
-        capturing the spectral features of the Sun with exceptional precision.
-        """
+        """Return the transmission array of the high-resolution solar atlas."""
         return self._solar_atlas[1]
 
     def __repr__(self):
