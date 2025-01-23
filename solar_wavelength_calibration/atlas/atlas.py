@@ -55,10 +55,6 @@ class Atlas(AtlasBase):
             registry=self.config.registry,
             env=CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR,
         )
-        self.local_telluric_atlas_path = self.pooch.fetch(
-            self.config.telluric_reference_atlas_file_name
-        )
-        self.local_solar_atlas_path = self.pooch.fetch(self.config.solar_reference_atlas_file_name)
 
     @cached_property
     def _telluric_atlas(self) -> tuple[np.ndarray, np.ndarray]:
@@ -70,7 +66,8 @@ class Atlas(AtlasBase):
         oxygen, and carbon dioxide.
         :return:
         """
-        return np.load(self.local_telluric_atlas_path)
+        path = self.pooch.fetch(self.config.telluric_reference_atlas_file_name)
+        return np.load(path)
 
     @cached_property
     def _solar_atlas(self) -> tuple[np.ndarray, np.ndarray]:
@@ -80,7 +77,8 @@ class Atlas(AtlasBase):
         It provides detailed measurements across a wide range of wavelengths,
         capturing the spectral features of the Sun with exceptional precision.
         """
-        return np.load(self.local_solar_atlas_path)
+        path = self.pooch.fetch(self.config.solar_reference_atlas_file_name)
+        return np.load(path)
 
     @property
     def telluric_atlas_wavelength(self) -> np.ndarray:
