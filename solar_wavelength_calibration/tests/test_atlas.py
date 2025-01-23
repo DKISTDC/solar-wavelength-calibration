@@ -1,6 +1,7 @@
 """Tests for the atlas package."""
 import os
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 import pooch
@@ -18,10 +19,16 @@ from solar_wavelength_calibration.atlas.atlas import DEFAULT_POOCH_CACHE_DIR
 )
 def cache_dir(request, tmp_path) -> Path:
     override_cache_dir = request.param
-    if override_cache_dir:
-        os.environ[CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR] = str(tmp_path)
-        return tmp_path
-    return pooch.os_cache(DEFAULT_POOCH_CACHE_DIR)
+    match override_cache_dir:
+        case True:
+            cache_path = tmp_path
+            environ_dict = {CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR: str(cache_path)}
+        case False:
+            cache_path = pooch.os_cache(DEFAULT_POOCH_CACHE_DIR)
+            environ_dict = dict()
+
+    with mock.patch.dict(os.environ, os.environ | environ_dict):
+        yield cache_path
 
 
 @pytest.fixture(
