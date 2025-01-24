@@ -31,10 +31,19 @@ def cache_dir(request, tmp_path) -> Path:
         yield cache_path
 
 
+test_config = DownloadConfig(
+    base_url="doi:10.5281/zenodo.14728809",
+    telluric_reference_atlas_file_name="test_telluric_reference_atlas.npy",
+    telluric_reference_atlas_hash_id="md5:a06c6923b794479f2b0ac483733402a7",
+    solar_reference_atlas_file_name="test_solar_reference_atlas.npy",
+    solar_reference_atlas_hash_id="md5:d692bff029923e833f900ebc59c4435a",
+)
+
+
 @pytest.fixture(
     params=[
         pytest.param(None, id="default_config"),
-        pytest.param(default_config, id="custom_config"),
+        pytest.param(test_config, id="test_config"),
     ]
 )
 def config(request) -> DownloadConfig | None:
