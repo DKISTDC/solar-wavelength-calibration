@@ -1,39 +1,34 @@
 image: python:3.11
 definitions:
   steps:
+    - step: &download_execute_script
+        name: Download Script Execute Script
+        script:
+          - echo "Retrieving Script Execution Script"
+          - curl -fL https://getcli.jfrog.io | sh
+          - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/execute_script.sh
+          - cat ci_scripts/latest/execute_script.sh
+          - chmod 755 ci_scripts/latest/execute_script.sh
+        artifacts:
+          - ci_scripts/latest/execute_script.sh
     - step: &lint
         caches:
           - pip
         name: Lint
         script:
-          - echo "Retrieving and Executing Lint Script"
-          - curl -fL https://getcli.jfrog.io | sh
-          - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/lint_python.sh
-          - cat ci_scripts/latest/lint_python.sh
-          - chmod 755 ci_scripts/latest/lint_python.sh
-          - ./ci_scripts/latest/lint_python.sh
+          - ./ci_scripts/latest/execute_script.sh lint_python.sh
     - step: &scan
         caches:
           - pip
         name: Scan
         script:
-          - echo "Retrieving and Executing Scan Script"
-          - curl -fL https://getcli.jfrog.io | sh
-          - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/scan_python.sh
-          - cat ci_scripts/latest/scan_python.sh
-          - chmod 755 ci_scripts/latest/scan_python.sh
-          - ./ci_scripts/latest/scan_python.sh
+          - ./ci_scripts/latest/execute_script.sh scan_python.sh
     - step: &changelog
         caches:
           - pip
         name: Changelog
         script:
-          - echo "Retrieving and Executing Changelog Script"
-          - curl -fL https://getcli.jfrog.io | sh
-          - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/check_changelog.sh
-          - cat ci_scripts/latest/check_changelog.sh
-          - chmod 755 ci_scripts/latest/check_changelog.sh
-          - ./ci_scripts/latest/check_changelog.sh
+          - ./ci_scripts/latest/execute_script.sh check_changelog.sh
     - step: &test311
         caches:
           - pip
@@ -76,21 +71,17 @@ definitions:
         caches:
           - pip
         script:
-          - apt update && apt -y install graphviz
-          - pip install .[docs]
-          - sphinx-build --color -W --keep-going -b html docs docs/_build/html
+          - ./ci_scripts/latest/execute_script.sh test_sphinx.sh
     - step: &push
         caches:
           - pip
         name: Push
         script:
-          - pip install -U pip
-          - pip install build twine
-          - python -m build --outdir wheelhouse .
-          - python -m twine upload --skip-existing wheelhouse/*
+          - ./ci_scripts/latest/execute_script.sh push_python.sh
 
 pipelines:
   default:
+    - step: *download_execute_script
     - parallel:
       - step: *lint
       - step: *changelog
@@ -101,6 +92,7 @@ pipelines:
       - step: *scan
   tags:
     'v*':
+      - step: *download_execute_script
       - parallel:
           - step: *lint
           - step: *changelog
