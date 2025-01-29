@@ -7,11 +7,11 @@ import numpy as np
 import pooch
 import pytest
 
-from solar_wavelength_calibration.atlas import Atlas
-from solar_wavelength_calibration.atlas import default_config
-from solar_wavelength_calibration.atlas import DownloadConfig
+from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.atlas import CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR
+from solar_wavelength_calibration.atlas.atlas import default_config
 from solar_wavelength_calibration.atlas.atlas import DEFAULT_POOCH_CACHE_DIR
+from solar_wavelength_calibration.atlas.atlas import DownloadConfig
 
 
 @pytest.fixture(
