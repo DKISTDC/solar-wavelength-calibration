@@ -8,7 +8,7 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.optimize import differential_evolution
 from scipy.optimize import OptimizeResult
 
-from solar_wavelength_calibration.atlas import Atlas
+from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
 
 record_provenence = True
