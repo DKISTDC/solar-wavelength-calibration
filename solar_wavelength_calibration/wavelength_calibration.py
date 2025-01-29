@@ -97,10 +97,6 @@ def resample_fts_atlases(
     """Resample both atlases to be on the same, linear wavelength grid and select the portion of atlas that pertains to bandpass used."""
     solar_atlas_wavelength = atlas.solar_atlas_wavelength * u.nm
     telluric_atlas_wavelength = atlas.telluric_atlas_wavelength * u.nm
-    print(solar_atlas_wavelength)
-    print(telluric_atlas_wavelength)
-    print("a")
-    assert 1 == 13
 
     expected_wavelength_range = expected_wavelength_vector.max() - expected_wavelength_vector.min()
     min_wavelength = expected_wavelength_vector.min() - 0.25 * expected_wavelength_range
@@ -332,16 +328,5 @@ def fit_dispersion_axis_to_FTS(
         logger.info(
             f"Parameter: {parameter_names[p]},   Fit Result: {fit_result.x[p]},    Bounds: {bounds[p]}"
         )
-
-    """fit_amplitude = fitness(
-        fit_result.x,
-        spectrum,
-        fts_wave,
-        fts_telluric,
-        fts_solar,
-        order,
-        grating_constant,
-        doppler_shift.value,
-    )"""
 
     return fit_result
