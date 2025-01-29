@@ -21,7 +21,10 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "astropy >=6.1",
+    "astropy >= 6.1",
+    "numpy >= 1.26.4",
+    "pooch >= 1.8.0",
+    "pydantic >= 2.0",
 ]
 
 [project.urls]
@@ -55,8 +58,8 @@ markers = [
 
 [tool.coverage.run]
 omit = [
-    "solar-wavelength-calibration/tests/*",
-    "solar-wavelength-calibration/__init__.py",
+    "solar_wavelength_calibration/tests/*",
+    "solar_wavelength_calibration/__init__.py",
 ]
 
 [tool.coverage.report]
