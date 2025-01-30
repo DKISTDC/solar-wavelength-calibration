@@ -25,6 +25,8 @@ dependencies = [
     "numpy >= 1.26.4",
     "pooch >= 1.8.0",
     "pydantic >= 2.0",
+    "scipy >= 1.13.0",
+    "dkist-service-configuration >= 2.3.0",
 ]
 
 [project.urls]

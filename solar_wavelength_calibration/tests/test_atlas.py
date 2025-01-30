@@ -72,3 +72,15 @@ def test_atlas_repr():
     Then: the object should have the correct representation."""
     atlas = Atlas()
     assert isinstance(eval(repr(atlas)), Atlas)
+
+
+def test_atlas_min_bigger_than_max(atlas: Atlas):
+    """Given: An atlas object
+    When: The object is loaded
+    Then: The min should be larger than the max.
+    """
+    with pytest.raises(AssertionError):
+        assert atlas.telluric_atlas_wavelength.min() > atlas.telluric_atlas_wavelength.max()
+
+    with pytest.raises(AssertionError):
+        assert atlas.solar_atlas_wavelength.min() > atlas.solar_atlas_wavelength.max()

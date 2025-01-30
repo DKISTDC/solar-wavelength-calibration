@@ -96,7 +96,7 @@ class Atlas(AtlasBase):
         Return the wavelength array of the high-resolution solar atlas.
 
         The solar atlas provides detailed measurements across a wide range of wavelengths,
-        capturing the spectral features of the Sun with exceptional precision.
+        capturing the spectral features of the Sun with high precision.
         """
         return self._solar_atlas[0]
 
@@ -106,7 +106,7 @@ class Atlas(AtlasBase):
         Return the transmission array of the high-resolution solar atlas.
 
         The solar atlas provides detailed measurements across a wide range of wavelengths,
-        capturing the spectral features of the Sun with exceptional precision.
+        capturing the spectral features of the Sun with high precision.
         """
         return self._solar_atlas[1]
 
