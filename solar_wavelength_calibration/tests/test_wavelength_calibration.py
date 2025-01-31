@@ -70,7 +70,6 @@ def test_initial_alignment(atlas: AtlasBase):
     """
     spectrum = np.linspace(0, 1, 1000)
     expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
-    # get cropped atlases by inputting atlas object and indexing into that instead?
     cropped_solar_atlas_wave_air = atlas.solar_atlas_wavelength[1000:1500] * u.nm
     cropped_solar_atlas_trans_flipped = atlas.solar_atlas_transmission[1000:1500]
     cropped_telluric_atlas_wave = atlas.telluric_atlas_wavelength[1000:1500] * u.nm
