@@ -1,9 +1,10 @@
 """Wavelength calibration task."""
+import logging
+
 import astropy.units as u
 import numpy as np
 from astropy import constants as const
 from astropy.wcs import WCS
-from dkist_service_configuration.logging import logger
 from scipy.ndimage import gaussian_filter1d
 from scipy.optimize import differential_evolution
 from scipy.optimize import OptimizeResult
@@ -12,6 +13,8 @@ from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
 
 record_provenence = True
+
+logger = logging.getLogger(__name__)
 
 
 def calibrate_wavelength(
