@@ -1,10 +1,10 @@
 import astropy.units as u
 import numpy as np
 import pytest
-from build.lib.solar_wavelength_calibration.atlas.base import AtlasBase
 
 from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.atlas import DownloadConfig
+from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.wavelength_calibration import calibrate_wavelength
 from solar_wavelength_calibration.wavelength_calibration import initial_alignment
 from solar_wavelength_calibration.wavelength_calibration import resample_fts_atlases
