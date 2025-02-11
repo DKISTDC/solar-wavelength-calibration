@@ -12,8 +12,6 @@ from scipy.optimize import OptimizeResult
 from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
 
-record_provenence = True
-
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +28,7 @@ def calibrate_wavelength(
     """
     Wavelength calibration task.
 
+    #TODO: make descriptions more detailed
     Parameters
     ----------
     spectrum : np.ndarray
@@ -38,8 +37,8 @@ def calibrate_wavelength(
         The expected wavelength vector.
     dispersion : u.Quantity
         The dispersion of the grating.
-    alpha : float
-        The angle of incidence of the grating.
+    alpha : u.Quantity
+        The angle (in radians) of incidence of the grating.
     doppler_shift : u.Quantity
         The doppler shift of the spectrum (from .
     order : int
@@ -264,7 +263,7 @@ def fit_dispersion_axis_to_FTS(
     fts_telluric: np.ndarray,
     fts_solar: np.ndarray,
     dispersion: u.Quantity,
-    alpha: float,
+    alpha: u.Quantity,
     doppler_shift: u.Quantity,
     spectrum: np.ndarray,
     order: int,
@@ -291,7 +290,7 @@ def fit_dispersion_axis_to_FTS(
             dispersion.value + 0.05 * dispersion.value,
         ),
         # [radian] Incident angle range is +/- 5 degree from value in header
-        (np.rad2deg(alpha) - 5, np.rad2deg(alpha) + 5),
+        (np.rad2deg(alpha.value) - 5, np.rad2deg(alpha.value) + 5),
         # resolving power range
         (20000, 125000),
         # opacity factor bounds

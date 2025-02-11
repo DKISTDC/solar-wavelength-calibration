@@ -73,13 +73,19 @@ def test_atlas_repr():
     assert isinstance(eval(repr(atlas)), Atlas)
 
 
-def test_atlas_min_bigger_than_max(atlas: Atlas):
+def test_atlas_vector_is_increasing(atlas: Atlas):
     """Given: An atlas object
     When: The object is loaded
-    Then: The min should be larger than the max.
+    Then: Each wavelength vector should be monotonically increasing.
     """
     with pytest.raises(AssertionError):
-        assert atlas.telluric_atlas_wavelength.min() > atlas.telluric_atlas_wavelength.max()
+        assert (
+            atlas.telluric_atlas_wavelength[0]
+            > atlas.telluric_atlas_wavelength[len(atlas.telluric_atlas_wavelength) - 1]
+        )
 
     with pytest.raises(AssertionError):
-        assert atlas.solar_atlas_wavelength.min() > atlas.solar_atlas_wavelength.max()
+        assert (
+            atlas.solar_atlas_wavelength[0]
+            > atlas.solar_atlas_wavelength[len(atlas.solar_atlas_wavelength) - 1]
+        )

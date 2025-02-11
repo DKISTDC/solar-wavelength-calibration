@@ -1,0 +1,128 @@
+"""Objects for storing fit parameters."""
+from dataclasses import dataclass
+
+import numpy as np
+from lmfit import Parameters
+
+
+@dataclass
+class WavelengthCalibrationParameters:
+    """Docstring."""
+
+    crval1: float
+    dispersion: float
+    incident_light_angle: float
+    resolving_power: int
+    opacity_factor: float
+    straylight_fraction: float
+    unfit_1d_spectrum: np.ndarray
+    grating_constant: float
+    doppler_shift: float
+    order: int
+
+    @property
+    def lmfit_parameters(self) -> Parameters:
+        """Docstring."""
+        param = Parameters()
+        param.add(
+            "cravl1", vary=True, value=self.crval1, min=self.crval1 - 0.5, max=self.crval1 + 0.5
+        )
+        param.add(
+            "dispersion",
+            vary=True,
+            value=self.dispersion,
+            min=self.dispersion - 0.05 * self.dispersion,
+            max=self.dispersion + 0.05 * self.dispersion,
+        )
+        param.add(
+            "incident_light_angle",
+            vary=True,
+            value=self.incident_light_angle,
+            min=np.rad2deg(self.incident_light_angle) - 5,
+            max=np.rad2deg(self.incident_light_angle) + 5,
+        )
+        # TODO: add default values for resolving power, opacity factor, and straylight fraction that 'do nothing' (i.e. multiply by 1 or add 0 or something)
+        param.add(
+            "resolving_power",
+            vary=True,
+            value=self.resolving_power,
+            min=self.resolving_power - 50000,
+            max=self.resolving_power + 50000,
+        )
+        param.add(
+            "opacity_factor",
+            vary=True,
+            value=self.opacity_factor,
+            min=self.opacity_factor - 5,
+            max=self.opacity_factor + 5,
+        )
+        param.add(
+            "straylight_fraction",
+            vary=True,
+            value=self.straylight_fraction,
+            min=self.straylight_fraction - 0.25,
+            max=self.straylight_fraction + 0.25,
+        )
+        spectrum_percentile = np.nanpercentile(self.unfit_1d_spectrum, 75)
+        param.add(
+            "continuum_intensity_correction",
+            vary=True,
+            value=spectrum_percentile,
+            min=0.8 * spectrum_percentile,
+            max=1.2 * spectrum_percentile,
+        )
+        return param
+
+    @property
+    def constant_parameters(self) -> Parameters:
+        """Docstring."""
+        param = Parameters()
+        param.add("grating_constant", vary=False, value=self.grating_constant)
+        param.add("doppler_shift", vary=False, value=self.doppler_shift)
+        param.add("order", vary=False, value=self.order)
+        return param
+
+
+'''class WavelengthCalibrationParameters():
+    """Objects for initializing wavelength calibration parameters prior to a fit and storing the results after a fit."""
+
+    def __init__(self):
+        pass
+
+    @property
+    def crval1_range(self):
+        # [nm[ +\- 0.5 nm range used for finding CRVAL1
+        return (crval1 - 0.5, crval1 + 0.5)
+
+    @property
+    def dispersion_range(self):
+        # [nm/pix] 5% bounds on the dispersion at CRPIX1
+        return (
+            dispersion.value - 0.05 * dispersion.value,
+            dispersion.value + 0.05 * dispersion.value,
+        )
+
+    @property
+    def incident_angle_range(self):
+        # [radian] Incident angle range is +/- 5 degree from value in header
+        return (np.rad2deg(alpha.value) - 5, np.rad2deg(alpha.value) + 5)
+
+    @property
+    def resolving_power_range(self):
+        # resolving power range
+        return (20000, 125000)
+
+    @property
+    def opacity_factor_range(self):
+        # opacity factor bounds
+        return (0.0, 10)
+
+    @property
+    def straylight_fraction_range(self):
+        # straylight fraction
+        return (0.0, 0.5)
+
+    @property
+    def continuum_intensity_correction(self):
+        # continuum intensity correction
+        return (0.8 * np.nanpercentile(spectrum, 75), 1.2 * np.nanpercentile(spectrum, 75))'''
