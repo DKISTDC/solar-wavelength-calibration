@@ -7,6 +7,7 @@ import lmfit
 import numpy as np
 from lmfit import Parameters
 
+from solar_wavelength_calibration.atlas.atlas_prep import PrepareAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.fitting_core import fitness
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
@@ -20,17 +21,16 @@ class WaveCalFitter:
     def __init__(
         self,
         input_parameters: WavelengthCalibrationParameters,
-        target_atlas_wavelength: np.ndarray,
-        target_solar_atlas: np.ndarray,
-        target_telluric_atlas: np.ndarray,
+        target_atlas: PrepareAtlas,
         unfit_1d_spectrum: np.ndarray,
     ):
 
         self.lmfit_parameters = input_parameters.lmfit_parameters
         self.constant_parameters = input_parameters.constant_parameters
-        self.target_atlas_wavelength = target_atlas_wavelength
-        self.target_solar_atlas = target_solar_atlas
-        self.target_telluric_atlas = target_telluric_atlas
+        self.target_solar_atlas_wavelength = target_atlas.solar_atlas_wavelength
+        self.target_telluric_atlas_wavelength = target_atlas.telluric_atlas_wavelength
+        self.target_solar_atlas = target_atlas.solar_atlas
+        self.target_telluric_atlas = target_atlas.telluric_atlas
         self.unfit_1d_spectrum = unfit_1d_spectrum
 
         self.run_fit()
@@ -46,28 +46,19 @@ class WaveCalFitter:
             params_to_fit,
             fcn_args=(
                 self.unfit_1d_spectrum,
-                self.target_atlas_wavelength,
+                self.target_solar_atlas_wavelength,
+                self.target_telluric_atlas_wavelength,
                 self.target_telluric_atlas,
                 self.target_solar_atlas,
             ),
             fcn_kws=constant_parameters,
         )
-        fit_result = minimizer.minimize(
-            method="leastsq", params=params_to_fit, **constant_parameters
-        )
+        fit_result = minimizer.minimize(method="leastsq", params=params_to_fit)
         logger.info("Finished fit.")
-        fit_result_params = fit_result.params  # should be a dictionary
+        fit_result_params = fit_result.params.valuesdict()  # should be a dictionary
 
-        print(fit_result_params)
-        assert 1 == 13
+        logger.info("Fitted Values:")
+        for (param, fitted_value) in fit_result_params.items():
+            logger.info(f"Parameter: {param},       Fit Result: {fitted_value}")
 
-        # TODO: return fit result as a dictionary
-
-        return fit_result
-
-        """logger.info("Fitted Values:")
-        logger.info(" ")
-        for p in range(len(parameter_names)):
-            logger.info(
-                f"Parameter: {parameter_names[p]},   Fit Result: {fit_result.x[p]},    Bounds: {bounds[p]}"
-            )"""
+        return fit_result_params

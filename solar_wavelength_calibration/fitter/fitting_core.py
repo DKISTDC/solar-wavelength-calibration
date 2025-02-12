@@ -10,7 +10,8 @@ from scipy.ndimage import gaussian_filter1d
 def fitness(
     params: Parameters,
     spectrum: np.ndarray,
-    target_atlas_wavelength: np.ndarray,
+    target_solar_atlas_wavelength: np.ndarray,
+    target_telluric_atlas_wavelength: np.ndarray,
     target_telluric_atlas: np.ndarray,
     target_solar_atlas: np.ndarray,
     grating_constant: float,
@@ -41,13 +42,13 @@ def fitness(
     """
     # TODO: update these parameter names to the same as what is used across the module
     param_vals = params.valuesdict()
-    crval1 = param_vals["crval1"]
-    cdelt1 = param_vals["dispersion"]
-    incident_light_angle = param_vals["incident_angle"]
-    resolving_power = param_vals["resolving_power"]
-    opacity = param_vals["opacity_factor"]
-    stray_light_frac = param_vals["straylight_fraction"]
-    continuum_amplitude = param_vals["continuum_intensity_correction"]
+    crval1 = param_vals.get("cravl1")
+    cdelt1 = param_vals.get("dispersion")
+    incident_light_angle = param_vals.get("incident_light_angle")
+    resolving_power = param_vals.get("resolving_power")
+    opacity = param_vals.get("opacity_factor")
+    stray_light_frac = param_vals.get("straylight_fraction")
+    continuum_amplitude = param_vals.get("continuum_intensity_correction")
 
     # calculate the spectral axis
     # Representations of spectral coordinates in FITS
@@ -60,8 +61,8 @@ def fitness(
         "CTYPE1": "AWAV-GRA",  # Grating dispersion function with air wavelengths
         "CUNIT1": "nm",  # Dispersion units
         "CRPIX1": number_of_wave_pix // 2 + 1,  # Reference pixel [pix]
-        "PV1_0": grating_constant,  # Grating density
-        "PV1_1": order,  # Diffraction order
+        "PV1_0": grating_constant.value,  # Grating density
+        "PV1_1": order.value,  # Diffraction order
         "CRVAL1": crval1,  # Reference value [nm] (<<<< TO BE OPTMIZED <<<<<<)
         "CDELT1": cdelt1,  # Linear dispersion [nm/pix] (<<<< TO BE OPTMIZED <<<<<<)
         "PV1_2": incident_light_angle,  # Incident angle [deg] (<<<< TO BE OPTMIZED <<<<<<)
@@ -79,14 +80,14 @@ def fitness(
 
     # interpolate the telluric spectral atlas onto the new wavelength axis and scale by the opacity value that is being optimized
     fts_atmosphere_interp = np.interp(
-        wavelength_vector, target_atlas_wavelength, target_telluric_atlas
+        wavelength_vector, target_telluric_atlas_wavelength, target_telluric_atlas
     )
     fts_telluric_interp = np.exp(opacity * np.log(fts_atmosphere_interp))  # in parameters
 
     # interpolate the solar spectral atlas onto the new wavelength axis and apply a shift according to the Doppler shift due to orbital motions
     fts_solar_interp = np.interp(
         wavelength_vector,
-        target_atlas_wavelength + doppler_shift / (const.c.to("km/s")).value * crval1,
+        target_solar_atlas_wavelength + doppler_shift.value / (const.c.to("km/s")).value * crval1,
         target_solar_atlas,
     )
 
@@ -100,7 +101,6 @@ def fitness(
     # convolution for spectrograph line spread function
     fit_amplitude = gaussian_filter1d(fit_amplitude, kern_pix)
 
-    # chisquare calculation for fit metric
-    res_amplitude = np.sum((spectrum - fit_amplitude) ** 2)
+    res_amplitude = spectrum - fit_amplitude
 
     return res_amplitude
