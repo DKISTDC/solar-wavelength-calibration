@@ -17,7 +17,7 @@ def fitness(
     grating_constant: float,
     order: int,
     doppler_shift: float,
-):
+) -> np.ndarray:
     """Compute fitness function for fitting wavecal parameters.
 
     Parameters
@@ -26,29 +26,37 @@ def fitness(
         Object containing information about the parameters to be used in the fit
 
     Spectrum
-        An object with the input (unfitted) 1D spectrum.
+        An object with the input (unfit) 1D spectrum.
 
-    grating_constant
+    target_solar_atlas_wavelength
+        Solar FTS Atlas wavelength object cropped around the input data.
 
-    order
-
-    target_atlas_wavelength
+    target_telluric_atlas_wavelength
+        Telluric FTS Atlas wavelength object cropped around the input data.
 
     target_telluric_atlas
+        Telluric FTS atlas transmission object corresponding to target_telluric_atlas_wavelength object.
 
     target_solar_atlas
+        Solar FTS atlas transmission object corresponding to target_solar_atlas_wavelength object.
+
+    grating_constant
+        Instrument specific grating constant.
+
+    order
+        Instrument specific optical order.
 
     doppler_shift
+        Calculated doppler shift of DKIST at time of observation.
     """
-    # TODO: update these parameter names to the same as what is used across the module
     param_vals = params.valuesdict()
     crval1 = param_vals.get("cravl1")
-    cdelt1 = param_vals.get("dispersion")
+    dispersion = param_vals.get("dispersion")
     incident_light_angle = param_vals.get("incident_light_angle")
     resolving_power = param_vals.get("resolving_power")
     opacity = param_vals.get("opacity_factor")
-    stray_light_frac = param_vals.get("straylight_fraction")
-    continuum_amplitude = param_vals.get("continuum_intensity_correction")
+    stray_light_fraction = param_vals.get("straylight_fraction")
+    continuum_intensity_correction = param_vals.get("continuum_intensity_correction")
 
     # calculate the spectral axis
     # Representations of spectral coordinates in FITS
@@ -64,7 +72,7 @@ def fitness(
         "PV1_0": grating_constant.value,  # Grating density
         "PV1_1": order.value,  # Diffraction order
         "CRVAL1": crval1,  # Reference value [nm] (<<<< TO BE OPTMIZED <<<<<<)
-        "CDELT1": cdelt1,  # Linear dispersion [nm/pix] (<<<< TO BE OPTMIZED <<<<<<)
+        "CDELT1": dispersion,  # Linear dispersion [nm/pix] (<<<< TO BE OPTMIZED <<<<<<)
         "PV1_2": incident_light_angle,  # Incident angle [deg] (<<<< TO BE OPTMIZED <<<<<<)
     }
 
@@ -76,7 +84,7 @@ def fitness(
     # Gaussian convolution of the FTS atlas
     fwhm_wavelength = np.divide(crval1, resolving_power)  # both in parameters
     sigma_wavelength = fwhm_wavelength / (2.0 * np.sqrt(2.0 * np.log(2)))
-    kern_pix = sigma_wavelength / np.abs(cdelt1)
+    kern_pix = sigma_wavelength / np.abs(dispersion)
 
     # interpolate the telluric spectral atlas onto the new wavelength axis and scale by the opacity value that is being optimized
     fts_atmosphere_interp = np.interp(
@@ -94,9 +102,11 @@ def fitness(
     # apply telluric absorption spectrum to solar spectrum
     fts_modulated = fts_telluric_interp * fts_solar_interp
     # add flat value of straylight contamination
-    fts_modulated_with_straylight = (fts_modulated + stray_light_frac) / (1.0 + stray_light_frac)
+    fts_modulated_with_straylight = (fts_modulated + stray_light_fraction) / (
+        1.0 + stray_light_fraction
+    )
     # scale for total intensity of the continuum
-    fit_amplitude = fts_modulated_with_straylight * continuum_amplitude
+    fit_amplitude = fts_modulated_with_straylight * continuum_intensity_correction
 
     # convolution for spectrograph line spread function
     fit_amplitude = gaussian_filter1d(fit_amplitude, kern_pix)

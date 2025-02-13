@@ -1,14 +1,10 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 import logging
-from keyword import kwlist
 
-import astropy.units as u
 import lmfit
 import numpy as np
-from lmfit import Parameters
 
 from solar_wavelength_calibration.atlas.atlas_prep import PrepareAtlas
-from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.fitting_core import fitness
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
@@ -16,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class WaveCalFitter:
-    """Object that brings together data, models (atlases), and fit paramters to run fits."""
+    """Object that brings together data, models (atlases), and fit parameters to run fits."""
 
     def __init__(
         self,
@@ -36,7 +32,7 @@ class WaveCalFitter:
         self.run_fit()
 
     def run_fit(self) -> dict:
-        """Docstring."""
+        """Send the fitter on its way."""
         params_to_fit = self.lmfit_parameters
         constant_parameters = self.constant_parameters
 
@@ -55,7 +51,7 @@ class WaveCalFitter:
         )
         fit_result = minimizer.minimize(method="leastsq", params=params_to_fit)
         logger.info("Finished fit.")
-        fit_result_params = fit_result.params.valuesdict()  # should be a dictionary
+        fit_result_params = fit_result.params.valuesdict()
 
         logger.info("Fitted Values:")
         for (param, fitted_value) in fit_result_params.items():
