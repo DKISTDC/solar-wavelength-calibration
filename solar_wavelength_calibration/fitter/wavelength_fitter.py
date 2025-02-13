@@ -33,7 +33,7 @@ class WaveCalFitter:
         self.unfit_1d_spectrum = unfit_1d_spectrum
 
         fts_wave, fts_solar, fts_telluric = self.prepare_atlas()
-        self.run_fit(fts_wave, fts_solar, fts_telluric)
+        self.fit_result_params = self.run_fit(fts_wave, fts_solar, fts_telluric)
 
     def prepare_atlas(self):
         """Prepare the atlas by roughly matching the atlas to the raw spectrum. This is done in 2 steps.
