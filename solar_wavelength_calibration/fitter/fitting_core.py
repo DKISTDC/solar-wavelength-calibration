@@ -10,10 +10,9 @@ from scipy.ndimage import gaussian_filter1d
 def fitness(
     params: Parameters,
     spectrum: np.ndarray,
-    target_solar_atlas_wavelength: np.ndarray,
-    target_telluric_atlas_wavelength: np.ndarray,
-    target_telluric_atlas: np.ndarray,
-    target_solar_atlas: np.ndarray,
+    fts_wave: np.ndarray,
+    fts_telluric: np.ndarray,
+    fts_solar: np.ndarray,
     grating_constant: float,
     order: int,
     doppler_shift: float,
@@ -28,17 +27,14 @@ def fitness(
     Spectrum
         An object with the input (unfit) 1D spectrum.
 
-    target_solar_atlas_wavelength
-        Solar FTS Atlas wavelength object cropped around the input data.
+    fts_wave
+        FTS Atlas wavelength object cropped around the input data.
 
-    target_telluric_atlas_wavelength
-        Telluric FTS Atlas wavelength object cropped around the input data.
+    fts_telluric
+        Telluric FTS atlas transmission object corresponding to fts_wave object.
 
-    target_telluric_atlas
-        Telluric FTS atlas transmission object corresponding to target_telluric_atlas_wavelength object.
-
-    target_solar_atlas
-        Solar FTS atlas transmission object corresponding to target_solar_atlas_wavelength object.
+    fts_solar
+        Solar FTS atlas transmission object corresponding to fts_wave object.
 
     grating_constant
         Instrument specific grating constant.
@@ -87,16 +83,14 @@ def fitness(
     kern_pix = sigma_wavelength / np.abs(dispersion)
 
     # interpolate the telluric spectral atlas onto the new wavelength axis and scale by the opacity value that is being optimized
-    fts_atmosphere_interp = np.interp(
-        wavelength_vector, target_telluric_atlas_wavelength, target_telluric_atlas
-    )
+    fts_atmosphere_interp = np.interp(wavelength_vector, fts_wave, fts_telluric)
     fts_telluric_interp = np.exp(opacity * np.log(fts_atmosphere_interp))  # in parameters
 
     # interpolate the solar spectral atlas onto the new wavelength axis and apply a shift according to the Doppler shift due to orbital motions
     fts_solar_interp = np.interp(
         wavelength_vector,
-        target_solar_atlas_wavelength + doppler_shift.value / (const.c.to("km/s")).value * crval1,
-        target_solar_atlas,
+        fts_wave + doppler_shift.value / (const.c.to("km/s")).value * crval1,
+        fts_solar,
     )
 
     # apply telluric absorption spectrum to solar spectrum

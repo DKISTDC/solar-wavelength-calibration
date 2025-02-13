@@ -1,10 +1,11 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 import logging
 
+import astropy.units as u
 import lmfit
 import numpy as np
 
-from solar_wavelength_calibration.atlas.atlas_prep import PrepareAtlas
+from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.fitting_core import fitness
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
@@ -17,21 +18,89 @@ class WaveCalFitter:
     def __init__(
         self,
         input_parameters: WavelengthCalibrationParameters,
-        target_atlas: PrepareAtlas,
+        atlas: AtlasBase,
+        expected_wavelength_vector: np.ndarray,
         unfit_1d_spectrum: np.ndarray,
     ):
 
         self.lmfit_parameters = input_parameters.lmfit_parameters
         self.constant_parameters = input_parameters.constant_parameters
-        self.target_solar_atlas_wavelength = target_atlas.solar_atlas_wavelength
-        self.target_telluric_atlas_wavelength = target_atlas.telluric_atlas_wavelength
-        self.target_solar_atlas = target_atlas.solar_atlas
-        self.target_telluric_atlas = target_atlas.telluric_atlas
+        self.telluric_atlas_wavelength = atlas.telluric_atlas_wavelength
+        self.telluric_atlas_transmission = atlas.telluric_atlas_transmission
+        self.solar_atlas_wavelength = atlas.solar_atlas_wavelength
+        self.solar_atlas_transmission = atlas.solar_atlas_transmission
+        self.expected_wavelength_vector = expected_wavelength_vector
         self.unfit_1d_spectrum = unfit_1d_spectrum
 
-        self.run_fit()
+        fts_wave, fts_solar, fts_telluric = self.prepare_atlas()
+        self.run_fit(fts_wave, fts_solar, fts_telluric)
 
-    def run_fit(self) -> dict:
+    def prepare_atlas(self):
+        """Prepare the atlas by roughly matching the atlas to the raw spectrum. This is done in 2 steps.
+
+        1. Resample both atlases to be on the same, linear wavelength grid and select the portion of atlas that
+        pertains to bandpass used in the data.
+
+        2. Determine a shift of the preliminary wavelength vector so that it generally aligns with the data itself.
+
+        """
+        # Resample atlases
+        solar_atlas_wavelength = self.solar_atlas_wavelength * u.nm
+        telluric_atlas_wavelength = self.telluric_atlas_wavelength * u.nm
+
+        expected_wavelength_range = (
+            self.expected_wavelength_vector.max() - self.expected_wavelength_vector.min()
+        )
+        min_wavelength = self.expected_wavelength_vector.min() - 0.25 * expected_wavelength_range
+        max_wavelength = self.expected_wavelength_vector.max() + 0.25 * expected_wavelength_range
+
+        cropped_telluric_mask = (telluric_atlas_wavelength > min_wavelength) * (
+            telluric_atlas_wavelength < max_wavelength
+        )
+        cropped_telluric_atlas_wavelength = telluric_atlas_wavelength[cropped_telluric_mask]
+        cropped_telluric_atlas_transmission = self.telluric_atlas_transmission[
+            cropped_telluric_mask
+        ]
+
+        cropped_solar_mask = (solar_atlas_wavelength > min_wavelength) * (
+            solar_atlas_wavelength < max_wavelength
+        )
+        cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask]
+        cropped_solar_atlas_transmission = self.solar_atlas_transmission[cropped_solar_mask]
+
+        # Determine shift
+        shifts = np.linspace(-2, 2, 550) * u.nm
+        merit = np.zeros(len(shifts))
+        for n, shift in enumerate(shifts):
+            preliminary_wavelength = self.expected_wavelength_vector + shift
+            fts_solar = np.interp(
+                preliminary_wavelength,
+                cropped_solar_atlas_wavelength,
+                cropped_solar_atlas_transmission,
+            )
+            fts_telluric = np.interp(
+                preliminary_wavelength,
+                cropped_telluric_atlas_wavelength,
+                cropped_telluric_atlas_transmission,
+            )
+            # calculate a merit value to be minimized
+            merit[n] = np.std(self.unfit_1d_spectrum - fts_solar * fts_telluric)
+
+        # get minimum
+        shift = shifts[np.argmin(merit)]
+
+        # recalculate spectral axis and atlas spectrum for the best shift value
+        fts_wave = self.expected_wavelength_vector + shift
+        fts_solar = np.interp(
+            fts_wave, cropped_solar_atlas_wavelength, cropped_solar_atlas_transmission
+        )
+        fts_telluric = np.interp(
+            fts_wave, cropped_telluric_atlas_wavelength, cropped_telluric_atlas_transmission
+        )
+
+        return fts_wave.value, fts_solar, fts_telluric
+
+    def run_fit(self, fts_wave, fts_solar, fts_telluric) -> dict:
         """Send the fitter on its way."""
         params_to_fit = self.lmfit_parameters
         constant_parameters = self.constant_parameters
@@ -42,10 +111,9 @@ class WaveCalFitter:
             params_to_fit,
             fcn_args=(
                 self.unfit_1d_spectrum,
-                self.target_solar_atlas_wavelength,
-                self.target_telluric_atlas_wavelength,
-                self.target_telluric_atlas,
-                self.target_solar_atlas,
+                fts_wave,
+                fts_telluric,
+                fts_solar,
             ),
             fcn_kws=constant_parameters,
         )
