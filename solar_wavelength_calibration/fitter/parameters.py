@@ -3,22 +3,24 @@ from dataclasses import dataclass
 
 import numpy as np
 from lmfit import Parameters
+from numpydantic import NDArray
+from pydantic import BaseModel
 
 
 @dataclass
-class WavelengthCalibrationParameters:
+class WavelengthCalibrationParameters(BaseModel):
     """Object for initializing the fit parameters prior to a fit."""
 
     crval1: float
     dispersion: float
     incident_light_angle: float
-    resolving_power: int
-    opacity_factor: float
-    straylight_fraction: float
-    unfit_1d_spectrum: np.ndarray
+    unfit_1d_spectrum: NDArray
     grating_constant: float
     doppler_shift: float
     order: int
+    resolving_power: int = 1
+    opacity_factor: float = 1
+    straylight_fraction: float = 1
 
     @property
     def lmfit_parameters(self) -> Parameters:
