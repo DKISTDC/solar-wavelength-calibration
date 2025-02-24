@@ -67,9 +67,9 @@ def fitness(
         "CRPIX1": number_of_wave_pix // 2 + 1,  # Reference pixel [pix]
         "PV1_0": grating_constant.value,  # Grating density
         "PV1_1": order.value,  # Diffraction order
-        "CRVAL1": crval1,  # Reference value [nm] (<<<< TO BE OPTMIZED <<<<<<)
-        "CDELT1": dispersion,  # Linear dispersion [nm/pix] (<<<< TO BE OPTMIZED <<<<<<)
-        "PV1_2": incident_light_angle,  # Incident angle [deg] (<<<< TO BE OPTMIZED <<<<<<)
+        "CRVAL1": crval1,  # Reference value [nm] (<<<< TO BE OPTIMIZED <<<<<<)
+        "CDELT1": dispersion,  # Linear dispersion [nm/pix] (<<<< TO BE OPTIMIZED <<<<<<)
+        "PV1_2": incident_light_angle,  # Incident angle [deg] (<<<< TO BE OPTIMIZED <<<<<<)
     }
 
     non_linear_wcs = WCS(non_linear_header)

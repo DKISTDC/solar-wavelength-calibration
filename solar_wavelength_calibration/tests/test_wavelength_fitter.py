@@ -1,88 +1,11 @@
 import astropy.units as u
 import numpy as np
 import pytest
-from lmfit import Parameters
+from pydantic import ValidationError
 
-from solar_wavelength_calibration.atlas.atlas import Atlas
-from solar_wavelength_calibration.atlas.atlas import DownloadConfig
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.wavelength_fitter import WaveCalFitter
-
-
-@pytest.fixture(
-    params=[
-        pytest.param(None, id="default_config"),
-    ],
-    scope="session",
-)
-def config(request) -> DownloadConfig | None:
-    return request.param
-
-
-@pytest.fixture(scope="session")
-def atlas(config: DownloadConfig | None) -> Atlas:
-    return Atlas(config=config)
-
-
-@pytest.fixture(scope="session")
-def test_unfit_1d_spectrum():
-    return np.linspace(0, 1, 1000)
-
-
-@pytest.fixture(scope="session")
-def test_dispersion():
-    """Dummy dispersion value."""
-    return 0.004401829598401599 * u.nm
-
-
-@pytest.fixture(scope="session")
-def test_incident_light_angle():
-    """Dummy incident_light_angle value."""
-    return 0.9949384642711658 * u.rad
-
-
-@pytest.fixture(scope="session")
-def test_grating_constant():
-    """Dummy grating constant."""
-    return 31600.0
-
-
-@pytest.fixture(scope="session")
-def test_doppler_shift():
-    """Dummy doppler shift value."""
-    return -0.4281437757265212
-
-
-@pytest.fixture(scope="session")
-def test_order():
-    """Dummy order."""
-    return 52
-
-
-@pytest.fixture(scope="session")
-def parameters(
-    test_unfit_1d_spectrum,
-    test_dispersion,
-    test_incident_light_angle,
-    test_grating_constant,
-    test_doppler_shift,
-    test_order,
-    atlas: AtlasBase,
-) -> Parameters:
-    params = WavelengthCalibrationParameters(
-        crval1=atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1],
-        dispersion=test_dispersion.value,
-        incident_light_angle=test_incident_light_angle.value,
-        resolving_power=72500,
-        opacity_factor=5.0,
-        straylight_fraction=0.25,
-        unfit_1d_spectrum=test_unfit_1d_spectrum,
-        grating_constant=test_grating_constant,
-        doppler_shift=test_doppler_shift,
-        order=test_order,
-    )
-    return params
 
 
 def test_wavecal_fitter(
@@ -90,9 +13,10 @@ def test_wavecal_fitter(
     test_unfit_1d_spectrum,
     atlas: AtlasBase,
     test_dispersion,
+    test_parameters_dict,
 ):
     """
-    Given:
+    Given: The correct WaveCalFitter inputs (data, models, and fit parameters)
     When: Initializing a WaveCalFitter object with these inputs
     Then: Everything needed for the fit is correctly set up
     """
@@ -105,43 +29,110 @@ def test_wavecal_fitter(
     )
 
     # test that values have been fit (i.e. changed)
-    assert fitter.fit_result_params.get("dispersion") != test_dispersion
+    assert fitter._fit_result_params.get("dispersion") != test_dispersion
     assert (
-        fitter.fit_result_params.get("crval1")
+        fitter._fit_result_params.get("crval1")
         != atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1]
     )
 
     # test that the same amount of parameters we get out of the fit is the same number that we put in
-    assert len(fitter.fit_result_params) == len(parameters.lmfit_parameters)
+    assert len(fitter._fit_result_params) == len(parameters.lmfit_parameters)
 
     # TODO: test that wavecal outputs are what we expected
 
 
-def test_incorrect_atlas():
-    pass
+def test_incorrect_atlas(parameters: WavelengthCalibrationParameters, test_unfit_1d_spectrum):
+    """
+    Given: An incorrect atlas (i.e. a random array of numbers)
+    When: Initializing a WaveCalFitter object
+    Then: Raise a ValidationError
+    """
+    test_expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
+    atlas = np.linspace(1000, 3000, 1000) * u.nm
+    with pytest.raises(ValidationError, match="Input should be an instance of AtlasBase"):
+        WaveCalFitter(
+            input_parameters=parameters,
+            atlas=atlas,
+            expected_wavelength_vector=test_expected_wavelength_vector,
+            unfit_1d_spectrum=test_unfit_1d_spectrum,
+        )
 
 
-def test_dispersion_not_fit():
-    pass
+def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas: AtlasBase):
+    """
+    Given: Correct input parameters, but we don't want to fit the dispersion
+    When: Initializing a WaveCalFitter object
+    Then: The dispersion value has not changed
+    """
+    initialized_parameters = WavelengthCalibrationParameters(
+        crval1=test_parameters_dict.get("crval1"),
+        dispersion=test_parameters_dict.get("dispersion"),
+        incident_light_angle=test_parameters_dict.get("incident_light_angle"),
+        resolving_power=test_parameters_dict.get("resolving_power"),
+        opacity_factor=test_parameters_dict.get("opacity_factor"),
+        straylight_fraction=test_parameters_dict.get("straylight_fraction"),
+        unfit_1d_spectrum=test_parameters_dict.get("unfit_1d_spectrum"),
+        grating_constant=test_parameters_dict.get("grating_constant"),
+        doppler_shift=test_parameters_dict.get("doppler_shift"),
+        order=test_parameters_dict.get("order"),
+        fit_dispersion=False,
+    )
+
+    test_expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
+    fit_result = WaveCalFitter(
+        input_parameters=initialized_parameters,
+        atlas=atlas,
+        expected_wavelength_vector=test_expected_wavelength_vector,
+        unfit_1d_spectrum=test_unfit_1d_spectrum,
+    )
+
+    # make sure that the dispersion was not fit (wasn't changed)
+    assert test_parameters_dict.get("dispersion") == fit_result._fit_result_params.get("dispersion")
 
 
-def test_expected_wavelength_and_unfit_spectrum_different_lengths():
-    pass
+def test_expected_wavelength_and_unfit_spectrum_different_lengths(
+    parameters: WavelengthCalibrationParameters, test_unfit_1d_spectrum, atlas: AtlasBase
+):
+    """
+    Given: An expected_wavelength_vector and unfit_1d_spectrum vector that are not of the same size
+    When: Initializing a WaveCalFitter object
+    Then: Raise an error
+    """
+    test_expected_wavelength_vector_small = np.linspace(1500, 2000, 100) * u.nm
+    with pytest.raises(ValueError, match="operands could not be broadcast together"):
+        WaveCalFitter(
+            input_parameters=parameters,
+            atlas=atlas,
+            expected_wavelength_vector=test_expected_wavelength_vector_small,
+            unfit_1d_spectrum=test_unfit_1d_spectrum,
+        )
 
 
-def test_fit_is_correct(atlas: AtlasBase):
-    # shift atlas by known amount
-    shift = 1.70856 * u.nm
-    shifted_atlas = atlas.solar_atlas_wavelength + shift
-    # add noise
-    # do a fit
-    WaveCalFitter
-    # see if you get your shift back
+def test_fit_is_correct(
+    parameters: WavelengthCalibrationParameters, test_unfit_1d_spectrum, atlas: AtlasBase
+):
+    """
+    Given:
+    When:
+    Then:
+    """
+    test_expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
+    fitter = WaveCalFitter(
+        input_parameters=parameters,
+        atlas=atlas,
+        expected_wavelength_vector=test_expected_wavelength_vector,
+        unfit_1d_spectrum=test_unfit_1d_spectrum,
+    )
 
 
 def test_prepare_atlas(
     parameters: WavelengthCalibrationParameters, test_unfit_1d_spectrum, atlas: AtlasBase
 ):
+    """
+    Given: The correct WaveCalFitter inputs (data, models, and fit parameters)
+    When: Preparing the atlas for the fit
+    Then: Make sure that a sample of the atlas is taken, and make sure that it is the correct sample
+    """
     test_expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
     fitter = WaveCalFitter(
         input_parameters=parameters,

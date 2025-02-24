@@ -1,13 +1,10 @@
 """Objects for storing fit parameters."""
-from dataclasses import dataclass
-
 import numpy as np
 from lmfit import Parameters
 from numpydantic import NDArray
 from pydantic import BaseModel
 
 
-@dataclass
 class WavelengthCalibrationParameters(BaseModel):
     """Object for initializing the fit parameters prior to a fit."""
 
@@ -21,6 +18,7 @@ class WavelengthCalibrationParameters(BaseModel):
     resolving_power: int = 1
     opacity_factor: float = 1
     straylight_fraction: float = 1
+    fit_dispersion: bool = True
 
     @property
     def lmfit_parameters(self) -> Parameters:
@@ -31,7 +29,7 @@ class WavelengthCalibrationParameters(BaseModel):
         )
         param.add(
             "dispersion",
-            vary=True,
+            vary=self.fit_dispersion,
             value=self.dispersion,
             min=self.dispersion - 0.05 * self.dispersion,
             max=self.dispersion + 0.05 * self.dispersion,
@@ -43,7 +41,6 @@ class WavelengthCalibrationParameters(BaseModel):
             min=np.rad2deg(self.incident_light_angle) - 5,
             max=np.rad2deg(self.incident_light_angle) + 5,
         )
-        # TODO: add default values for resolving power, opacity factor, and straylight fraction that 'do nothing' (i.e. multiply by 1 or add 0 or something)
         param.add(
             "resolving_power",
             vary=True,
