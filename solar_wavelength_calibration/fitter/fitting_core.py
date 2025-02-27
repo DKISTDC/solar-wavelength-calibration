@@ -65,8 +65,8 @@ def fitness(
         "CTYPE1": "AWAV-GRA",  # Grating dispersion function with air wavelengths
         "CUNIT1": "nm",  # Dispersion units
         "CRPIX1": number_of_wave_pix // 2 + 1,  # Reference pixel [pix]
-        "PV1_0": grating_constant.value,  # Grating density
-        "PV1_1": order.value,  # Diffraction order
+        "PV1_0": grating_constant,  # Grating density
+        "PV1_1": order,  # Diffraction order
         "CRVAL1": crval1,  # Reference value [nm] (<<<< TO BE OPTIMIZED <<<<<<)
         "CDELT1": dispersion,  # Linear dispersion [nm/pix] (<<<< TO BE OPTIMIZED <<<<<<)
         "PV1_2": incident_light_angle,  # Incident angle [deg] (<<<< TO BE OPTIMIZED <<<<<<)
@@ -89,7 +89,7 @@ def fitness(
     # interpolate the solar spectral atlas onto the new wavelength axis and apply a shift according to the Doppler shift due to orbital motions
     fts_solar_interp = np.interp(
         wavelength_vector,
-        fts_wave + doppler_shift.value / (const.c.to_value("km/s")) * crval1,
+        fts_wave + doppler_shift / (const.c.to_value("km/s")) * crval1,
         fts_solar,
     )
 

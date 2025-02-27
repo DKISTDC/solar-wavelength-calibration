@@ -92,6 +92,6 @@ def test_default_parameters(atlas: AtlasBase, test_parameters_dict):
     initialized_params_dict = initialized_parameters.lmfit_parameters.valuesdict()
     assert initialized_params_dict["resolving_power"] == 1
     assert initialized_params_dict["opacity_factor"] == 1
-    assert initialized_params_dict["straylight_fraction"] == 1
+    assert initialized_params_dict["straylight_fraction"] == 0
     # make sure than 7 parameters were added into lmfit_parameters [crval1, dispersion, incident_light_angle, resolving_power, opacity_factor, straylight_fraction, unfit_1d_spectrum]
     assert len(initialized_parameters.lmfit_parameters.valuesdict()) == 7

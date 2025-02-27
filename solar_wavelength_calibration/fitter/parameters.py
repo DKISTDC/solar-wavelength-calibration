@@ -17,7 +17,7 @@ class WavelengthCalibrationParameters(BaseModel):
     order: int
     resolving_power: int = 1
     opacity_factor: float = 1
-    straylight_fraction: float = 1
+    straylight_fraction: float = 0
     fit_dispersion: bool = True
 
     @property
@@ -73,10 +73,11 @@ class WavelengthCalibrationParameters(BaseModel):
         return param
 
     @property
-    def constant_parameters(self) -> Parameters:
-        """Create a single lmfit `Parameters` object with correct starting values for the constant instrument specific parameters that will not vary."""
-        param = Parameters()
-        param.add("grating_constant", vary=False, value=self.grating_constant)
-        param.add("doppler_shift", vary=False, value=self.doppler_shift)
-        param.add("order", vary=False, value=self.order)
-        return param
+    def constant_parameters(self) -> dict:
+        """Create a single dictionary with correct starting values for the constant instrument specific parameters that will not vary."""
+        # Initialize a dict to hold the constant parameters and their values
+        constant_params = {}
+        constant_params["grating_constant"] = self.grating_constant
+        constant_params["doppler_shift"] = self.doppler_shift
+        constant_params["order"] = self.order
+        return constant_params
