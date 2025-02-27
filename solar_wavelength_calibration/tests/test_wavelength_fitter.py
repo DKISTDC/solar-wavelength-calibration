@@ -29,14 +29,14 @@ def test_wavecal_fitter(
     )
 
     # test that values have been fit (i.e. changed)
-    assert fitter._fit_result_params.get("dispersion") != test_dispersion
+    assert fitter.fit_result_params.get("dispersion") != test_dispersion
     assert (
-        fitter._fit_result_params.get("crval1")
+        fitter.fit_result_params.get("crval1")
         != atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1]
     )
 
     # test that the same amount of parameters we get out of the fit is the same number that we put in
-    assert len(fitter._fit_result_params) == len(parameters.lmfit_parameters)
+    assert len(fitter.fit_result_params) == len(parameters.lmfit_parameters)
 
     # TODO: test that wavecal outputs are what we expected
 
@@ -49,7 +49,7 @@ def test_incorrect_atlas(parameters: WavelengthCalibrationParameters, test_unfit
     """
     test_expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
     atlas = np.linspace(1000, 3000, 1000) * u.nm
-    with pytest.raises(ValidationError, match="Input should be an instance of AtlasBase"):
+    with pytest.raises(ValueError, match="atlas is not an instance of AtlasBase"):
         WaveCalFitter(
             input_parameters=parameters,
             atlas=atlas,
@@ -87,7 +87,7 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
     )
 
     # make sure that the dispersion was not fit (wasn't changed)
-    assert test_parameters_dict.get("dispersion") == fit_result._fit_result_params.get("dispersion")
+    assert test_parameters_dict.get("dispersion") == fit_result.fit_result_params.get("dispersion")
 
 
 def test_expected_wavelength_and_unfit_spectrum_different_lengths(

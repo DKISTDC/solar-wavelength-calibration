@@ -21,20 +21,20 @@ def fitness(
 
     Parameters
     ----------
-    Params
+    params
         Object containing information about the parameters to be used in the fit
 
-    Spectrum
-        An object with the input (unfit) 1D spectrum.
+    spectrum
+        An array with the input (unfit) 1D spectrum.
 
     fts_wave
-        FTS Atlas wavelength object cropped around the input data.
+        FTS Atlas wavelength array cropped around the input data.
 
     fts_telluric
-        Telluric FTS atlas transmission object corresponding to fts_wave object.
+        Telluric FTS atlas transmission array corresponding to fts_wave object.
 
     fts_solar
-        Solar FTS atlas transmission object corresponding to fts_wave object.
+        Solar FTS atlas transmission array corresponding to fts_wave object.
 
     grating_constant
         Instrument specific grating constant.
@@ -74,27 +74,27 @@ def fitness(
 
     non_linear_wcs = WCS(non_linear_header)
     wavelength_vector = (
-        (non_linear_wcs.spectral.pixel_to_world(np.arange(number_of_wave_pix))).to(u.nm).value
-    )
+        non_linear_wcs.spectral.pixel_to_world(np.arange(number_of_wave_pix))
+    ).to_value(u.nm)
 
     # Gaussian convolution of the FTS atlas
-    fwhm_wavelength = np.divide(crval1, resolving_power)  # both in parameters
+    fwhm_wavelength = crval1 / resolving_power  # both in parameters
     sigma_wavelength = fwhm_wavelength / (2.0 * np.sqrt(2.0 * np.log(2)))
     kern_pix = sigma_wavelength / np.abs(dispersion)
 
     # interpolate the telluric spectral atlas onto the new wavelength axis and scale by the opacity value that is being optimized
-    fts_atmosphere_interp = np.interp(wavelength_vector, fts_wave, fts_telluric)
-    fts_telluric_interp = np.exp(opacity * np.log(fts_atmosphere_interp))  # in parameters
+    fts_telluric_interp = np.interp(wavelength_vector, fts_wave, fts_telluric)
+    fts_telluric_atmos_corr = fts_telluric_interp**opacity  # in parameters
 
     # interpolate the solar spectral atlas onto the new wavelength axis and apply a shift according to the Doppler shift due to orbital motions
     fts_solar_interp = np.interp(
         wavelength_vector,
-        fts_wave + doppler_shift.value / (const.c.to("km/s")).value * crval1,
+        fts_wave + doppler_shift.value / (const.c.to_value("km/s")) * crval1,
         fts_solar,
     )
 
     # apply telluric absorption spectrum to solar spectrum
-    fts_modulated = fts_telluric_interp * fts_solar_interp
+    fts_modulated = fts_telluric_atmos_corr * fts_solar_interp
     # add flat value of straylight contamination
     fts_modulated_with_straylight = (fts_modulated + stray_light_fraction) / (
         1.0 + stray_light_fraction
