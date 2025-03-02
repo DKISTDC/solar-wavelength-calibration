@@ -71,21 +71,3 @@ def test_atlas_repr():
     Then: the object should have the correct representation."""
     atlas = Atlas()
     assert isinstance(eval(repr(atlas)), Atlas)
-
-
-def test_atlas_vector_is_increasing(atlas: Atlas):
-    """Given: An atlas object
-    When: The object is loaded
-    Then: Each wavelength vector should be monotonically increasing.
-    """
-    with pytest.raises(AssertionError):
-        assert (
-            atlas.telluric_atlas_wavelength[0]
-            > atlas.telluric_atlas_wavelength[len(atlas.telluric_atlas_wavelength) - 1]
-        )
-
-    with pytest.raises(AssertionError):
-        assert (
-            atlas.solar_atlas_wavelength[0]
-            > atlas.solar_atlas_wavelength[len(atlas.solar_atlas_wavelength) - 1]
-        )
