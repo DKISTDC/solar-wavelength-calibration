@@ -1,7 +1,6 @@
 import astropy.units as u
 import numpy as np
 import pytest
-from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
@@ -38,8 +37,6 @@ def test_wavecal_fitter(
     # test that the same amount of parameters we get out of the fit is the same number that we put in
     assert len(fitter.fit_result) == len(parameters.lmfit_parameters)
 
-    # TODO: test that wavecal outputs are what we expected
-
 
 def test_incorrect_atlas(parameters: WavelengthCalibrationParameters, test_unfit_1d_spectrum):
     """
@@ -66,16 +63,16 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
     Then: The dispersion value has not changed
     """
     initialized_parameters = WavelengthCalibrationParameters(
-        crval1=test_parameters_dict.get("crval1"),
-        dispersion=test_parameters_dict.get("dispersion"),
-        incident_light_angle=test_parameters_dict.get("incident_light_angle"),
-        resolving_power=test_parameters_dict.get("resolving_power"),
-        opacity_factor=test_parameters_dict.get("opacity_factor"),
-        straylight_fraction=test_parameters_dict.get("straylight_fraction"),
-        unfit_1d_spectrum=test_parameters_dict.get("unfit_1d_spectrum"),
-        grating_constant=test_parameters_dict.get("grating_constant"),
-        doppler_shift=test_parameters_dict.get("doppler_shift"),
-        order=test_parameters_dict.get("order"),
+        crval1=test_parameters_dict["crval1"],
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=test_parameters_dict["incident_light_angle"],
+        resolving_power=test_parameters_dict["resolving_power"],
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        straylight_fraction=test_parameters_dict["straylight_fraction"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=test_parameters_dict["grating_constant"],
+        doppler_shift=test_parameters_dict["doppler_shift"],
+        order=test_parameters_dict["order"],
         fit_dispersion=False,
     )
 
@@ -88,7 +85,7 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
     )
 
     # make sure that the dispersion was not fit (wasn't changed)
-    assert test_parameters_dict.get("dispersion") == fitter.fit_result.get("dispersion")
+    assert test_parameters_dict["dispersion"].value == fitter.fit_result["dispersion"]
 
 
 def test_expected_wavelength_and_unfit_spectrum_different_lengths(

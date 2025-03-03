@@ -46,13 +46,13 @@ def fitness(
         Calculated doppler shift of DKIST at time of observation.
     """
     param_vals = params.valuesdict()
-    crval1 = param_vals.get("cravl1")
-    dispersion = param_vals.get("dispersion")
-    incident_light_angle = param_vals.get("incident_light_angle")
-    resolving_power = param_vals.get("resolving_power")
-    opacity = param_vals.get("opacity_factor")
-    stray_light_fraction = param_vals.get("straylight_fraction")
-    continuum_intensity_correction = param_vals.get("continuum_intensity_correction")
+    crval1 = param_vals["crval1"]
+    dispersion = param_vals["dispersion"]
+    incident_light_angle = param_vals["incident_light_angle"]
+    resolving_power = param_vals["resolving_power"]
+    opacity = param_vals["opacity_factor"]
+    stray_light_fraction = param_vals["straylight_fraction"]
+    continuum_intensity_correction = param_vals["continuum_intensity_correction"]
 
     # calculate the spectral axis
     # Representations of spectral coordinates in FITS

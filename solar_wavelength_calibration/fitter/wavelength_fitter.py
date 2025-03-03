@@ -23,7 +23,7 @@ class WaveCalFitter(BaseModel):
 
     input_parameters: WavelengthCalibrationParameters
     atlas: AtlasBase
-    expected_wavelength_vector: NDArray
+    expected_wavelength_vector: u.Quantity
     unfit_1d_spectrum: NDArray
 
     def __init__(self, input_parameters, atlas, expected_wavelength_vector, unfit_1d_spectrum):
@@ -91,7 +91,7 @@ class WaveCalFitter(BaseModel):
                 cropped_telluric_atlas_transmission,
             )
             # calculate a merit value to be minimized
-            merit[n] = np.std(self.unfit_1d_spectrum - fts_solar * fts_telluric)
+            merit[n] = np.std(self.unfit_1d_spectrum.value - fts_solar * fts_telluric)
 
         # get minimum
         shift = shifts[np.argmin(merit)]
@@ -117,7 +117,7 @@ class WaveCalFitter(BaseModel):
             fitness,
             params_to_fit,
             fcn_args=(
-                self.unfit_1d_spectrum,
+                self.unfit_1d_spectrum.value,
                 fts_wave,
                 fts_telluric,
                 fts_solar,

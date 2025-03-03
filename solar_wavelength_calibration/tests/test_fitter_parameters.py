@@ -1,3 +1,4 @@
+import astropy.units as u
 import numpy as np
 import pytest
 from lmfit import Parameters
@@ -7,7 +8,26 @@ from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
 
-def test_incorrect_parameter_types():
+def test_no_input_spectrum_units(test_parameters_dict):
+    """
+    Given: An input unfit_1d_spectrum array without units
+    When: Initializing a WavelengthCalibrationParameters object
+    Then: Raise a TypeError
+    """
+    with pytest.raises(TypeError) as excinfo:
+        WavelengthCalibrationParameters(
+            crval1=test_parameters_dict["crval1"],
+            dispersion=test_parameters_dict["dispersion"],
+            incident_light_angle=test_parameters_dict["incident_light_angle"],
+            unfit_1d_spectrum=np.linspace(0, 1, 1000),
+            grating_constant=test_parameters_dict["grating_constant"],
+            doppler_shift=test_parameters_dict["doppler_shift"],
+            order=test_parameters_dict["order"],
+        )
+    assert "unfit_1d_spectrum must be an astropy Quantity with units." in str(excinfo.value)
+
+
+def test_incorrect_parameter_types(test_unfit_1d_spectrum):
     """
     Given: Incorrect input parameter value types
     When: Initializing a WavelengthCalibrationParameters object with these incorrect inputs
@@ -17,11 +37,11 @@ def test_incorrect_parameter_types():
         WavelengthCalibrationParameters(
             crval1=3,
             dispersion="shouldbeafloat",
-            incident_light_angle=154,
+            incident_light_angle=154 * u.nm,
             resolving_power="shouldbeanint",
             opacity_factor=5,
             straylight_fraction=2,
-            unfit_1d_spectrum="shouldbeanarray",
+            unfit_1d_spectrum=test_unfit_1d_spectrum,
             grating_constant=5,
             doppler_shift=12,
             order=1.5,
@@ -55,16 +75,16 @@ def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict):
     Then: The lmfit parameters were set up correctly
     """
     input_params = WavelengthCalibrationParameters(
-        crval1=test_parameters_dict.get("crval1"),
-        dispersion=test_parameters_dict.get("dispersion"),
-        incident_light_angle=test_parameters_dict.get("incident_light_angle"),
-        resolving_power=test_parameters_dict.get("resolving_power"),
-        opacity_factor=test_parameters_dict.get("opacity_factor"),
-        straylight_fraction=test_parameters_dict.get("straylight_fraction"),
-        unfit_1d_spectrum=test_parameters_dict.get("unfit_1d_spectrum"),
-        grating_constant=test_parameters_dict.get("grating_constant"),
-        doppler_shift=test_parameters_dict.get("doppler_shift"),
-        order=test_parameters_dict.get("order"),
+        crval1=test_parameters_dict["crval1"],
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=test_parameters_dict["incident_light_angle"],
+        resolving_power=test_parameters_dict["resolving_power"],
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        straylight_fraction=test_parameters_dict["straylight_fraction"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=test_parameters_dict["grating_constant"],
+        doppler_shift=test_parameters_dict["doppler_shift"],
+        order=test_parameters_dict["order"],
     )
 
     assert isinstance(input_params.lmfit_parameters, Parameters)

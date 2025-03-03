@@ -26,7 +26,7 @@ def atlas(config: DownloadConfig | None) -> Atlas:
 
 @pytest.fixture(scope="session")
 def test_unfit_1d_spectrum():
-    return np.linspace(0, 1, 1000)
+    return np.linspace(0, 1, 1000) * u.nm
 
 
 @pytest.fixture(scope="session")
@@ -44,13 +44,13 @@ def test_incident_light_angle():
 @pytest.fixture(scope="session")
 def test_grating_constant():
     """Dummy grating constant."""
-    return 31600.0
+    return 31600.0 * u.mm ** (-1)
 
 
 @pytest.fixture(scope="session")
 def test_doppler_shift():
     """Dummy doppler shift value."""
-    return -0.4281437757265212
+    return -0.4281437757265212 * u.km / u.s
 
 
 @pytest.fixture(scope="session")
@@ -70,9 +70,9 @@ def test_parameters_dict(
     test_order,
 ):
     return {
-        "crval1": atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1],
-        "dispersion": test_dispersion.value,
-        "incident_light_angle": test_incident_light_angle.value,
+        "crval1": atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1] * u.nm,
+        "dispersion": test_dispersion,
+        "incident_light_angle": test_incident_light_angle,
         "resolving_power": 72500,
         "opacity_factor": 5.0,
         "straylight_fraction": 0.25,
@@ -94,9 +94,9 @@ def test_only_required_parameters_dict(
     test_order,
 ):
     return {
-        "crval1": atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1],
-        "dispersion": test_dispersion.value,
-        "incident_light_angle": test_incident_light_angle.value,
+        "crval1": atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1] * u.nm,
+        "dispersion": test_dispersion,
+        "incident_light_angle": test_incident_light_angle,
         "unfit_1d_spectrum": test_unfit_1d_spectrum,
         "grating_constant": test_grating_constant,
         "doppler_shift": test_doppler_shift,
@@ -115,9 +115,9 @@ def parameters(
     atlas: AtlasBase,
 ) -> Parameters:
     params = WavelengthCalibrationParameters(
-        crval1=atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1],
-        dispersion=test_dispersion.value,
-        incident_light_angle=test_incident_light_angle.value,
+        crval1=atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1] * u.nm,
+        dispersion=test_dispersion,
+        incident_light_angle=test_incident_light_angle,
         resolving_power=72500,
         opacity_factor=5.0,
         straylight_fraction=0.25,
