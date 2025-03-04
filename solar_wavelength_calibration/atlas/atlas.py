@@ -69,6 +69,14 @@ class Atlas(AtlasBase):
         path = self.pooch.fetch(self.config.solar_reference_atlas_file_name)
         return np.load(path)
 
+    def _validate_monotonic(self, array: np.ndarray, name: str) -> np.ndarray:
+        """Check that the wavelength array is strictly increasing."""
+        if not np.all(np.diff(array) > 0):  # Strictly increasing check
+            raise ValueError(
+                f"{name} must be monotonically increasing. Found non-monotonic values."
+            )
+        return array
+
     @property
     def telluric_atlas_wavelength(self) -> np.ndarray:
         """
@@ -78,7 +86,8 @@ class Atlas(AtlasBase):
         capturing the absorption features caused by atmospheric molecules such as water vapor,
         oxygen, and carbon dioxide.
         """
-        return self._telluric_atlas[0] * u.nm
+        wavelength = self._telluric_atlas[0] * u.nm
+        return self._validate_monotonic(wavelength, "telluric_atlas_wavelength")
 
     @property
     def telluric_atlas_transmission(self) -> np.ndarray:
@@ -99,7 +108,8 @@ class Atlas(AtlasBase):
         The solar atlas provides detailed measurements across a wide range of wavelengths,
         capturing the spectral features of the Sun with high precision.
         """
-        return self._solar_atlas[0] * u.nm
+        wavelength = self._solar_atlas[0] * u.nm
+        return self._validate_monotonic(wavelength, "solar_atlas_wavelength")
 
     @property
     def solar_atlas_transmission(self) -> np.ndarray:
