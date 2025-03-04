@@ -2,6 +2,7 @@
 import logging
 from functools import cached_property
 
+import astropy.units as u
 import numpy as np
 import pooch
 from pydantic import BaseModel
@@ -77,7 +78,7 @@ class Atlas(AtlasBase):
         capturing the absorption features caused by atmospheric molecules such as water vapor,
         oxygen, and carbon dioxide.
         """
-        return self._telluric_atlas[0]
+        return self._telluric_atlas[0] * u.nm
 
     @property
     def telluric_atlas_transmission(self) -> np.ndarray:
@@ -98,7 +99,7 @@ class Atlas(AtlasBase):
         The solar atlas provides detailed measurements across a wide range of wavelengths,
         capturing the spectral features of the Sun with high precision.
         """
-        return self._solar_atlas[0]
+        return self._solar_atlas[0] * u.nm
 
     @property
     def solar_atlas_transmission(self) -> np.ndarray:

@@ -52,8 +52,8 @@ class WaveCalFitter(BaseModel):
 
         """
         # Resample atlases
-        solar_atlas_wavelength = self.atlas.solar_atlas_wavelength * u.nm
-        telluric_atlas_wavelength = self.atlas.telluric_atlas_wavelength * u.nm
+        solar_atlas_wavelength = self.atlas.solar_atlas_wavelength
+        telluric_atlas_wavelength = self.atlas.telluric_atlas_wavelength
 
         expected_wavelength_range = (
             self.expected_wavelength_vector.max() - self.expected_wavelength_vector.min()
@@ -61,6 +61,8 @@ class WaveCalFitter(BaseModel):
         min_wavelength = self.expected_wavelength_vector.min() - 0.25 * expected_wavelength_range
         max_wavelength = self.expected_wavelength_vector.max() + 0.25 * expected_wavelength_range
 
+        print(telluric_atlas_wavelength)
+        print(min_wavelength)
         cropped_telluric_mask = (telluric_atlas_wavelength > min_wavelength) * (
             telluric_atlas_wavelength < max_wavelength
         )
