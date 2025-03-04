@@ -95,7 +95,7 @@ def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict):
 def test_default_parameters(atlas: AtlasBase, test_parameters_dict):
     """
     Given: The required input parameter values
-    When: Resolving power, opacity factor, and straylight fraction are not given and dafault values are used
+    When: Resolving power, opacity factor, and straylight fraction are not given and default values are used
     Then: The initialized parameters are returned and the non-required parameter values are set to their default values
     """
     initialized_parameters = WavelengthCalibrationParameters(
@@ -115,3 +115,136 @@ def test_default_parameters(atlas: AtlasBase, test_parameters_dict):
     assert initialized_params_dict["straylight_fraction"] == 0
     # make sure than 7 parameters were added into lmfit_parameters [crval1, dispersion, incident_light_angle, resolving_power, opacity_factor, straylight_fraction, unfit_1d_spectrum]
     assert len(initialized_parameters.lmfit_parameters.valuesdict()) == 7
+
+
+def test_default_bounds(test_parameters_dict):
+    """
+    Given: No custom input bounds
+    When: Initializing the fit parameters
+    Then: Each parameter's bound is the default value
+    """
+
+    input_params = WavelengthCalibrationParameters(
+        crval1=test_parameters_dict["crval1"],
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=test_parameters_dict["incident_light_angle"],
+        resolving_power=test_parameters_dict["resolving_power"],
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        straylight_fraction=test_parameters_dict["straylight_fraction"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=test_parameters_dict["grating_constant"],
+        doppler_shift=test_parameters_dict["doppler_shift"],
+        order=test_parameters_dict["order"],
+    )
+
+    assert input_params._get_bounds("crval1") == [-0.5, 0.5]
+    assert input_params._get_bounds("dispersion") == [-0.05, 0.05]
+    assert input_params._get_bounds("incident_light_angle") == [-5, 5]
+    assert input_params._get_bounds("resolving_power") == [-50000, 50000]
+    assert input_params._get_bounds("opacity_factor") == [-5, 5]
+    assert input_params._get_bounds("straylight_fraction") == [-0.25, 0.25]
+    assert input_params._get_bounds("continuum_intensity_correction") == [0.8, 1.2]
+
+
+def test_custom_bounds(test_parameters_dict):
+    """
+    Given: Some custom input bounds
+    When: Initializing the fit parameters
+    Then: The customized input bounds are set to the custom values and others are set to the default values
+    """
+    bounds = {
+        "crval1": [-0.3, 0.3],
+        "dispersion": [-55, 55],
+        "incident_light_angle": [-5, 103],
+        "resolving_power": [-50, 0.0001],
+        "opacity_factor": [-1, 1],
+    }
+
+    input_params = WavelengthCalibrationParameters(
+        crval1=test_parameters_dict["crval1"],
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=test_parameters_dict["incident_light_angle"],
+        resolving_power=test_parameters_dict["resolving_power"],
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        straylight_fraction=test_parameters_dict["straylight_fraction"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=test_parameters_dict["grating_constant"],
+        doppler_shift=test_parameters_dict["doppler_shift"],
+        order=test_parameters_dict["order"],
+        bounds=bounds,
+    )
+
+    assert input_params._get_bounds("crval1") == [-0.3, 0.3]
+    assert input_params._get_bounds("dispersion") == [-55, 55]
+    assert input_params._get_bounds("incident_light_angle") == [-5, 103]
+    assert input_params._get_bounds("resolving_power") == [-50, 0.0001]
+    assert input_params._get_bounds("opacity_factor") == [-1, 1]
+    assert input_params._get_bounds("straylight_fraction") == [-0.25, 0.25]  # default bounds
+    assert input_params._get_bounds("continuum_intensity_correction") == [
+        0.8,
+        1.2,
+    ]  # default bounds
+
+
+def test_default_fit_flags(test_parameters_dict):
+    """
+    Given: No custom input fit flags
+    When: Initializing the fit parameters
+    Then: Each parameter's fit flag is the default value (True)
+    """
+    input_params = WavelengthCalibrationParameters(
+        crval1=test_parameters_dict["crval1"],
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=test_parameters_dict["incident_light_angle"],
+        resolving_power=test_parameters_dict["resolving_power"],
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        straylight_fraction=test_parameters_dict["straylight_fraction"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=test_parameters_dict["grating_constant"],
+        doppler_shift=test_parameters_dict["doppler_shift"],
+        order=test_parameters_dict["order"],
+    )
+
+    assert input_params.fit_flags["crval1"] == True
+    assert input_params.fit_flags["dispersion"] == True
+    assert input_params.fit_flags["incident_light_angle"] == True
+    assert input_params.fit_flags["resolving_power"] == True
+    assert input_params.fit_flags["opacity_factor"] == True
+    assert input_params.fit_flags["straylight_fraction"] == True
+    assert input_params.fit_flags["continuum_intensity_correction"] == True
+
+
+def test_custom_fit_flags(test_parameters_dict):
+    """
+    Given: Some custom fit flags
+    When: Initializing the fit parameters
+    Then: The customized input fit flags are set to the custom values and others are set to the default values
+    """
+    fit_flags = {
+        "dispersion": False,
+        "resolving_power": False,
+        "opacity_factor": False,
+        "continuum_intensity_correction": False,
+    }
+
+    input_params = WavelengthCalibrationParameters(
+        crval1=test_parameters_dict["crval1"],
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=test_parameters_dict["incident_light_angle"],
+        resolving_power=test_parameters_dict["resolving_power"],
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        straylight_fraction=test_parameters_dict["straylight_fraction"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=test_parameters_dict["grating_constant"],
+        doppler_shift=test_parameters_dict["doppler_shift"],
+        order=test_parameters_dict["order"],
+        fit_flags=fit_flags,
+    )
+
+    assert input_params.fit_flags["crval1"] == True
+    assert input_params.fit_flags["dispersion"] == False
+    assert input_params.fit_flags["incident_light_angle"] == True
+    assert input_params.fit_flags["resolving_power"] == False
+    assert input_params.fit_flags["opacity_factor"] == False
+    assert input_params.fit_flags["straylight_fraction"] == True
+    assert input_params.fit_flags["continuum_intensity_correction"] == False

@@ -73,7 +73,7 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
         grating_constant=test_parameters_dict["grating_constant"],
         doppler_shift=test_parameters_dict["doppler_shift"],
         order=test_parameters_dict["order"],
-        fit_dispersion=False,
+        fit_flags={"dispersion": False},
     )
 
     test_expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
