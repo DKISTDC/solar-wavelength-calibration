@@ -8,6 +8,7 @@ import numpy as np
 from numpydantic import NDArray
 from pydantic import BaseModel
 from pydantic import ConfigDict
+from scipy.ndimage import gaussian_filter1d
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.fitting_core import fitness
@@ -51,6 +52,15 @@ class WaveCalFitter(BaseModel):
         2. Determine a shift of the expected wavelength vector so that it generally aligns with the data itself.
 
         """
+        # Extract parameters
+        param_vals = self.input_parameters.lmfit_parameters.valuesdict()
+        crval1 = param_vals["crval1"]
+        dispersion = param_vals["dispersion"]
+        resolving_power = param_vals["resolving_power"]
+        opacity = param_vals["opacity_factor"]
+        stray_light_fraction = param_vals["straylight_fraction"]
+        continuum_intensity_correction = param_vals["continuum_intensity_correction"]
+
         # Resample atlases
         solar_atlas_wavelength = self.atlas.solar_atlas_wavelength
         telluric_atlas_wavelength = self.atlas.telluric_atlas_wavelength
@@ -61,8 +71,6 @@ class WaveCalFitter(BaseModel):
         min_wavelength = self.expected_wavelength_vector.min() - 0.25 * expected_wavelength_range
         max_wavelength = self.expected_wavelength_vector.max() + 0.25 * expected_wavelength_range
 
-        print(telluric_atlas_wavelength)
-        print(min_wavelength)
         cropped_telluric_mask = (telluric_atlas_wavelength > min_wavelength) * (
             telluric_atlas_wavelength < max_wavelength
         )
@@ -76,6 +84,11 @@ class WaveCalFitter(BaseModel):
         )
         cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask]
         cropped_solar_atlas_transmission = self.atlas.solar_atlas_transmission[cropped_solar_mask]
+
+        # Gaussian convolution of the FTS atlas
+        fwhm_wavelength = crval1 / resolving_power  # both in parameters
+        sigma_wavelength = fwhm_wavelength / (2.0 * np.sqrt(2.0 * np.log(2)))
+        kern_pix = sigma_wavelength / np.abs(dispersion)
 
         # Determine shift
         shifts = np.linspace(-2, 2, 550) * u.nm
@@ -92,8 +105,22 @@ class WaveCalFitter(BaseModel):
                 cropped_telluric_atlas_wavelength,
                 cropped_telluric_atlas_transmission,
             )
+            # scale by opacity value
+            fts_telluric_atmos_corr = fts_telluric**opacity
+
+            # apply telluric absorption spectrum to solar spectrum
+            fts_modulated = fts_telluric_atmos_corr * fts_solar
+            # add flat value of straylight contamination
+            fts_modulated_with_straylight = (fts_modulated + stray_light_fraction) / (
+                1.0 + stray_light_fraction
+            )
+            # scale for total intensity of the continuum
+            fit_amplitude = fts_modulated_with_straylight * continuum_intensity_correction
+            # convolution for spectrograph line spread function
+            fit_amplitude = gaussian_filter1d(fit_amplitude, kern_pix)
             # calculate a merit value to be minimized
-            merit[n] = np.std(self.unfit_1d_spectrum.value - fts_solar * fts_telluric)
+            merit[n] = np.std(self.unfit_1d_spectrum - fit_amplitude)
+            # merit[n] = np.std(self.unfit_1d_spectrum - fts_solar * fts_telluric)
 
         # get minimum
         shift = shifts[np.argmin(merit)]
@@ -119,7 +146,7 @@ class WaveCalFitter(BaseModel):
             fitness,
             params_to_fit,
             fcn_args=(
-                self.unfit_1d_spectrum.value,
+                self.unfit_1d_spectrum,
                 fts_wave,
                 fts_telluric,
                 fts_solar,
@@ -129,6 +156,13 @@ class WaveCalFitter(BaseModel):
         fit_result = minimizer.minimize(method="leastsq", params=params_to_fit)
         logger.info("Finished fit.")
         fit_result_params = fit_result.params.valuesdict()
+
+        # assign units to fitted values
+        fit_result_params["crval1"] = fit_result_params["crval1"] * u.nm
+        fit_result_params["dispersion"] = fit_result_params["dispersion"] * u.nm
+        fit_result_params["incident_light_angle"] = (
+            fit_result_params["incident_light_angle"] * u.rad
+        )
 
         logger.info("Fitted Values:")
         for (param, fitted_value) in fit_result_params.items():

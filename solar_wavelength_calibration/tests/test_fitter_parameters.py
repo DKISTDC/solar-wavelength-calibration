@@ -8,32 +8,13 @@ from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
 
-def test_no_input_spectrum_units(test_parameters_dict):
-    """
-    Given: An input unfit_1d_spectrum array without units
-    When: Initializing a WavelengthCalibrationParameters object
-    Then: Raise a TypeError
-    """
-    with pytest.raises(TypeError) as excinfo:
-        WavelengthCalibrationParameters(
-            crval1=test_parameters_dict["crval1"],
-            dispersion=test_parameters_dict["dispersion"],
-            incident_light_angle=test_parameters_dict["incident_light_angle"],
-            unfit_1d_spectrum=np.linspace(0, 1, 1000),
-            grating_constant=test_parameters_dict["grating_constant"],
-            doppler_shift=test_parameters_dict["doppler_shift"],
-            order=test_parameters_dict["order"],
-        )
-    assert "unfit_1d_spectrum must be an astropy Quantity with units." in str(excinfo.value)
-
-
 def test_incorrect_parameter_types(test_unfit_1d_spectrum):
     """
     Given: Incorrect input parameter value types
     When: Initializing a WavelengthCalibrationParameters object with these incorrect inputs
     Then: Raise a ValidationError
     """
-    with pytest.raises(ValidationError) as excinfo:
+    with pytest.raises(TypeError) as excinfo:
         WavelengthCalibrationParameters(
             crval1=3,
             dispersion="shouldbeafloat",
@@ -46,7 +27,7 @@ def test_incorrect_parameter_types(test_unfit_1d_spectrum):
             doppler_shift=12,
             order=1.5,
         )
-    assert "Input should be a valid" in str(excinfo.value)
+    assert "must be an astropy Quantity" in str(excinfo.value)
 
 
 def test_missing_parameters(
@@ -137,9 +118,9 @@ def test_default_bounds(test_parameters_dict):
         order=test_parameters_dict["order"],
     )
 
-    assert input_params._get_bounds("crval1") == [-0.5, 0.5]
-    assert input_params._get_bounds("dispersion") == [-0.05, 0.05]
-    assert input_params._get_bounds("incident_light_angle") == [-5, 5]
+    assert input_params._get_bounds("crval1") == [-0.5 * u.nm, 0.5 * u.nm]
+    assert input_params._get_bounds("dispersion") == [-0.05 * u.nm, 0.05 * u.nm]
+    assert input_params._get_bounds("incident_light_angle") == [-5 * u.rad, 5 * u.rad]
     assert input_params._get_bounds("resolving_power") == [-50000, 50000]
     assert input_params._get_bounds("opacity_factor") == [-5, 5]
     assert input_params._get_bounds("straylight_fraction") == [-0.25, 0.25]
@@ -153,9 +134,9 @@ def test_custom_bounds(test_parameters_dict):
     Then: The customized input bounds are set to the custom values and others are set to the default values
     """
     bounds = {
-        "crval1": [-0.3, 0.3],
-        "dispersion": [-55, 55],
-        "incident_light_angle": [-5, 103],
+        "crval1": [-0.3, 0.3] * u.nm,
+        "dispersion": [-55, 55] * u.nm,
+        "incident_light_angle": [-5, 103] * u.rad,
         "resolving_power": [-50, 0.0001],
         "opacity_factor": [-1, 1],
     }
@@ -174,9 +155,9 @@ def test_custom_bounds(test_parameters_dict):
         bounds=bounds,
     )
 
-    assert input_params._get_bounds("crval1") == [-0.3, 0.3]
-    assert input_params._get_bounds("dispersion") == [-55, 55]
-    assert input_params._get_bounds("incident_light_angle") == [-5, 103]
+    assert input_params._get_bounds("crval1") == [-0.3 * u.nm, 0.3 * u.nm]
+    assert input_params._get_bounds("dispersion") == [-55 * u.nm, 55 * u.nm]
+    assert input_params._get_bounds("incident_light_angle") == [-5 * u.rad, 103 * u.rad]
     assert input_params._get_bounds("resolving_power") == [-50, 0.0001]
     assert input_params._get_bounds("opacity_factor") == [-1, 1]
     assert input_params._get_bounds("straylight_fraction") == [-0.25, 0.25]  # default bounds
@@ -184,6 +165,60 @@ def test_custom_bounds(test_parameters_dict):
         0.8,
         1.2,
     ]  # default bounds
+
+
+def test_bounds_have_no_units(test_parameters_dict):
+    """
+    Given: Some custom input bounds with no units
+    When: Initializing the fit parameters
+    Then: A ValidationError is raised
+    """
+    bounds = {
+        "crval1": [-0.3, 0.3],
+        "dispersion": [-55, 55],
+        "incident_light_angle": [-5, 103],
+        "resolving_power": [-50, 0.0001],
+        "opacity_factor": [-1, 1],
+    }
+
+    with pytest.raises(ValidationError) as excinfo:
+        input_params = WavelengthCalibrationParameters(
+            crval1=test_parameters_dict["crval1"],
+            dispersion=test_parameters_dict["dispersion"],
+            incident_light_angle=test_parameters_dict["incident_light_angle"],
+            resolving_power=test_parameters_dict["resolving_power"],
+            opacity_factor=test_parameters_dict["opacity_factor"],
+            straylight_fraction=test_parameters_dict["straylight_fraction"],
+            unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+            grating_constant=test_parameters_dict["grating_constant"],
+            doppler_shift=test_parameters_dict["doppler_shift"],
+            order=test_parameters_dict["order"],
+            bounds=bounds,
+        )
+    assert "must be an astropy Quantity with appropriate units" in str(excinfo.value)
+
+
+def test_params_have_no_bounds(test_parameters_dict):
+    """
+    Given: Input parameters with no units
+    When: Initializing the fit parameters
+    Then: Each parameter's bound is the default value
+    """
+
+    with pytest.raises(TypeError) as excinfo:
+        input_params = WavelengthCalibrationParameters(
+            crval1=test_parameters_dict["crval1"].to_value(u.nm),
+            dispersion=test_parameters_dict["dispersion"].to_value(u.nm),
+            incident_light_angle=test_parameters_dict["incident_light_angle"].to_value(u.rad),
+            resolving_power=test_parameters_dict["resolving_power"],
+            opacity_factor=test_parameters_dict["opacity_factor"],
+            straylight_fraction=test_parameters_dict["straylight_fraction"],
+            unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+            grating_constant=test_parameters_dict["grating_constant"],
+            doppler_shift=test_parameters_dict["doppler_shift"],
+            order=test_parameters_dict["order"],
+        )
+    assert "must be an astropy Quantity" in str(excinfo.value)
 
 
 def test_default_fit_flags(test_parameters_dict):

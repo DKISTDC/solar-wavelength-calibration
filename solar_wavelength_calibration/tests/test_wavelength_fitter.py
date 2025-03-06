@@ -1,6 +1,7 @@
 import astropy.units as u
 import numpy as np
 import pytest
+from astropy import constants as const
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
@@ -85,7 +86,9 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
     )
 
     # make sure that the dispersion was not fit (wasn't changed)
-    assert test_parameters_dict["dispersion"].value == fitter.fit_result["dispersion"]
+    assert test_parameters_dict["dispersion"].value == fitter.fit_result["dispersion"].to_value(
+        u.nm
+    )
 
 
 def test_expected_wavelength_and_unfit_spectrum_different_lengths(
@@ -108,21 +111,45 @@ def test_expected_wavelength_and_unfit_spectrum_different_lengths(
 
 
 def test_fit_is_correct(
-    parameters: WavelengthCalibrationParameters, test_unfit_1d_spectrum, atlas: AtlasBase
+    parameters: WavelengthCalibrationParameters,
+    test_unfit_1d_spectrum,
+    atlas: AtlasBase,
+    test_parameters_dict,
 ):
     """
     Given:
     When:
     Then:
     """
-    test_expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
+
+    # centered around 1083 nm
+    idx = np.where(
+        (atlas.solar_atlas_wavelength.value > 1078.0)
+        & (atlas.solar_atlas_wavelength.value < 1082.0)
+    )[0]
+
+    dispersion = 0.01
+    dummy_wavelength = np.arange(1078.0, 1082.0, dispersion) * u.nm
+    linear_spectrum = np.interp(
+        dummy_wavelength, atlas.solar_atlas_wavelength[idx], atlas.solar_atlas_transmission[idx]
+    )
+
+    shift = 0.5 * u.nm  # dummy shift
+    dispersion_scale = 1.003  # dummy dispersion scale factor
+    simulated_unfit_1d_wavelength = dummy_wavelength * dispersion_scale + shift
+    simulated_unfit_1d_transmission = np.interp(
+        simulated_unfit_1d_wavelength, dummy_wavelength, linear_spectrum
+    )
+
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        expected_wavelength_vector=test_expected_wavelength_vector,
-        unfit_1d_spectrum=test_unfit_1d_spectrum,
+        expected_wavelength_vector=dummy_wavelength,
+        unfit_1d_spectrum=simulated_unfit_1d_transmission,
     )
-    fitter.fit_result
+    print(fitter.fit_result)
+    assert 1 == 3
+    # assert fitter.fit_result['dispersion'] ==
 
 
 def test_prepare_atlas(

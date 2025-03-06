@@ -26,7 +26,7 @@ def atlas(config: DownloadConfig | None) -> Atlas:
 
 @pytest.fixture(scope="session")
 def test_unfit_1d_spectrum():
-    return np.linspace(0, 1, 1000) * u.nm
+    return np.linspace(0, 1, 1000)
 
 
 @pytest.fixture(scope="session")
@@ -70,7 +70,7 @@ def test_parameters_dict(
     test_order,
 ):
     return {
-        "crval1": atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1] * u.nm,
+        "crval1": atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1],
         "dispersion": test_dispersion,
         "incident_light_angle": test_incident_light_angle,
         "resolving_power": 72500,
@@ -94,7 +94,7 @@ def test_only_required_parameters_dict(
     test_order,
 ):
     return {
-        "crval1": atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1] * u.nm,
+        "crval1": atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1],
         "dispersion": test_dispersion,
         "incident_light_angle": test_incident_light_angle,
         "unfit_1d_spectrum": test_unfit_1d_spectrum,
@@ -115,7 +115,7 @@ def parameters(
     atlas: AtlasBase,
 ) -> Parameters:
     params = WavelengthCalibrationParameters(
-        crval1=atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1] * u.nm,
+        crval1=atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1],
         dispersion=test_dispersion,
         incident_light_angle=test_incident_light_angle,
         resolving_power=72500,

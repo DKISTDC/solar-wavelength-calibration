@@ -61,6 +61,7 @@ def fitness(
 
     number_of_wave_pix = np.size(spectrum)
 
+    # TODO: check units of parameters v units that are in the comments
     non_linear_header = {
         "CTYPE1": "AWAV-GRA",  # Grating dispersion function with air wavelengths
         "CUNIT1": "nm",  # Dispersion units
@@ -84,7 +85,9 @@ def fitness(
 
     # interpolate the telluric spectral atlas onto the new wavelength axis and scale by the opacity value that is being optimized
     fts_telluric_interp = np.interp(wavelength_vector, fts_wave, fts_telluric)
-    fts_telluric_atmos_corr = fts_telluric_interp**opacity  # in parameters
+    fts_telluric_atmos_corr = (
+        fts_telluric_interp**opacity
+    )  # in parameters # TODO: check the physics here
 
     # interpolate the solar spectral atlas onto the new wavelength axis and apply a shift according to the Doppler shift due to orbital motions
     fts_solar_interp = np.interp(
