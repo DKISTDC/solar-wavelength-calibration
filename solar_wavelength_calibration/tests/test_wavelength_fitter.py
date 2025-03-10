@@ -72,7 +72,7 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
         straylight_fraction=test_parameters_dict["straylight_fraction"],
         unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
         grating_constant=test_parameters_dict["grating_constant"],
-        doppler_shift=test_parameters_dict["doppler_shift"],
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
         order=test_parameters_dict["order"],
         fit_flags={"dispersion": False},
     )

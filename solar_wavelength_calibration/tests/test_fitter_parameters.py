@@ -24,7 +24,7 @@ def test_incorrect_parameter_types(test_unfit_1d_spectrum):
             straylight_fraction=2,
             unfit_1d_spectrum=test_unfit_1d_spectrum,
             grating_constant=5,
-            doppler_shift=12,
+            doppler_velocity=12,
             order=1.5,
         )
     assert "must be an astropy Quantity" in str(excinfo.value)
@@ -64,7 +64,7 @@ def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict):
         straylight_fraction=test_parameters_dict["straylight_fraction"],
         unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
         grating_constant=test_parameters_dict["grating_constant"],
-        doppler_shift=test_parameters_dict["doppler_shift"],
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
         order=test_parameters_dict["order"],
     )
 
@@ -85,7 +85,7 @@ def test_default_parameters(atlas: AtlasBase, test_parameters_dict):
         incident_light_angle=test_parameters_dict.get("incident_light_angle"),
         unfit_1d_spectrum=test_parameters_dict.get("unfit_1d_spectrum"),
         grating_constant=test_parameters_dict.get("grating_constant"),
-        doppler_shift=test_parameters_dict.get("doppler_shift"),
+        doppler_velocity=test_parameters_dict.get("doppler_velocity"),
         order=test_parameters_dict.get("order"),
     )
 
@@ -114,7 +114,7 @@ def test_default_bounds(test_parameters_dict):
         straylight_fraction=test_parameters_dict["straylight_fraction"],
         unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
         grating_constant=test_parameters_dict["grating_constant"],
-        doppler_shift=test_parameters_dict["doppler_shift"],
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
         order=test_parameters_dict["order"],
     )
 
@@ -150,7 +150,7 @@ def test_custom_bounds(test_parameters_dict):
         straylight_fraction=test_parameters_dict["straylight_fraction"],
         unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
         grating_constant=test_parameters_dict["grating_constant"],
-        doppler_shift=test_parameters_dict["doppler_shift"],
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
         order=test_parameters_dict["order"],
         bounds=bounds,
     )
@@ -191,7 +191,7 @@ def test_bounds_have_no_units(test_parameters_dict):
             straylight_fraction=test_parameters_dict["straylight_fraction"],
             unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
             grating_constant=test_parameters_dict["grating_constant"],
-            doppler_shift=test_parameters_dict["doppler_shift"],
+            doppler_velocity=test_parameters_dict["doppler_velocity"],
             order=test_parameters_dict["order"],
             bounds=bounds,
         )
@@ -215,7 +215,7 @@ def test_params_have_no_bounds(test_parameters_dict):
             straylight_fraction=test_parameters_dict["straylight_fraction"],
             unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
             grating_constant=test_parameters_dict["grating_constant"],
-            doppler_shift=test_parameters_dict["doppler_shift"],
+            doppler_velocity=test_parameters_dict["doppler_velocity"],
             order=test_parameters_dict["order"],
         )
     assert "must be an astropy Quantity" in str(excinfo.value)
@@ -236,7 +236,7 @@ def test_default_fit_flags(test_parameters_dict):
         straylight_fraction=test_parameters_dict["straylight_fraction"],
         unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
         grating_constant=test_parameters_dict["grating_constant"],
-        doppler_shift=test_parameters_dict["doppler_shift"],
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
         order=test_parameters_dict["order"],
     )
 
@@ -271,7 +271,7 @@ def test_custom_fit_flags(test_parameters_dict):
         straylight_fraction=test_parameters_dict["straylight_fraction"],
         unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
         grating_constant=test_parameters_dict["grating_constant"],
-        doppler_shift=test_parameters_dict["doppler_shift"],
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
         order=test_parameters_dict["order"],
         fit_flags=fit_flags,
     )

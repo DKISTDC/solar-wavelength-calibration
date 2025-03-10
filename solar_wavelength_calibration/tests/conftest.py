@@ -48,8 +48,8 @@ def test_grating_constant():
 
 
 @pytest.fixture(scope="session")
-def test_doppler_shift():
-    """Dummy doppler shift value."""
+def test_doppler_velocity():
+    """Dummy doppler velocity value."""
     return -0.4281437757265212 * u.km / u.s
 
 
@@ -66,7 +66,7 @@ def test_parameters_dict(
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
-    test_doppler_shift,
+    test_doppler_velocity,
     test_order,
 ):
     return {
@@ -78,7 +78,7 @@ def test_parameters_dict(
         "straylight_fraction": 0.25,
         "unfit_1d_spectrum": test_unfit_1d_spectrum,
         "grating_constant": test_grating_constant,
-        "doppler_shift": test_doppler_shift,
+        "doppler_velocity": test_doppler_velocity,
         "order": test_order,
     }
 
@@ -90,7 +90,7 @@ def test_only_required_parameters_dict(
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
-    test_doppler_shift,
+    test_doppler_velocity,
     test_order,
 ):
     return {
@@ -99,7 +99,7 @@ def test_only_required_parameters_dict(
         "incident_light_angle": test_incident_light_angle,
         "unfit_1d_spectrum": test_unfit_1d_spectrum,
         "grating_constant": test_grating_constant,
-        "doppler_shift": test_doppler_shift,
+        "doppler_velocity": test_doppler_velocity,
         "order": test_order,
     }
 
@@ -110,7 +110,7 @@ def parameters(
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
-    test_doppler_shift,
+    test_doppler_velocity,
     test_order,
     atlas: AtlasBase,
 ) -> Parameters:
@@ -123,7 +123,7 @@ def parameters(
         straylight_fraction=0.25,
         unfit_1d_spectrum=test_unfit_1d_spectrum,
         grating_constant=test_grating_constant,
-        doppler_shift=test_doppler_shift,
+        doppler_velocity=test_doppler_velocity,
         order=test_order,
     )
     return params

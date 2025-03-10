@@ -22,7 +22,7 @@ class WavelengthCalibrationParameters(BaseModel):
     incident_light_angle: Quantity
     unfit_1d_spectrum: NDArray
     grating_constant: Quantity
-    doppler_shift: Quantity
+    doppler_velocity: Quantity
     order: int
     resolving_power: int = 1
     opacity_factor: float = 1
@@ -71,10 +71,10 @@ class WavelengthCalibrationParameters(BaseModel):
 
         return value
 
-    @field_validator("doppler_shift", mode="before")
+    @field_validator("doppler_velocity", mode="before")
     @classmethod
-    def validate_doppler_shift(cls, value, info):
-        """Ensure doppler_shift has correct units (km/s)."""
+    def validate_doppler_velocity(cls, value, info):
+        """Ensure doppler_velocity has correct units (km/s)."""
         if not isinstance(value, Quantity):
             raise TypeError(f"{info.field_name} must be an astropy Quantity.")
 
@@ -223,6 +223,6 @@ class WavelengthCalibrationParameters(BaseModel):
         # Initialize a dict to hold the constant parameters and their values
         constant_params = {}
         constant_params["grating_constant"] = self.grating_constant.value
-        constant_params["doppler_shift"] = self.doppler_shift.value
+        constant_params["doppler_velocity"] = self.doppler_velocity.value
         constant_params["order"] = self.order
         return constant_params
