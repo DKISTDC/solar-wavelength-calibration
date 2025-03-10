@@ -99,12 +99,7 @@ class WaveCalFitter(BaseModel):
             max_wavelength.to_value(u.nm),
             min_atlas_dispersion.to_value(u.nm),
         )
-        print(len(linear_atlas_wavelength_vector))
-        print(len(cropped_telluric_atlas_transmission))
-        print(len(cropped_solar_atlas_transmission))
-        print("a")
-        print("a")
-        print("a")
+
         return (
             linear_atlas_wavelength_vector,
             cropped_solar_atlas_transmission,
