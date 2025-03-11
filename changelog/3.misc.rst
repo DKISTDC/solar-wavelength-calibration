@@ -1,3 +1,1 @@
-Bulk development of solar-wavelength-calibration.
-
-#TODO: Make this better before release
+Wavelength axis correction done by fitting the corresponding section of the FTS Atlas using a least-squares optimization.
