@@ -32,7 +32,7 @@ def test_unfit_1d_spectrum():
 @pytest.fixture(scope="session")
 def test_dispersion():
     """Dummy dispersion value."""
-    return 0.004401829598401599 * u.nm
+    return 0.004401829598401599 * u.nm / u.pix
 
 
 @pytest.fixture(scope="session")

@@ -119,7 +119,7 @@ def test_default_bounds(test_parameters_dict):
     )
 
     assert input_params._get_bounds("crval1") == [-0.5 * u.nm, 0.5 * u.nm]
-    assert input_params._get_bounds("dispersion") == [-0.05 * u.nm, 0.05 * u.nm]
+    assert input_params._get_bounds("dispersion") == [-0.05 * u.nm / u.pix, 0.05 * u.nm / u.pix]
     assert input_params._get_bounds("incident_light_angle") == [-5 * u.rad, 5 * u.rad]
     assert input_params._get_bounds("resolving_power") == [-50000, 50000]
     assert input_params._get_bounds("opacity_factor") == [-5, 5]
@@ -135,7 +135,7 @@ def test_custom_bounds(test_parameters_dict):
     """
     bounds = {
         "crval1": [-0.3, 0.3] * u.nm,
-        "dispersion": [-55, 55] * u.nm,
+        "dispersion": [-55, 55] * u.nm / u.pix,
         "incident_light_angle": [-5, 103] * u.rad,
         "resolving_power": [-50, 0.0001],
         "opacity_factor": [-1, 1],
@@ -156,7 +156,7 @@ def test_custom_bounds(test_parameters_dict):
     )
 
     assert input_params._get_bounds("crval1") == [-0.3 * u.nm, 0.3 * u.nm]
-    assert input_params._get_bounds("dispersion") == [-55 * u.nm, 55 * u.nm]
+    assert input_params._get_bounds("dispersion") == [-55 * u.nm / u.pix, 55 * u.nm / u.pix]
     assert input_params._get_bounds("incident_light_angle") == [-5 * u.rad, 103 * u.rad]
     assert input_params._get_bounds("resolving_power") == [-50, 0.0001]
     assert input_params._get_bounds("opacity_factor") == [-1, 1]
@@ -208,7 +208,7 @@ def test_params_have_no_bounds(test_parameters_dict):
     with pytest.raises(TypeError) as excinfo:
         input_params = WavelengthCalibrationParameters(
             crval1=test_parameters_dict["crval1"].to_value(u.nm),
-            dispersion=test_parameters_dict["dispersion"].to_value(u.nm),
+            dispersion=test_parameters_dict["dispersion"].to_value(u.nm / u.pix),
             incident_light_angle=test_parameters_dict["incident_light_angle"].to_value(u.rad),
             resolving_power=test_parameters_dict["resolving_power"],
             opacity_factor=test_parameters_dict["opacity_factor"],

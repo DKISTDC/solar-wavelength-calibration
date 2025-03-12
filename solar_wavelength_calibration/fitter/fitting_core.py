@@ -36,7 +36,10 @@ def fitness(
         Telluric FTS atlas transmission array corresponding to fts_wave object.
 
     fts_solar
-        Solar FTS atlas transmission array corresponding to fts_wave object.
+        Solar FTS atlas spectrum corresponding to fts_wave object.
+
+    number_of_wave_pix
+        The number of wavelength pixels in the unfit_1d_spectrum.
 
     grating_constant
         Instrument specific grating constant.
@@ -87,9 +90,11 @@ def fitness(
     )  # in parameters
 
     # interpolate the solar spectral atlas onto the new wavelength axis and apply a shift according to the Doppler shift due to orbital motions (doppler velocity)
+    fts_wave_doppler_corrected = fts_wave + doppler_velocity / (const.c.to_value("km/s"))
+    scaled_fts_wave_doppler_corrected = fts_wave_doppler_corrected * crval1
     fts_solar_interp = np.interp(
         wavelength_vector,
-        fts_wave + doppler_velocity / (const.c.to_value("km/s")) * crval1,
+        scaled_fts_wave_doppler_corrected,
         fts_solar,
     )
 

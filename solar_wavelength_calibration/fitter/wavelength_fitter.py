@@ -8,7 +8,6 @@ import numpy as np
 from numpydantic import NDArray
 from pydantic import BaseModel
 from pydantic import ConfigDict
-from scipy.ndimage import gaussian_filter1d
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.fitting_core import fitness

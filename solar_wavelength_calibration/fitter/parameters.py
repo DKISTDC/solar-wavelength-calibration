@@ -36,7 +36,7 @@ class WavelengthCalibrationParameters(BaseModel):
         """Ensure crval1, dispersion, and incident_light_angle have correct length units."""
         expected_units = {
             "crval1": u.nm,
-            "dispersion": u.nm,
+            "dispersion": u.nm / u.pix,
             "incident_light_angle": u.rad,
         }
 
@@ -101,7 +101,7 @@ class WavelengthCalibrationParameters(BaseModel):
         """Return default bounds for the fit parameters."""
         return {
             "crval1": [-0.5, 0.5] * u.nm,
-            "dispersion": [-0.05, 0.05] * u.nm,
+            "dispersion": [-0.05, 0.05] * u.nm / u.pix,
             "incident_light_angle": [-5, 5] * u.rad,
             "resolving_power": [-50000, 50000],
             "opacity_factor": [-5, 5],
@@ -169,11 +169,13 @@ class WavelengthCalibrationParameters(BaseModel):
         param.add(
             "dispersion",
             vary=self.fit_flags["dispersion"],
-            value=self.dispersion.to_value(u.nm),
-            min=self.dispersion.to_value(u.nm)
-            + self._get_bounds("dispersion")[0].to_value(u.nm) * self.dispersion.to_value(u.nm),
-            max=self.dispersion.to_value(u.nm)
-            + self._get_bounds("dispersion")[1].to_value(u.nm) * self.dispersion.to_value(u.nm),
+            value=self.dispersion.to_value(u.nm / u.pix),
+            min=self.dispersion.to_value(u.nm / u.pix)
+            + self._get_bounds("dispersion")[0].to_value(u.nm / u.pix)
+            * self.dispersion.to_value(u.nm / u.pix),
+            max=self.dispersion.to_value(u.nm / u.pix)
+            + self._get_bounds("dispersion")[1].to_value(u.nm / u.pix)
+            * self.dispersion.to_value(u.nm / u.pix),
         )
         param.add(
             "incident_light_angle",
