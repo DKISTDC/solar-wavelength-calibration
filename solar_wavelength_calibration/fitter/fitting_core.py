@@ -71,46 +71,43 @@ def fitness(
         "PV1_0": grating_constant,  # Grating density
         "PV1_1": order,  # Diffraction order
         "CRVAL1": crval1,  # Reference value [nm] (<<<< TO BE OPTIMIZED <<<<<<)
-        "CDELT1": dispersion,  # Linear dispersion [nm/pix] (<<<< TO BE OPTIMIZED <<<<<<) # TODO: dispersion param is in nm
-        "PV1_2": np.rad2deg(
-            incident_light_angle
-        ),  # Incident angle [deg] (<<<< TO BE OPTIMIZED <<<<<<)
+        "CDELT1": dispersion,  # Linear dispersion [nm/pix] (<<<< TO BE OPTIMIZED <<<<<<)
+        "PV1_2": incident_light_angle,  # Incident angle [deg] (<<<< TO BE OPTIMIZED <<<<<<)
     }
 
     non_linear_wcs = WCS(non_linear_header)
-    wavelength_vector = (  # linear_wavelength_vector
+    linear_wave = (  # linear_wavelength_vector
         non_linear_wcs.spectral.pixel_to_world(np.arange(number_of_wave_pix))
     ).to_value(u.nm)
 
     # interpolate the telluric spectral atlas onto the new wavelength axis and scale by the opacity value that is being optimized
-    fts_telluric_transmission_interp = np.interp(wavelength_vector, fts_wave, fts_telluric)
-    fts_telluric_transmission_atmos_corr = (
-        fts_telluric_transmission_interp
+    linear_fts_telluric_transmission = np.interp(linear_wave, fts_wave, fts_telluric)
+    opacity_scaled_fts_telluric_transmission = (
+        linear_fts_telluric_transmission
         ** opacity  # relative scaling of each wavelength based on the atmosphere during the observations
     )  # in parameters
 
     # interpolate the solar spectral atlas onto the new wavelength axis and apply a shift according to the Doppler shift due to orbital motions (doppler velocity)
-    fts_wave_doppler_corrected = fts_wave + doppler_velocity / (const.c.to_value("km/s"))
-    scaled_fts_wave_doppler_corrected = fts_wave_doppler_corrected * crval1
-    fts_solar_interp = np.interp(
-        wavelength_vector,
-        scaled_fts_wave_doppler_corrected,
+    fts_wave_doppler_corrected = fts_wave + doppler_velocity / (const.c.to_value("km/s")) * crval1
+    linear_fts_solar_transmission = np.interp(
+        linear_wave,
+        fts_wave_doppler_corrected,
         fts_solar,
     )
 
     # apply telluric absorption spectrum to solar spectrum
-    fts_modulated = fts_telluric_transmission_atmos_corr * fts_solar_interp
+    fts_solar_atmos_corr = opacity_scaled_fts_telluric_transmission * linear_fts_solar_transmission
     # add flat value of straylight contamination
-    fts_modulated_with_straylight = fts_modulated + stray_light_fraction
+    fts_solar_with_straylight = fts_solar_atmos_corr + stray_light_fraction
 
     # scale for total intensity of the continuum
-    fit_amplitude = fts_modulated_with_straylight * continuum_intensity_correction
+    fts_solar_normalized = fts_solar_with_straylight * continuum_intensity_correction
 
     # convolution for spectrograph line spread function
     sigma_wavelength = (crval1 / resolving_power) * gaussian_fwhm_to_sigma
-    kern_pix = sigma_wavelength / np.abs(dispersion)  # used to match FTS resolution to our data
-    fit_amplitude = gaussian_filter1d(fit_amplitude, kern_pix)
+    sigma_pix = sigma_wavelength / np.abs(dispersion)  # used to match FTS resolution to our data
+    fts_final_spectrum = gaussian_filter1d(fts_solar_normalized, sigma_pix)
 
-    res_amplitude = unfit_1d_spectrum - fit_amplitude
+    res_amplitude = unfit_1d_spectrum - fts_final_spectrum
 
     return res_amplitude

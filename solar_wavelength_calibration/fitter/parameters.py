@@ -37,7 +37,7 @@ class WavelengthCalibrationParameters(BaseModel):
         expected_units = {
             "crval1": u.nm,
             "dispersion": u.nm / u.pix,
-            "incident_light_angle": u.rad,
+            "incident_light_angle": u.deg,
         }
 
         field_name = info.field_name  # Correct way to get the field name
@@ -102,7 +102,7 @@ class WavelengthCalibrationParameters(BaseModel):
         return {
             "crval1": [-0.5, 0.5] * u.nm,
             "dispersion": [-0.05, 0.05] * u.nm / u.pix,
-            "incident_light_angle": [-5, 5] * u.rad,
+            "incident_light_angle": [-180, 180] * u.deg,
             "resolving_power": [-50000, 50000],
             "opacity_factor": [-5, 5],
             "straylight_fraction": [-0.25, 0.25],
@@ -180,12 +180,12 @@ class WavelengthCalibrationParameters(BaseModel):
         param.add(
             "incident_light_angle",
             vary=self.fit_flags["incident_light_angle"],
-            value=self.incident_light_angle.to_value(u.rad),
+            value=self.incident_light_angle.to_value(u.deg),
             min=(self.incident_light_angle + self._get_bounds("incident_light_angle")[0]).to_value(
-                u.rad
+                u.deg
             ),
             max=(self.incident_light_angle + self._get_bounds("incident_light_angle")[1]).to_value(
-                u.rad
+                u.deg
             ),
         )
         param.add(

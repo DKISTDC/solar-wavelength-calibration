@@ -38,7 +38,7 @@ def test_dispersion():
 @pytest.fixture(scope="session")
 def test_incident_light_angle():
     """Dummy incident_light_angle value."""
-    return 0.9949384642711658 * u.rad
+    return 57.00577487796545 * u.deg
 
 
 @pytest.fixture(scope="session")
