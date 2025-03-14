@@ -39,25 +39,24 @@ class WaveCalFitter(BaseModel):
     def fit_result(self) -> dict:
         """Run data preparation and fitting."""
         (
-            linear_atlas_wavelength_vector,
+            cropped_solar_atlas_wavelength,
+            cropped_telluric_atlas_wavelength,
             cropped_solar_atlas_transmission,
             cropped_telluric_atlas_transmission,
         ) = self.prepare_atlas()
         fit_result_params = self.run_fit(
-            linear_atlas_wavelength_vector,
+            cropped_solar_atlas_wavelength,
+            cropped_telluric_atlas_wavelength,
             cropped_solar_atlas_transmission,
             cropped_telluric_atlas_transmission,
         )
         return fit_result_params
 
     def prepare_atlas(self):
-        """Prepare the atlas by roughly matching the atlas to the raw spectrum. This is done in 2 steps.
+        """Prepare the atlas by roughly matching the atlas to the raw spectrum.
 
-        1. Resample both atlases to be on the same, linear wavelength grid and select the portion of atlas that
+        This is done by resampling both atlases to be on the same, linear wavelength grid and select the portion of atlas that
         pertains to bandpass used in the data.
-
-        2. Determine a shift of the expected wavelength vector so that it generally aligns with the data itself.
-
         """
         # Resample atlases
         solar_atlas_wavelength = self.atlas.solar_atlas_wavelength
@@ -77,7 +76,6 @@ class WaveCalFitter(BaseModel):
         )
 
         cropped_telluric_atlas_wavelength = telluric_atlas_wavelength[cropped_telluric_mask]
-        min_telluric_atlas_dispersion = min(np.diff(cropped_telluric_atlas_wavelength))
         cropped_telluric_atlas_transmission = self.atlas.telluric_atlas_transmission[
             cropped_telluric_mask
         ]
@@ -86,26 +84,16 @@ class WaveCalFitter(BaseModel):
             solar_atlas_wavelength < max_wavelength
         )
         cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask]
-        min_solar_atlas_dispersion = min(np.diff(cropped_solar_atlas_wavelength))
         cropped_solar_atlas_transmission = self.atlas.solar_atlas_transmission[cropped_solar_mask]
 
-        # find the smallest dispersion
-        min_atlas_dispersion = min([min_solar_atlas_dispersion, min_telluric_atlas_dispersion])
-
-        # linearize wavelength grid that atlas is on
-        linear_atlas_wavelength_vector = np.arange(
-            min_wavelength.to_value(u.nm),
-            max_wavelength.to_value(u.nm),
-            min_atlas_dispersion.to_value(u.nm),
-        )
-
         return (
-            linear_atlas_wavelength_vector,
+            cropped_solar_atlas_wavelength.to_value(u.nm),
+            cropped_telluric_atlas_wavelength.to_value(u.nm),
             cropped_solar_atlas_transmission,
             cropped_telluric_atlas_transmission,
         )
 
-    def run_fit(self, fts_wave, fts_solar, fts_telluric) -> dict:
+    def run_fit(self, fts_solar_wave, fts_telluric_wave, fts_solar, fts_telluric) -> dict:
         """Send the fitter on its way."""
         params_to_fit = self.input_parameters.lmfit_parameters
         constant_parameters = self.input_parameters.constant_parameters
@@ -117,7 +105,8 @@ class WaveCalFitter(BaseModel):
             params_to_fit,
             fcn_args=(
                 self.unfit_1d_spectrum,
-                fts_wave,
+                fts_solar_wave,
+                fts_telluric_wave,
                 fts_telluric,
                 fts_solar,
                 number_of_wave_pix,

@@ -11,7 +11,8 @@ from scipy.ndimage import gaussian_filter1d
 def fitness(
     params: Parameters,
     unfit_1d_spectrum: np.ndarray,
-    fts_wave: np.ndarray,
+    fts_solar_wave: np.ndarray,
+    fts_telluric_wave: np.ndarray,
     fts_telluric: np.ndarray,
     fts_solar: np.ndarray,
     number_of_wave_pix: int,
@@ -29,14 +30,17 @@ def fitness(
     unfit_1d_spectrum
         An array with the input (unfit) 1D spectrum.
 
-    fts_wave
-        FTS Atlas wavelength array cropped around the input data.
+    fts_solar_wave
+        FTS Solar Atlas wavelength array cropped around the input data.
+
+    fts_telluric_wave
+        FTS Telluric Atlas wavelength array cropped around the input data.
 
     fts_telluric
-        Telluric FTS atlas transmission array corresponding to fts_wave object.
+        Telluric FTS atlas transmission array corresponding to fts_telluric_wave object.
 
     fts_solar
-        Solar FTS atlas spectrum corresponding to fts_wave object.
+        Solar FTS atlas spectrum corresponding to fts_solar_wave object.
 
     number_of_wave_pix
         The number of wavelength pixels in the unfit_1d_spectrum.
@@ -81,14 +85,16 @@ def fitness(
     ).to_value(u.nm)
 
     # interpolate the telluric spectral atlas onto the new wavelength axis and scale by the opacity value that is being optimized
-    linear_fts_telluric_transmission = np.interp(linear_wave, fts_wave, fts_telluric)
+    linear_fts_telluric_transmission = np.interp(linear_wave, fts_telluric_wave, fts_telluric)
     opacity_scaled_fts_telluric_transmission = (
         linear_fts_telluric_transmission
         ** opacity  # relative scaling of each wavelength based on the atmosphere during the observations
     )  # in parameters
 
     # interpolate the solar spectral atlas onto the new wavelength axis and apply a shift according to the Doppler shift due to orbital motions (doppler velocity)
-    fts_wave_doppler_corrected = fts_wave + doppler_velocity / (const.c.to_value("km/s")) * crval1
+    fts_wave_doppler_corrected = (
+        fts_solar_wave + doppler_velocity / (const.c.to_value("km/s")) * crval1
+    )
     linear_fts_solar_transmission = np.interp(
         linear_wave,
         fts_wave_doppler_corrected,
@@ -108,6 +114,6 @@ def fitness(
     sigma_pix = sigma_wavelength / np.abs(dispersion)  # used to match FTS resolution to our data
     fts_final_spectrum = gaussian_filter1d(fts_solar_normalized, sigma_pix)
 
-    res_amplitude = unfit_1d_spectrum - fts_final_spectrum
+    res_amplitude = unfit_1d_spectrum.to_value(u.nm) - fts_final_spectrum
 
     return res_amplitude

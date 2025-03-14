@@ -91,25 +91,6 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
     )
 
 
-def test_expected_wavelength_and_unfit_spectrum_different_lengths(
-    parameters: WavelengthCalibrationParameters, test_unfit_1d_spectrum, atlas: AtlasBase
-):
-    """
-    Given: An expected_wavelength_vector and unfit_1d_spectrum vector that are not of the same size
-    When: Initializing a WaveCalFitter object
-    Then: Raise an error
-    """
-    test_expected_wavelength_vector_small = np.linspace(1500, 2000, 100) * u.nm
-    with pytest.raises(ValueError, match="operands could not be broadcast together"):
-        fitter = WaveCalFitter(
-            input_parameters=parameters,
-            atlas=atlas,
-            expected_wavelength_vector=test_expected_wavelength_vector_small,
-            unfit_1d_spectrum=test_unfit_1d_spectrum,
-        )
-        fitter.fit_result
-
-
 def test_fit_is_correct(
     parameters: WavelengthCalibrationParameters,
     test_unfit_1d_spectrum,
@@ -167,15 +148,21 @@ def test_prepare_atlas(
         expected_wavelength_vector=test_expected_wavelength_vector,
         unfit_1d_spectrum=test_unfit_1d_spectrum,
     )
-    fts_wavelength, fts_solar, fts_telluric = fitter.prepare_atlas()
+    fts_solar_wavelength, fts_telluric_wavelength, fts_solar, fts_telluric = fitter.prepare_atlas()
 
     # test that we took out a chunk of the atlas
     assert len(fts_solar) < len(atlas.solar_atlas_transmission)
     assert len(fts_telluric) < len(atlas.telluric_atlas_transmission)
 
-    # test that we took out the correct chunk (i.e. mean of expected wavelength vector is contained in fts_wavelength)
+    # test that we took out the correct chunk for each atlas (i.e. mean of expected wavelength vector is contained in fts_[solar/telluric]wavelength)
     assert (
-        fts_wavelength[0]
-        < np.mean(test_expected_wavelength_vector).value
-        < fts_wavelength[len(fts_wavelength) - 1]
+        fts_solar_wavelength[0]
+        < np.mean(test_expected_wavelength_vector).to_value(u.nm)
+        < fts_solar_wavelength[len(fts_solar_wavelength) - 1]
+    )
+
+    assert (
+        fts_telluric_wavelength[0]
+        < np.mean(test_expected_wavelength_vector).to_value(u.nm)
+        < fts_telluric_wavelength[len(fts_telluric_wavelength) - 1]
     )

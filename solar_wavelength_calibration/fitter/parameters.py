@@ -28,28 +28,45 @@ class WavelengthCalibrationParameters(BaseModel):
     opacity_factor: float = 1
     straylight_fraction: float = 0
     fit_flags: Optional[dict[str, bool]] = None
-    bounds: Optional[dict[str, list[Union[Quantity, float, int]]]] = None  # Mixed types
+    bounds: dict[str, list[Union[Quantity, float, int]]] = {
+        "crval1": [-0.5, 0.5] * u.nm,
+        "dispersion": [-0.05, 0.05] * u.nm / u.pix,
+        "incident_light_angle": [-180, 180] * u.deg,
+        "resolving_power": [-50000, 50000],
+        "opacity_factor": [-5, 5],
+        "straylight_fraction": [-0.25, 0.25],
+        "continuum_intensity_correction": [0.8, 1.2],
+    }
 
-    @field_validator("crval1", "dispersion", "incident_light_angle", mode="before")
+    @field_validator("crval1", mode="after")
     @classmethod
-    def validate_length_units(cls, value, info):
-        """Ensure crval1, dispersion, and incident_light_angle have correct length units."""
-        expected_units = {
-            "crval1": u.nm,
-            "dispersion": u.nm / u.pix,
-            "incident_light_angle": u.deg,
-        }
+    def validate_crval1_units(cls, value):
+        """Ensure crval1 has correct length units."""
+        return value.to_value(u.nm)
 
-        field_name = info.field_name  # Correct way to get the field name
+    @field_validator("incident_light_angle")
+    @classmethod
+    def validate_incident_light_angle_units(cls, value):
+        """Ensure incident_light_angle has correct length units."""
+        return value.to_value(u.deg)
 
-        if not isinstance(value, Quantity):
-            raise TypeError(f"{field_name} must be an astropy Quantity.")
+    @field_validator("dispersion")
+    @classmethod
+    def validate_dispersion_units(cls, value):
+        """Ensure dispersion has correct length units."""
+        return value.to_value(u.nm / u.pix)
 
-        expected_unit = expected_units[field_name]
-        if not value.unit.is_equivalent(expected_unit):
-            raise ValueError(f"{field_name} must be in {expected_unit}, but got {value.unit}.")
+    @field_validator("grating_constant")
+    @classmethod
+    def validate_grating_constant_units(cls, value):
+        """Ensure grating_constant has correct length units."""
+        return value.to_value(1 / u.mm)
 
-        return value
+    @field_validator("doppler_velocity")
+    @classmethod
+    def validate_doppler_velocity_units(cls, value):
+        """Ensure doppler_velocity has correct length units."""
+        return value.to_value(u.km / u.s)
 
     @field_validator("unfit_1d_spectrum", mode="after")
     @classmethod
@@ -57,30 +74,6 @@ class WavelengthCalibrationParameters(BaseModel):
         """Ensure unfit_1d_spectrum is an NDArray."""
         if not isinstance(value, np.ndarray):
             raise TypeError("unfit_1d_spectrum must be a NumPy array.")
-        return value
-
-    @field_validator("grating_constant", mode="before")
-    @classmethod
-    def validate_grating_constant(cls, value, info):
-        """Ensure grating_constant has correct units (1/mm)."""
-        if not isinstance(value, Quantity):
-            raise TypeError(f"{info.field_name} must be an astropy Quantity.")
-
-        if not value.unit.is_equivalent(1 / u.mm):
-            raise ValueError(f"{info.field_name} must have units of 1/mm, but got {value.unit}.")
-
-        return value
-
-    @field_validator("doppler_velocity", mode="before")
-    @classmethod
-    def validate_doppler_velocity(cls, value, info):
-        """Ensure doppler_velocity has correct units (km/s)."""
-        if not isinstance(value, Quantity):
-            raise TypeError(f"{info.field_name} must be an astropy Quantity.")
-
-        if not value.unit.is_equivalent(u.km / u.s):
-            raise ValueError(f"{info.field_name} must have units of km/s, but got {value.unit}.")
-
         return value
 
     @staticmethod
@@ -96,63 +89,62 @@ class WavelengthCalibrationParameters(BaseModel):
             "continuum_intensity_correction": True,
         }
 
-    @staticmethod
-    def _default_bounds():
-        """Return default bounds for the fit parameters."""
-        return {
-            "crval1": [-0.5, 0.5] * u.nm,
-            "dispersion": [-0.05, 0.05] * u.nm / u.pix,
-            "incident_light_angle": [-180, 180] * u.deg,
-            "resolving_power": [-50000, 50000],
-            "opacity_factor": [-5, 5],
-            "straylight_fraction": [-0.25, 0.25],
-            "continuum_intensity_correction": [0.8, 1.2],
-        }
-
-    @field_validator("bounds", mode="before")
+    @field_validator("bounds", mode="after")
     @classmethod
     def validate_bounds(cls, value):
-        """Ensure crval1, dispersion, and incident_light_angle have correct units, while others are dimensionless."""
+        """Ensure bounds have correct units."""
         if value is None:
-            return cls._default_bounds()
+            value = cls.bounds  # Use the default bounds directly
 
-        default_bounds = cls._default_bounds()
+        validated_bounds = {}
 
         for key, bound in value.items():
             if key in ["crval1", "dispersion", "incident_light_angle"]:
-                # These must be a Quantity and match expected units
+                # Ensure bounds are Quantities with correct units
                 if not isinstance(bound[0], Quantity) or not isinstance(bound[1], Quantity):
                     raise ValueError(
                         f"Bounds for {key} must be an astropy Quantity with appropriate units."
                     )
 
-                expected_unit = default_bounds[key][0].unit
+                expected_unit = bound[0].unit
                 if not bound[0].unit.is_equivalent(expected_unit) or not bound[
                     1
                 ].unit.is_equivalent(expected_unit):
                     raise ValueError(
-                        f"Bounds for {key} must be in {expected_unit}, got {bound[0].unit} and {bound[1].unit}."
+                        f"Bounds for {key} must be in {expected_unit}, but got {bound[0].unit} and {bound[1].unit}."
                     )
 
+                validated_bounds[key] = [b.to_value(expected_unit) for b in bound]
+
             else:
-                # All other parameters must be dimensionless
+                # Ensure non-quantity bounds are dimensionless (int or float)
                 if isinstance(bound[0], Quantity) or isinstance(bound[1], Quantity):
                     raise ValueError(
                         f"Bounds for {key} must be dimensionless (int or float), but got {bound}."
                     )
 
-        return value
+                validated_bounds[key] = bound
+
+        return validated_bounds
 
     def __init__(self, **kwargs):
         """Merge user-provided fit_flags and bounds with defaults."""
+        # Ensure fit_flags are merged with defaults
         kwargs["fit_flags"] = {**self._default_fit_flags(), **(kwargs.get("fit_flags") or {})}
-        kwargs["bounds"] = {**self._default_bounds(), **(kwargs.get("bounds") or {})}
 
         super().__init__(**kwargs)  # Initialize Pydantic model
 
+        user_bounds = kwargs.get("bounds", {})
+        self.bounds = {key: user_bounds.get(key, default) for key, default in self.bounds.items()}
+
     def _get_bounds(self, param_name: str):
         """Retrieve bounds for a parameter, ensuring defaults exist."""
-        return self.bounds.get(param_name, self._default_bounds()[param_name])
+        bounds = self.bounds.get(param_name, None)
+
+        if bounds is None:
+            raise KeyError(f"Bounds for parameter '{param_name}' not found.")
+
+        return [b.to_value() if isinstance(b, Quantity) else b for b in bounds]
 
     @property
     def lmfit_parameters(self) -> Parameters:
@@ -162,31 +154,23 @@ class WavelengthCalibrationParameters(BaseModel):
         param.add(
             "crval1",
             vary=self.fit_flags["crval1"],
-            value=self.crval1.to_value(u.nm),
-            min=(self.crval1 + self._get_bounds("crval1")[0]).to_value(u.nm),
-            max=(self.crval1 + self._get_bounds("crval1")[1]).to_value(u.nm),
+            value=self.crval1,
+            min=(self.crval1 + self._get_bounds("crval1")[0]),
+            max=(self.crval1 + self._get_bounds("crval1")[1]),
         )
         param.add(
             "dispersion",
             vary=self.fit_flags["dispersion"],
-            value=self.dispersion.to_value(u.nm / u.pix),
-            min=self.dispersion.to_value(u.nm / u.pix)
-            + self._get_bounds("dispersion")[0].to_value(u.nm / u.pix)
-            * self.dispersion.to_value(u.nm / u.pix),
-            max=self.dispersion.to_value(u.nm / u.pix)
-            + self._get_bounds("dispersion")[1].to_value(u.nm / u.pix)
-            * self.dispersion.to_value(u.nm / u.pix),
+            value=self.dispersion,
+            min=self.dispersion + self._get_bounds("dispersion")[0] * self.dispersion,
+            max=self.dispersion + self._get_bounds("dispersion")[1] * self.dispersion,
         )
         param.add(
             "incident_light_angle",
             vary=self.fit_flags["incident_light_angle"],
-            value=self.incident_light_angle.to_value(u.deg),
-            min=(self.incident_light_angle + self._get_bounds("incident_light_angle")[0]).to_value(
-                u.deg
-            ),
-            max=(self.incident_light_angle + self._get_bounds("incident_light_angle")[1]).to_value(
-                u.deg
-            ),
+            value=self.incident_light_angle,
+            min=(self.incident_light_angle + self._get_bounds("incident_light_angle")[0]),
+            max=(self.incident_light_angle + self._get_bounds("incident_light_angle")[1]),
         )
         param.add(
             "resolving_power",
@@ -209,7 +193,8 @@ class WavelengthCalibrationParameters(BaseModel):
             min=self.straylight_fraction + self._get_bounds("straylight_fraction")[0],
             max=self.straylight_fraction + self._get_bounds("straylight_fraction")[1],
         )
-        spectrum_percentile = np.nanpercentile(self.unfit_1d_spectrum, 75)
+
+        spectrum_percentile = np.nanpercentile(self.unfit_1d_spectrum, 75).to_value(u.nm)
         param.add(
             "continuum_intensity_correction",
             vary=self.fit_flags["continuum_intensity_correction"],
@@ -224,7 +209,7 @@ class WavelengthCalibrationParameters(BaseModel):
         """Create a single dictionary with correct starting values for the constant instrument specific parameters that will not vary."""
         # Initialize a dict to hold the constant parameters and their values
         constant_params = {}
-        constant_params["grating_constant"] = self.grating_constant.value
-        constant_params["doppler_velocity"] = self.doppler_velocity.value
+        constant_params["grating_constant"] = self.grating_constant
+        constant_params["doppler_velocity"] = self.doppler_velocity
         constant_params["order"] = self.order
         return constant_params
