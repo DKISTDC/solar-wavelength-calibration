@@ -117,13 +117,13 @@ def test_default_bounds(test_parameters_dict):
         order=test_parameters_dict["order"],
     )
 
-    assert input_params._get_bounds("crval1") == [-0.5, 0.5]
-    assert input_params._get_bounds("dispersion") == [-0.05, 0.05]
-    assert input_params._get_bounds("incident_light_angle") == [-180, 180]
-    assert input_params._get_bounds("resolving_power") == [-50000, 50000]
-    assert input_params._get_bounds("opacity_factor") == [-5, 5]
-    assert input_params._get_bounds("straylight_fraction") == [-0.25, 0.25]
-    assert input_params._get_bounds("continuum_intensity_correction") == [0.8, 1.2]
+    assert input_params._get_bounds("crval1") == None
+    assert input_params._get_bounds("dispersion") == None
+    assert input_params._get_bounds("incident_light_angle") == None
+    assert input_params._get_bounds("resolving_power") == None
+    assert input_params._get_bounds("opacity_factor") == None
+    assert input_params._get_bounds("straylight_fraction") == None
+    assert input_params._get_bounds("continuum_intensity_correction") == None
 
 
 def test_custom_bounds(test_parameters_dict):
@@ -133,11 +133,26 @@ def test_custom_bounds(test_parameters_dict):
     Then: The customized input bounds are set to the custom values and others are set to the default values
     """
     bounds = {
-        "crval1": [-0.3, 0.3] * u.nm,
-        "dispersion": [-55, 55] * u.nm / u.pix,
-        "incident_light_angle": [-5, 103] * u.deg,
-        "resolving_power": [-50, 0.0001],
-        "opacity_factor": [-1, 1],
+        "crval1": [
+            test_parameters_dict["crval1"] - (0.3 * u.nm),
+            test_parameters_dict["crval1"] + (0.3 * u.nm),
+        ],
+        "dispersion": [
+            test_parameters_dict["dispersion"] - (55 * u.nm / u.pix),
+            test_parameters_dict["dispersion"] + (55 * u.nm / u.pix),
+        ],
+        "incident_light_angle": [
+            test_parameters_dict["incident_light_angle"] - (5 * u.deg),
+            test_parameters_dict["incident_light_angle"] + (103 * u.deg),
+        ],
+        "resolving_power": [
+            test_parameters_dict["resolving_power"] - 50,
+            test_parameters_dict["resolving_power"] + 0.0001,
+        ],
+        "opacity_factor": [
+            test_parameters_dict["opacity_factor"] - 1,
+            test_parameters_dict["opacity_factor"] + 1,
+        ],
     }
 
     input_params = WavelengthCalibrationParameters(
@@ -154,16 +169,80 @@ def test_custom_bounds(test_parameters_dict):
         bounds=bounds,
     )
 
-    assert input_params._get_bounds("crval1") == [-0.3, 0.3]
-    assert input_params._get_bounds("dispersion") == [-55, 55]
-    assert input_params._get_bounds("incident_light_angle") == [-5, 103]
-    assert input_params._get_bounds("resolving_power") == [-50, 0.0001]
-    assert input_params._get_bounds("opacity_factor") == [-1, 1]
-    assert input_params._get_bounds("straylight_fraction") == [-0.25, 0.25]  # default bounds
-    assert input_params._get_bounds("continuum_intensity_correction") == [
-        0.8,
-        1.2,
-    ]  # default bounds
+    assert np.isclose(
+        input_params._get_bounds("crval1")[0], test_parameters_dict["crval1"].to_value(u.nm) - 0.3
+    )
+    assert np.isclose(
+        input_params._get_bounds("crval1")[1], test_parameters_dict["crval1"].to_value(u.nm) + 0.3
+    )
+    assert np.isclose(
+        input_params._get_bounds("dispersion")[0],
+        test_parameters_dict["dispersion"].to_value(u.nm / u.pix) - 55,
+    )
+    assert np.isclose(
+        input_params._get_bounds("dispersion")[1],
+        test_parameters_dict["dispersion"].to_value(u.nm / u.pix) + 55,
+    )
+    assert np.isclose(
+        input_params._get_bounds("incident_light_angle")[0],
+        test_parameters_dict["incident_light_angle"].to_value(u.deg) - 5,
+    )
+    assert np.isclose(
+        input_params._get_bounds("incident_light_angle")[1],
+        test_parameters_dict["incident_light_angle"].to_value(u.deg) + 103,
+    )
+    assert np.isclose(
+        input_params._get_bounds("resolving_power")[0], test_parameters_dict["resolving_power"] - 50
+    )
+    assert np.isclose(
+        input_params._get_bounds("resolving_power")[1],
+        test_parameters_dict["resolving_power"] + 0.0001,
+    )
+    assert np.isclose(
+        input_params._get_bounds("opacity_factor")[0], test_parameters_dict["opacity_factor"] - 1
+    )
+    assert np.isclose(
+        input_params._get_bounds("opacity_factor")[1], test_parameters_dict["opacity_factor"] + 1
+    )
+    assert input_params._get_bounds("straylight_fraction") == None  # default bounds
+    assert input_params._get_bounds("continuum_intensity_correction") == None  # default bounds
+
+
+def test_custom_bounds_incorrect_units(test_parameters_dict):
+    """
+    Given: Some custom input bounds with incorrect input units
+    When: Initializing the fit parameters
+    Then: The customized input bounds are converted to the correct units and others are set to the default values
+    """
+    crval1_bound = 3 * u.Angstrom
+    bounds = {
+        "crval1": [
+            test_parameters_dict["crval1"] - crval1_bound,
+            test_parameters_dict["crval1"] + crval1_bound,
+        ],
+    }
+
+    input_params = WavelengthCalibrationParameters(
+        crval1=test_parameters_dict["crval1"],
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=test_parameters_dict["incident_light_angle"],
+        resolving_power=test_parameters_dict["resolving_power"],
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        straylight_fraction=test_parameters_dict["straylight_fraction"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=test_parameters_dict["grating_constant"],
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
+        order=test_parameters_dict["order"],
+        bounds=bounds,
+    )
+
+    # bound value was converted to correct units
+    assert np.isclose(
+        input_params._get_bounds("crval1")[0], test_parameters_dict["crval1"].to_value(u.nm) - 0.3
+    )
+    assert np.isclose(
+        input_params._get_bounds("crval1")[1], test_parameters_dict["crval1"].to_value(u.nm) + 0.3
+    )
 
 
 def test_bounds_have_no_units(test_parameters_dict):
@@ -173,11 +252,26 @@ def test_bounds_have_no_units(test_parameters_dict):
     Then: A ValidationError is raised
     """
     bounds = {
-        "crval1": [-0.3, 0.3],
-        "dispersion": [-55, 55],
-        "incident_light_angle": [-5, 103],
-        "resolving_power": [-50, 0.0001],
-        "opacity_factor": [-1, 1],
+        "crval1": [
+            test_parameters_dict["crval1"].to_value(u.nm) - 0.3,
+            test_parameters_dict["crval1"].to_value(u.nm) + 0.3,
+        ],
+        "dispersion": [
+            test_parameters_dict["dispersion"].to_value(u.nm / u.pix) - 55,
+            test_parameters_dict["dispersion"].to_value(u.nm / u.pix) + 55,
+        ],
+        "incident_light_angle": [
+            test_parameters_dict["incident_light_angle"].to_value(u.deg) - 5,
+            test_parameters_dict["incident_light_angle"].to_value(u.deg) + 103,
+        ],
+        "resolving_power": [
+            test_parameters_dict["resolving_power"] - 50,
+            test_parameters_dict["resolving_power"] + 0.0001,
+        ],
+        "opacity_factor": [
+            test_parameters_dict["opacity_factor"] - 1,
+            test_parameters_dict["opacity_factor"] + 1,
+        ],
     }
 
     with pytest.raises(ValidationError) as excinfo:
@@ -194,7 +288,7 @@ def test_bounds_have_no_units(test_parameters_dict):
             order=test_parameters_dict["order"],
             bounds=bounds,
         )
-    assert "must be an astropy Quantity with appropriate units" in str(excinfo.value)
+    assert "must have units" in str(excinfo.value)
 
 
 def test_default_fit_flags(test_parameters_dict):
@@ -216,13 +310,13 @@ def test_default_fit_flags(test_parameters_dict):
         order=test_parameters_dict["order"],
     )
 
-    assert input_params.fit_flags["crval1"] == True
-    assert input_params.fit_flags["dispersion"] == True
-    assert input_params.fit_flags["incident_light_angle"] == True
-    assert input_params.fit_flags["resolving_power"] == True
-    assert input_params.fit_flags["opacity_factor"] == True
-    assert input_params.fit_flags["straylight_fraction"] == True
-    assert input_params.fit_flags["continuum_intensity_correction"] == True
+    assert input_params.fit_flags.crval1 == True
+    assert input_params.fit_flags.dispersion == True
+    assert input_params.fit_flags.incident_light_angle == True
+    assert input_params.fit_flags.resolving_power == True
+    assert input_params.fit_flags.opacity_factor == True
+    assert input_params.fit_flags.straylight_fraction == True
+    assert input_params.fit_flags.continuum_intensity_correction == True
 
 
 def test_custom_fit_flags(test_parameters_dict):
@@ -252,10 +346,10 @@ def test_custom_fit_flags(test_parameters_dict):
         fit_flags=fit_flags,
     )
 
-    assert input_params.fit_flags["crval1"] == True
-    assert input_params.fit_flags["dispersion"] == False
-    assert input_params.fit_flags["incident_light_angle"] == True
-    assert input_params.fit_flags["resolving_power"] == False
-    assert input_params.fit_flags["opacity_factor"] == False
-    assert input_params.fit_flags["straylight_fraction"] == True
-    assert input_params.fit_flags["continuum_intensity_correction"] == False
+    assert input_params.fit_flags.crval1 == True
+    assert input_params.fit_flags.dispersion == False
+    assert input_params.fit_flags.incident_light_angle == True
+    assert input_params.fit_flags.resolving_power == False
+    assert input_params.fit_flags.opacity_factor == False
+    assert input_params.fit_flags.straylight_fraction == True
+    assert input_params.fit_flags.continuum_intensity_correction == False
