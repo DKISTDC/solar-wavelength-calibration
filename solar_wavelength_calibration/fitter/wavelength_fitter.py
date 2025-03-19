@@ -1,10 +1,12 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 import logging
 from functools import cached_property
+from typing import Optional
 
 import astropy.units as u
 import lmfit
 import numpy as np
+from astropy.wcs import WCS
 from numpydantic import NDArray
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -25,14 +27,23 @@ class WaveCalFitter(BaseModel):
     atlas: AtlasBase
     expected_wavelength_vector: u.Quantity
     unfit_1d_spectrum: NDArray
+    full: Optional[bool] = False
 
-    def __init__(self, input_parameters, atlas, expected_wavelength_vector, unfit_1d_spectrum):
+    def __init__(
+        self,
+        input_parameters,
+        atlas,
+        expected_wavelength_vector,
+        unfit_1d_spectrum,
+        full: Optional[bool] = False,
+    ):
         """Call Pydantic validation."""
         super().__init__(
             input_parameters=input_parameters,
             atlas=atlas,
             expected_wavelength_vector=expected_wavelength_vector,
             unfit_1d_spectrum=unfit_1d_spectrum,
+            full=full,
         )
 
     @cached_property
@@ -117,15 +128,15 @@ class WaveCalFitter(BaseModel):
         logger.info("Finished fit.")
         fit_result_params = fit_result.params.valuesdict()
 
-        # assign units to fitted values
-        fit_result_params["crval1"] = fit_result_params["crval1"] * u.nm
-        fit_result_params["dispersion"] = fit_result_params["dispersion"] * u.nm
-        fit_result_params["incident_light_angle"] = (
-            fit_result_params["incident_light_angle"] * u.rad
-        )
-
         logger.info("Fitted Values:")
         for (param, fitted_value) in fit_result_params.items():
             logger.info(f"{param} = {fitted_value}")
+        if self.full:
+            return WCS(fit_result_params).to_header()
 
-        return fit_result_params
+        basic_fit_result_params = {
+            "crval1": fit_result_params["crval1"],
+            "dispersion": fit_result_params["dispersion"],
+            "incident_light_angle": fit_result_params["incident_light_angle"],
+        }
+        return WCS(basic_fit_result_params).to_header()

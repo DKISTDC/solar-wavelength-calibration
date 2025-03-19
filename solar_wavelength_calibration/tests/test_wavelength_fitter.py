@@ -36,7 +36,9 @@ def test_wavecal_fitter(
     )
 
     # test that the same amount of parameters we get out of the fit is the same number that we put in
-    assert len(fitter.fit_result) == len(parameters.lmfit_parameters)
+    assert (
+        len(fitter.fit_result) == len(parameters.lmfit_parameters) - 1
+    )  # minus 1 because continuum_intensity_correction is added in the parameters
 
 
 def test_incorrect_atlas(parameters: WavelengthCalibrationParameters, test_unfit_1d_spectrum):
@@ -86,6 +88,8 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
     )
 
     # make sure that the dispersion was not fit (wasn't changed)
+    print(test_parameters_dict["dispersion"].value)
+    print(fitter.fit_result["dispersion"])
     assert test_parameters_dict["dispersion"].value == fitter.fit_result["dispersion"].to_value(
         u.nm
     )
@@ -118,8 +122,8 @@ def test_fit_is_correct(
     shift = 0.5 * u.nm  # dummy shift
     dispersion_scale = 1.003  # dummy dispersion scale factor
     simulated_unfit_1d_wavelength = dummy_wavelength * dispersion_scale + shift
-    simulated_unfit_1d_transmission = np.interp(
-        simulated_unfit_1d_wavelength, dummy_wavelength, linear_spectrum
+    simulated_unfit_1d_transmission = (
+        np.interp(simulated_unfit_1d_wavelength, dummy_wavelength, linear_spectrum) * u.nm
     )
 
     fitter = WaveCalFitter(

@@ -117,13 +117,20 @@ def test_default_bounds(test_parameters_dict):
         order=test_parameters_dict["order"],
     )
 
-    assert input_params._get_bounds("crval1") == None
-    assert input_params._get_bounds("dispersion") == None
-    assert input_params._get_bounds("incident_light_angle") == None
-    assert input_params._get_bounds("resolving_power") == None
-    assert input_params._get_bounds("opacity_factor") == None
-    assert input_params._get_bounds("straylight_fraction") == None
-    assert input_params._get_bounds("continuum_intensity_correction") == None
+    assert input_params._get_bounds("crval1").min == -np.inf
+    assert input_params._get_bounds("crval1").max == np.inf
+    assert input_params._get_bounds("dispersion").min == -np.inf
+    assert input_params._get_bounds("dispersion").max == np.inf
+    assert input_params._get_bounds("incident_light_angle").min == -np.inf
+    assert input_params._get_bounds("incident_light_angle").max == np.inf
+    assert input_params._get_bounds("resolving_power").min == -np.inf
+    assert input_params._get_bounds("resolving_power").max == np.inf
+    assert input_params._get_bounds("opacity_factor").min == -np.inf
+    assert input_params._get_bounds("opacity_factor").max == np.inf
+    assert input_params._get_bounds("straylight_fraction").min == -np.inf
+    assert input_params._get_bounds("straylight_fraction").max == np.inf
+    assert input_params._get_bounds("continuum_intensity_correction").min == -np.inf
+    assert input_params._get_bounds("continuum_intensity_correction").max == np.inf
 
 
 def test_custom_bounds(test_parameters_dict):
@@ -170,42 +177,51 @@ def test_custom_bounds(test_parameters_dict):
     )
 
     assert np.isclose(
-        input_params._get_bounds("crval1")[0], test_parameters_dict["crval1"].to_value(u.nm) - 0.3
+        (input_params._get_bounds("crval1").min).to_value(u.nm),
+        test_parameters_dict["crval1"].to_value(u.nm) - 0.3,
     )
     assert np.isclose(
-        input_params._get_bounds("crval1")[1], test_parameters_dict["crval1"].to_value(u.nm) + 0.3
+        (input_params._get_bounds("crval1").max).to_value(u.nm),
+        test_parameters_dict["crval1"].to_value(u.nm) + 0.3,
     )
     assert np.isclose(
-        input_params._get_bounds("dispersion")[0],
+        (input_params._get_bounds("dispersion").min).to_value(u.nm / u.pix),
         test_parameters_dict["dispersion"].to_value(u.nm / u.pix) - 55,
     )
     assert np.isclose(
-        input_params._get_bounds("dispersion")[1],
+        (input_params._get_bounds("dispersion").max).to_value(u.nm / u.pix),
         test_parameters_dict["dispersion"].to_value(u.nm / u.pix) + 55,
     )
     assert np.isclose(
-        input_params._get_bounds("incident_light_angle")[0],
+        (input_params._get_bounds("incident_light_angle").min).to_value(u.deg),
         test_parameters_dict["incident_light_angle"].to_value(u.deg) - 5,
     )
     assert np.isclose(
-        input_params._get_bounds("incident_light_angle")[1],
+        (input_params._get_bounds("incident_light_angle").max).to_value(u.deg),
         test_parameters_dict["incident_light_angle"].to_value(u.deg) + 103,
     )
     assert np.isclose(
-        input_params._get_bounds("resolving_power")[0], test_parameters_dict["resolving_power"] - 50
+        input_params._get_bounds("resolving_power").min,
+        test_parameters_dict["resolving_power"] - 50,
     )
     assert np.isclose(
-        input_params._get_bounds("resolving_power")[1],
+        input_params._get_bounds("resolving_power").max,
         test_parameters_dict["resolving_power"] + 0.0001,
     )
     assert np.isclose(
-        input_params._get_bounds("opacity_factor")[0], test_parameters_dict["opacity_factor"] - 1
+        input_params._get_bounds("opacity_factor").min, test_parameters_dict["opacity_factor"] - 1
     )
     assert np.isclose(
-        input_params._get_bounds("opacity_factor")[1], test_parameters_dict["opacity_factor"] + 1
+        input_params._get_bounds("opacity_factor").max, test_parameters_dict["opacity_factor"] + 1
     )
-    assert input_params._get_bounds("straylight_fraction") == None  # default bounds
-    assert input_params._get_bounds("continuum_intensity_correction") == None  # default bounds
+    assert input_params._get_bounds("straylight_fraction").min == -np.inf  # default bounds
+    assert input_params._get_bounds("straylight_fraction").max == np.inf  # default bounds
+    assert (
+        input_params._get_bounds("continuum_intensity_correction").min == -np.inf
+    )  # default bounds
+    assert (
+        input_params._get_bounds("continuum_intensity_correction").max == np.inf
+    )  # default bounds
 
 
 def test_custom_bounds_incorrect_units(test_parameters_dict):
@@ -238,10 +254,12 @@ def test_custom_bounds_incorrect_units(test_parameters_dict):
 
     # bound value was converted to correct units
     assert np.isclose(
-        input_params._get_bounds("crval1")[0], test_parameters_dict["crval1"].to_value(u.nm) - 0.3
+        (input_params._get_bounds("crval1").min).to_value(u.nm),
+        test_parameters_dict["crval1"].to_value(u.nm) - 0.3,
     )
     assert np.isclose(
-        input_params._get_bounds("crval1")[1], test_parameters_dict["crval1"].to_value(u.nm) + 0.3
+        (input_params._get_bounds("crval1").max).to_value(u.nm),
+        test_parameters_dict["crval1"].to_value(u.nm) + 0.3,
     )
 
 

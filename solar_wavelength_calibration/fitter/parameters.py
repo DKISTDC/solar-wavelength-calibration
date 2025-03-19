@@ -15,6 +15,15 @@ from pydantic import field_validator
 logger = logging.getLogger(__name__)
 
 
+class BoundRange(BaseModel):
+    """Represents a min and max bound for a parameter."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    min: Union[Quantity, float, int]
+    max: Union[Quantity, float, int]
+
+
 class BoundsModel(BaseModel):
     """Base model for bounds with default values set to None."""
 
@@ -26,7 +35,6 @@ class BoundsModel(BaseModel):
     resolving_power: Optional[list[Union[Quantity, float, int]]] = None
     opacity_factor: Optional[list[Union[Quantity, float, int]]] = None
     straylight_fraction: Optional[list[Union[Quantity, float, int]]] = None
-    continuum_intensity_correction: Optional[list[Union[Quantity, float, int]]] = None
 
     @field_validator(
         "crval1",
@@ -35,7 +43,6 @@ class BoundsModel(BaseModel):
         "resolving_power",
         "opacity_factor",
         "straylight_fraction",
-        "continuum_intensity_correction",
         mode="after",
     )
     @classmethod
@@ -49,7 +56,6 @@ class BoundsModel(BaseModel):
             "resolving_power": None,  # Unitless
             "opacity_factor": None,  # Unitless
             "straylight_fraction": None,  # Unitless
-            "continuum_intensity_correction": None,  # Unitless
         }
 
         param_name = info.field_name
@@ -61,26 +67,20 @@ class BoundsModel(BaseModel):
         if not isinstance(value, list) or len(value) != 2:
             raise ValueError(f"Bounds for '{param_name}' must be a list of exactly two values.")
 
-        validated_bounds = []
-        for v in value:
-            if expected_unit is not None:  # If the parameter requires a unit
-                if isinstance(v, Quantity):
-                    # Convert to the expected unit if possible
-                    v = v.to(expected_unit)
-                elif isinstance(v, (int, float)):
-                    raise ValueError(
-                        f"Bounds for '{param_name}' must have units of {expected_unit}."
-                    )
-                else:
-                    raise ValueError(f"Invalid unit for '{param_name}'. Expected {expected_unit}.")
+        min_val, max_val = value
+
+        if expected_unit is not None:  # If the parameter requires a unit
+            if isinstance(min_val, Quantity) and isinstance(max_val, Quantity):
+                min_val, max_val = min_val.to(expected_unit), max_val.to(expected_unit)
+            elif isinstance(min_val, (int, float)) and isinstance(max_val, (int, float)):
+                raise ValueError(f"Bounds for '{param_name}' must have units of {expected_unit}.")
             else:
-                # If parameter is unitless, ensure it's a number
-                if not isinstance(v, (int, float)):
-                    raise ValueError(f"Invalid bound for '{param_name}', must be a number.")
+                raise ValueError(f"Invalid unit for '{param_name}'. Expected {expected_unit}.")
+        else:
+            if not isinstance(min_val, (int, float)) or not isinstance(max_val, (int, float)):
+                raise ValueError(f"Invalid bound for '{param_name}', must be a number.")
 
-            validated_bounds.append(v)
-
-        return validated_bounds
+        return BoundRange(min=min_val, max=max_val)
 
 
 class FitFlagsModel(BaseModel):
@@ -89,8 +89,6 @@ class FitFlagsModel(BaseModel):
 
     True indicates that the parameter should be fit.
     """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     crval1: bool = True
     dispersion: bool = True
@@ -116,8 +114,17 @@ class WavelengthCalibrationParameters(BaseModel):
     resolving_power: int = 1
     opacity_factor: float = 1
     straylight_fraction: float = 0
+    quartile: int = 75
     fit_flags: FitFlagsModel = FitFlagsModel()
     bounds: BoundsModel = BoundsModel()
+
+    @field_validator("quartile", mode="before")
+    @classmethod
+    def validate_quartile(cls, value):
+        """Ensure the quartile value is between 0 and 100."""
+        if not (0 <= value <= 100):
+            raise ValueError("Quartile value must be between 0 and 100.")
+        return value
 
     @field_validator("fit_flags", mode="before")
     @classmethod
@@ -174,15 +181,15 @@ class WavelengthCalibrationParameters(BaseModel):
             raise TypeError("unfit_1d_spectrum must be a NumPy array.")
         return value
 
-    def _get_bounds(self, param_name: str):
-        """Retrieve bounds for a parameter, ensuring defaults exist."""
+    def _get_bounds(self, param_name: str) -> Optional[BoundRange]:
+        """Retrieve bounds for a parameter as a BoundRange object."""
         bounds = getattr(self.bounds, param_name, None)
 
         if bounds is None:
             logger.info(f"Bounds for parameter '{param_name}' set to None.")
-            return [0, 0]
+            return BoundRange(min=-np.inf, max=np.inf)  # Default to no bounds
 
-        return [b.to_value() if isinstance(b, Quantity) else b for b in bounds]
+        return bounds  # Now returns BoundRange instead of a list
 
     def _get_fit_flag(self, param_name: str) -> bool:
         """Retrieve the fit flag for a parameter, ensuring a default exists."""
@@ -200,52 +207,52 @@ class WavelengthCalibrationParameters(BaseModel):
             "crval1",
             vary=self._get_fit_flag("crval1"),
             value=self.crval1,
-            min=self._get_bounds("crval1")[0],
-            max=self._get_bounds("crval1")[1],
+            min=self._get_bounds("crval1").min,
+            max=self._get_bounds("crval1").max,
         )
         param.add(
             "dispersion",
             vary=self._get_fit_flag("dispersion"),
             value=self.dispersion,
-            min=self.dispersion + self._get_bounds("dispersion")[0] * self.dispersion,
-            max=self.dispersion + self._get_bounds("dispersion")[1] * self.dispersion,
+            min=self._get_bounds("dispersion").min,
+            max=self._get_bounds("dispersion").max,
         )
         param.add(
             "incident_light_angle",
             vary=self._get_fit_flag("incident_light_angle"),
             value=self.incident_light_angle,
-            min=self._get_bounds("incident_light_angle")[0],
-            max=self._get_bounds("incident_light_angle")[1],
+            min=self._get_bounds("incident_light_angle").min,
+            max=self._get_bounds("incident_light_angle").max,
         )
         param.add(
             "resolving_power",
             vary=self._get_fit_flag("resolving_power"),
             value=self.resolving_power,
-            min=self._get_bounds("resolving_power")[0],
-            max=self._get_bounds("resolving_power")[1],
+            min=self._get_bounds("resolving_power").min,
+            max=self._get_bounds("resolving_power").max,
         )
         param.add(
             "opacity_factor",
             vary=self._get_fit_flag("opacity_factor"),
             value=self.opacity_factor,
-            min=self._get_bounds("opacity_factor")[0],
-            max=self._get_bounds("opacity_factor")[1],
+            min=self._get_bounds("opacity_factor").min,
+            max=self._get_bounds("opacity_factor").max,
         )
         param.add(
             "straylight_fraction",
             vary=self._get_fit_flag("straylight_fraction"),
             value=self.straylight_fraction,
-            min=self._get_bounds("straylight_fraction")[0],
-            max=self._get_bounds("straylight_fraction")[1],
+            min=self._get_bounds("straylight_fraction").min,
+            max=self._get_bounds("straylight_fraction").max,
         )
 
-        spectrum_percentile = np.nanpercentile(self.unfit_1d_spectrum, 75).to_value(u.nm)
+        spectrum_percentile = np.nanpercentile(self.unfit_1d_spectrum, self.quartile).to_value(u.nm)
         param.add(
             "continuum_intensity_correction",
             vary=self._get_fit_flag("continuum_intensity_correction"),
             value=spectrum_percentile,
-            min=spectrum_percentile * self._get_bounds("continuum_intensity_correction")[0],
-            max=spectrum_percentile * self._get_bounds("continuum_intensity_correction")[1],
+            min=-np.inf,
+            max=np.inf,
         )
         return param
 
