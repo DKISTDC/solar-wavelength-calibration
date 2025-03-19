@@ -11,24 +11,28 @@ definitions:
           - chmod 755 ci_scripts/latest/execute_script.sh
         artifacts:
           - ci_scripts/latest/execute_script.sh
+
     - step: &lint
         caches:
           - pip
         name: Lint
         script:
           - ./ci_scripts/latest/execute_script.sh lint_python.sh
+
     - step: &scan
         caches:
           - pip
         name: Scan
         script:
           - ./ci_scripts/latest/execute_script.sh scan_python.sh
+
     - step: &changelog
         caches:
           - pip
         name: Changelog
         script:
           - ./ci_scripts/latest/execute_script.sh check_changelog.sh
+
     - step: &test311
         caches:
           - pip
@@ -37,16 +41,8 @@ definitions:
           - pip install -U pip
           - pip install tox
           - tox -e py311
+          - ./ci_scripts/latest/execute_script.sh upload_coverage.sh
 
-          # Upload test coverage to codecov
-          - curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --keyring trustedkeys.gpg --import
-          - curl -Os https://uploader.codecov.io/latest/linux/codecov
-          - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
-          - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
-          - gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
-          - shasum -a 256 -c codecov.SHA256SUM
-          - chmod +x codecov
-          - ./codecov -t ${CODECOV_TOKEN}
     - step: &test311-min
         caches:
           - pip
@@ -56,22 +52,13 @@ definitions:
           - pip install tox
           - tox -e py311-min
 
-          # Upload test coverage to codecov
-          - curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --keyring trustedkeys.gpg --import
-          - curl -Os https://uploader.codecov.io/latest/linux/codecov
-          - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
-          - curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
-          - gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
-          - shasum -a 256 -c codecov.SHA256SUM
-          - chmod +x codecov
-          - ./codecov -t ${CODECOV_TOKEN}
-
     - step: &docs
         name: Test Docs
         caches:
           - pip
         script:
           - ./ci_scripts/latest/execute_script.sh test_sphinx.sh
+
     - step: &push
         caches:
           - pip
