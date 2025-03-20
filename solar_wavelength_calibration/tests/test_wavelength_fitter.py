@@ -29,16 +29,11 @@ def test_wavecal_fitter(
     )
 
     # test that values have been fit (i.e. changed)
-    assert fitter.fit_result.get("dispersion") != test_dispersion
+    assert fitter.fit_result.wcs.cdelt[0] != test_dispersion
     assert (
-        fitter.fit_result.get("crval1")
+        fitter.fit_result.wcs.crval[0]
         != atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1]
     )
-
-    # test that the same amount of parameters we get out of the fit is the same number that we put in
-    assert (
-        len(fitter.fit_result) == len(parameters.lmfit_parameters) - 1
-    )  # minus 1 because continuum_intensity_correction is added in the parameters
 
 
 def test_incorrect_atlas(parameters: WavelengthCalibrationParameters, test_unfit_1d_spectrum):
@@ -102,9 +97,9 @@ def test_fit_is_correct(
     test_parameters_dict,
 ):
     """
-    Given:
-    When:
-    Then:
+    Given: A simulated unfit 1D spectrum with a known shift and dispersion scale.
+    When: The WaveCalFitter is used to fit the spectrum.
+    Then: The fitted dispersion (CDELT1) is approximately equal to the expected dispersion.
     """
 
     # centered around 1083 nm
@@ -132,9 +127,9 @@ def test_fit_is_correct(
         expected_wavelength_vector=dummy_wavelength,
         unfit_1d_spectrum=simulated_unfit_1d_transmission,
     )
-    print(fitter.fit_result)
-    assert 1 == 3
-    # assert fitter.fit_result['dispersion'] ==
+    print(fitter.fit_result.wcs.cdelt[0])
+    print(dispersion * dispersion_scale)
+    assert np.isclose(fitter.fit_result.wcs.cdelt[0], dispersion * dispersion_scale)
 
 
 def test_prepare_atlas(

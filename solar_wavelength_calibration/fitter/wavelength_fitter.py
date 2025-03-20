@@ -131,12 +131,20 @@ class WaveCalFitter(BaseModel):
         logger.info("Fitted Values:")
         for (param, fitted_value) in fit_result_params.items():
             logger.info(f"{param} = {fitted_value}")
-        if self.full:
-            return WCS(fit_result_params).to_header()
 
-        basic_fit_result_params = {
-            "crval1": fit_result_params["crval1"],
-            "dispersion": fit_result_params["dispersion"],
-            "incident_light_angle": fit_result_params["incident_light_angle"],
+        fit_result_header = {
+            "CTYPE1": "AWAV-GRA",  # Grating dispersion function with air wavelengths
+            "CUNIT1": "nm",  # Dispersion units
+            "CRPIX1": number_of_wave_pix // 2 + 1,  # Reference pixel [pix]
+            "PV1_0": constant_parameters["grating_constant"],  # Grating density
+            "PV1_1": constant_parameters["order"],  # Diffraction order
+            "CRVAL1": fit_result_params["crval1"],  # Reference value [nm]
+            "CDELT1": fit_result_params["dispersion"],  # Linear dispersion [nm/pix]
+            "PV1_2": fit_result_params["incident_light_angle"],  # Incident angle [deg]
         }
-        return WCS(basic_fit_result_params).to_header()
+
+        if self.full:
+            return WCS(fit_result_header)
+            # also want other fit result parameters returned; resolving_power, opacity_factor, straylight_fraction, continuum_intensity_correction
+
+        return WCS(fit_result_header)
