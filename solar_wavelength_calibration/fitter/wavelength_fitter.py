@@ -144,7 +144,6 @@ class WaveCalFitter(BaseModel):
         }
 
         if self.full:
-            return WCS(fit_result_header)
-            # also want other fit result parameters returned; resolving_power, opacity_factor, straylight_fraction, continuum_intensity_correction
+            return [WCS(fit_result_header), fit_result_params]
 
         return WCS(fit_result_header)

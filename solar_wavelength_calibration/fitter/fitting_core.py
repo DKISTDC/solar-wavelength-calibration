@@ -92,9 +92,7 @@ def fitness(
     )  # in parameters
 
     # interpolate the solar spectral atlas onto the new wavelength axis and apply a shift according to the Doppler shift due to orbital motions (doppler velocity)
-    fts_wave_doppler_corrected = (
-        fts_solar_wave + doppler_velocity / (const.c.to_value("km/s")) * crval1
-    )
+    fts_wave_doppler_corrected = fts_solar_wave + doppler_velocity / (const.c.to("km/s")) * crval1
     linear_fts_solar_transmission = np.interp(
         linear_wave,
         fts_wave_doppler_corrected,

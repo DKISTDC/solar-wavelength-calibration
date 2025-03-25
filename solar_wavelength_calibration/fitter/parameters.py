@@ -1,7 +1,5 @@
 """Objects for storing fit parameters."""
 import logging
-from typing import Optional
-from typing import Union
 
 import astropy.units as u
 import numpy as np
@@ -11,8 +9,11 @@ from numpydantic import NDArray
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import field_validator
+from pydantic_core.core_schema import ValidationInfo
 
 logger = logging.getLogger(__name__)
+
+QUANTITY_OR_NUMBER = Quantity | float | int
 
 
 class BoundRange(BaseModel):
@@ -20,8 +21,8 @@ class BoundRange(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    min: Union[Quantity, float, int]
-    max: Union[Quantity, float, int]
+    min: QUANTITY_OR_NUMBER = -np.inf
+    max: QUANTITY_OR_NUMBER = np.inf
 
 
 class BoundsModel(BaseModel):
@@ -29,58 +30,12 @@ class BoundsModel(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    crval1: Optional[list[Union[Quantity, float, int]]] = None
-    dispersion: Optional[list[Union[Quantity, float, int]]] = None
-    incident_light_angle: Optional[list[Union[Quantity, float, int]]] = None
-    resolving_power: Optional[list[Union[Quantity, float, int]]] = None
-    opacity_factor: Optional[list[Union[Quantity, float, int]]] = None
-    straylight_fraction: Optional[list[Union[Quantity, float, int]]] = None
-
-    @field_validator(
-        "crval1",
-        "dispersion",
-        "incident_light_angle",
-        "resolving_power",
-        "opacity_factor",
-        "straylight_fraction",
-        mode="after",
-    )
-    @classmethod
-    def validate_and_convert_bounds(cls, value, info):
-        """Ensure bounds have the correct units or convert if necessary."""
-        # Define expected units for each parameter
-        _expected_units = {
-            "crval1": u.nm,
-            "dispersion": u.nm / u.pix,
-            "incident_light_angle": u.deg,
-            "resolving_power": None,  # Unitless
-            "opacity_factor": None,  # Unitless
-            "straylight_fraction": None,  # Unitless
-        }
-
-        param_name = info.field_name
-        expected_unit = _expected_units[param_name]
-
-        if value is None:
-            return value  # Allow None values
-
-        if not isinstance(value, list) or len(value) != 2:
-            raise ValueError(f"Bounds for '{param_name}' must be a list of exactly two values.")
-
-        min_val, max_val = value
-
-        if expected_unit is not None:  # If the parameter requires a unit
-            if isinstance(min_val, Quantity) and isinstance(max_val, Quantity):
-                min_val, max_val = min_val.to(expected_unit), max_val.to(expected_unit)
-            elif isinstance(min_val, (int, float)) and isinstance(max_val, (int, float)):
-                raise ValueError(f"Bounds for '{param_name}' must have units of {expected_unit}.")
-            else:
-                raise ValueError(f"Invalid unit for '{param_name}'. Expected {expected_unit}.")
-        else:
-            if not isinstance(min_val, (int, float)) or not isinstance(max_val, (int, float)):
-                raise ValueError(f"Invalid bound for '{param_name}', must be a number.")
-
-        return BoundRange(min=min_val, max=max_val)
+    crval1: BoundRange = BoundRange()
+    dispersion: BoundRange = BoundRange()
+    incident_light_angle: BoundRange = BoundRange()
+    resolving_power: BoundRange = BoundRange()
+    opacity_factor: BoundRange = BoundRange()
+    straylight_fraction: BoundRange = BoundRange()
 
 
 class FitFlagsModel(BaseModel):
@@ -147,31 +102,31 @@ class WavelengthCalibrationParameters(BaseModel):
     @classmethod
     def validate_crval1_units(cls, value):
         """Ensure crval1 has correct length units."""
-        return value.to_value(u.nm)
+        return value.to(u.nm)
 
     @field_validator("incident_light_angle")
     @classmethod
     def validate_incident_light_angle_units(cls, value):
         """Ensure incident_light_angle has correct length units."""
-        return value.to_value(u.deg)
+        return value.to(u.deg)
 
     @field_validator("dispersion")
     @classmethod
     def validate_dispersion_units(cls, value):
         """Ensure dispersion has correct length units."""
-        return value.to_value(u.nm / u.pix)
+        return value.to(u.nm / u.pix)
 
     @field_validator("grating_constant")
     @classmethod
     def validate_grating_constant_units(cls, value):
         """Ensure grating_constant has correct length units."""
-        return value.to_value(1 / u.mm)
+        return value.to(1 / u.mm)
 
     @field_validator("doppler_velocity")
     @classmethod
     def validate_doppler_velocity_units(cls, value):
         """Ensure doppler_velocity has correct length units."""
-        return value.to_value(u.km / u.s)
+        return value.to(u.km / u.s)
 
     @field_validator("unfit_1d_spectrum", mode="after")
     @classmethod
@@ -181,22 +136,58 @@ class WavelengthCalibrationParameters(BaseModel):
             raise TypeError("unfit_1d_spectrum must be a NumPy array.")
         return value
 
-    def _get_bounds(self, param_name: str) -> Optional[BoundRange]:
-        """Retrieve bounds for a parameter as a BoundRange object."""
-        bounds = getattr(self.bounds, param_name, None)
+    @field_validator("bounds")
+    @classmethod
+    def ensure_correct_bounds_units(cls, bounds: BoundsModel, info: ValidationInfo) -> BoundsModel:
+        """
+        Ensure that all bounds in the BoundsModel have units compatible with their corresponding parameter values.
 
-        if bounds is None:
-            logger.info(f"Bounds for parameter '{param_name}' set to None.")
-            return BoundRange(min=-np.inf, max=np.inf)  # Default to no bounds
+        For parameters that are expected to have units (e.g., crval1, dispersion, incident_light_angle),
+        this method converts the bound values to match the units of the corresponding parameter in the model input.
 
-        return bounds  # Now returns BoundRange instead of a list
+        For unitless parameters, it raises an error if bounds are incorrectly specified with units.
+        """
+        params_with_units = ["crval1", "dispersion", "incident_light_angle"]
+        for param in bounds.model_fields.keys():
+            param_value = info.data[param]
+            bounds_range = getattr(bounds, param)
+            if param in params_with_units:
+                param_unit = param_value.unit
+                if isinstance(bounds_range.min, Quantity):
+                    new_min = bounds_range.min.to(param_unit)
+                    new_max = bounds_range.max.to(param_unit)
+                else:
+                    new_min = bounds_range.min * param_unit
+                    new_max = bounds_range.max * param_unit
+                new_range = BoundRange(min=new_min, max=new_max)
+                setattr(bounds, param, new_range)
 
-    def _get_fit_flag(self, param_name: str) -> bool:
-        """Retrieve the fit flag for a parameter, ensuring a default exists."""
-        if not hasattr(self.fit_flags, param_name):
-            raise KeyError(f"Fit flag for parameter '{param_name}' not found.")
+            else:
+                if isinstance(bounds_range.min, Quantity):
+                    raise TypeError(
+                        f"{param} has units ({bounds_range.min.unit}), but it shouldn't."
+                    )
 
-        return getattr(self.fit_flags, param_name)
+        return bounds
+
+    @field_validator("bounds")
+    @classmethod
+    def ensure_value_in_bounds_range(cls, bounds: BoundsModel, info: ValidationInfo) -> BoundsModel:
+        """
+        Validate that each parameter value falls within its corresponding bounds range.
+
+        This method compares the current model values (from the `info` context) to their associated
+        min and max bounds and raises an error if any value falls outside its allowed range.
+        """
+        for param in bounds.model_fields.keys():
+            param_value = info.data[param]
+            bounds_range = getattr(bounds, param)
+            if not (bounds_range.min <= param_value <= bounds_range.max):
+                raise TypeError(
+                    f"{param} with value {param_value} is outside the bounds range of ({bounds_range.min}, {bounds_range.max})"
+                )
+
+        return bounds
 
     @property
     def lmfit_parameters(self) -> Parameters:
@@ -205,52 +196,52 @@ class WavelengthCalibrationParameters(BaseModel):
 
         param.add(
             "crval1",
-            vary=self._get_fit_flag("crval1"),
-            value=self.crval1,
-            min=self._get_bounds("crval1").min,
-            max=self._get_bounds("crval1").max,
+            vary=self.fit_flags.crval1,
+            value=self.crval1.value,
+            min=self.bounds.crval1.min,
+            max=self.bounds.crval1.max,
         )
         param.add(
             "dispersion",
-            vary=self._get_fit_flag("dispersion"),
-            value=self.dispersion,
-            min=self._get_bounds("dispersion").min,
-            max=self._get_bounds("dispersion").max,
+            vary=self.fit_flags.dispersion,
+            value=self.dispersion.value,
+            min=self.bounds.dispersion.min,
+            max=self.bounds.dispersion.max,
         )
         param.add(
             "incident_light_angle",
-            vary=self._get_fit_flag("incident_light_angle"),
-            value=self.incident_light_angle,
-            min=self._get_bounds("incident_light_angle").min,
-            max=self._get_bounds("incident_light_angle").max,
+            vary=self.fit_flags.incident_light_angle,
+            value=self.incident_light_angle.value,
+            min=self.bounds.incident_light_angle.min,
+            max=self.bounds.incident_light_angle.max,
         )
         param.add(
             "resolving_power",
-            vary=self._get_fit_flag("resolving_power"),
+            vary=self.fit_flags.resolving_power,
             value=self.resolving_power,
-            min=self._get_bounds("resolving_power").min,
-            max=self._get_bounds("resolving_power").max,
+            min=self.bounds.resolving_power.min,
+            max=self.bounds.resolving_power.max,
         )
         param.add(
             "opacity_factor",
-            vary=self._get_fit_flag("opacity_factor"),
+            vary=self.fit_flags.opacity_factor,
             value=self.opacity_factor,
-            min=self._get_bounds("opacity_factor").min,
-            max=self._get_bounds("opacity_factor").max,
+            min=self.bounds.opacity_factor.min,
+            max=self.bounds.opacity_factor.max,
         )
         param.add(
             "straylight_fraction",
-            vary=self._get_fit_flag("straylight_fraction"),
+            vary=self.fit_flags.straylight_fraction,
             value=self.straylight_fraction,
-            min=self._get_bounds("straylight_fraction").min,
-            max=self._get_bounds("straylight_fraction").max,
+            min=self.bounds.straylight_fraction.min,
+            max=self.bounds.straylight_fraction.max,
         )
 
-        spectrum_percentile = np.nanpercentile(self.unfit_1d_spectrum, self.quartile).to_value(u.nm)
+        spectrum_percentile = np.nanpercentile(self.unfit_1d_spectrum, self.quartile)
         param.add(
             "continuum_intensity_correction",
-            vary=self._get_fit_flag("continuum_intensity_correction"),
-            value=spectrum_percentile,
+            vary=self.fit_flags.continuum_intensity_correction,
+            value=spectrum_percentile.value,
             min=-np.inf,
             max=np.inf,
         )
@@ -261,7 +252,7 @@ class WavelengthCalibrationParameters(BaseModel):
         """Create a single dictionary with correct starting values for the constant instrument specific parameters that will not vary."""
         # Initialize a dict to hold the constant parameters and their values
         constant_params = {}
-        constant_params["grating_constant"] = self.grating_constant
+        constant_params["grating_constant"] = self.grating_constant.value
         constant_params["doppler_velocity"] = self.doppler_velocity
         constant_params["order"] = self.order
         return constant_params

@@ -84,10 +84,8 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
 
     # make sure that the dispersion was not fit (wasn't changed)
     print(test_parameters_dict["dispersion"].value)
-    print(fitter.fit_result["dispersion"])
-    assert test_parameters_dict["dispersion"].value == fitter.fit_result["dispersion"].to_value(
-        u.nm
-    )
+    print(fitter.fit_result)
+    assert test_parameters_dict["dispersion"].value == fitter.fit_result.wcs.dispersion[0].value
 
 
 def test_fit_is_correct(
@@ -156,12 +154,12 @@ def test_prepare_atlas(
     # test that we took out the correct chunk for each atlas (i.e. mean of expected wavelength vector is contained in fts_[solar/telluric]wavelength)
     assert (
         fts_solar_wavelength[0]
-        < np.mean(test_expected_wavelength_vector).to_value(u.nm)
+        < np.mean(test_expected_wavelength_vector).value
         < fts_solar_wavelength[len(fts_solar_wavelength) - 1]
     )
 
     assert (
         fts_telluric_wavelength[0]
-        < np.mean(test_expected_wavelength_vector).to_value(u.nm)
+        < np.mean(test_expected_wavelength_vector).value
         < fts_telluric_wavelength[len(fts_telluric_wavelength) - 1]
     )
