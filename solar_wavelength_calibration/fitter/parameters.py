@@ -22,8 +22,8 @@ class BoundRange(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    min: QUANTITY_OR_NUMBER = -np.inf * u.dimensionless_unscaled
-    max: QUANTITY_OR_NUMBER = np.inf * u.dimensionless_unscaled
+    min: QUANTITY_OR_NUMBER = -np.inf
+    max: QUANTITY_OR_NUMBER = np.inf
 
     @model_validator(mode="after")
     def validate_units_match(self) -> "BoundRange":
@@ -69,7 +69,7 @@ class FitFlagsModel(BaseModel):
 class WavelengthCalibrationParameters(BaseModel):
     """Object for initializing the fit parameters prior to a fit."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True)
 
     crval1: Quantity
     dispersion: Quantity
@@ -107,7 +107,7 @@ class WavelengthCalibrationParameters(BaseModel):
             raise ValueError("Quartile value must be between 0 and 100.")
         return value
 
-    @field_validator("crval1", mode="after")
+    @field_validator("crval1")
     @classmethod
     def validate_crval1_units(cls, value):
         """Ensure crval1 has correct length units."""
@@ -141,9 +141,12 @@ class WavelengthCalibrationParameters(BaseModel):
     @classmethod
     def ensure_correct_bounds_units(cls, bounds: BoundsModel, info: ValidationInfo) -> BoundsModel:
         """
-        Ensure all bounds in BoundsModel have units compatible with their corresponding parameter values.
+        Ensure that all bounds in the BoundsModel have units compatible with their corresponding parameter values.
 
-        Promote float/int values (but not dimensionless Quantity) to the expected unit.
+        For parameters that are expected to have units (e.g., crval1, dispersion, incident_light_angle),
+        this method converts the bound values to match the units of the corresponding parameter in the model input.
+
+        For unitless parameters, it raises an error if bounds are incorrectly specified with units.
         """
         params_with_units = ["crval1", "dispersion", "incident_light_angle"]
         for param in bounds.model_fields.keys():
@@ -151,26 +154,20 @@ class WavelengthCalibrationParameters(BaseModel):
             bounds_range = getattr(bounds, param)
             if param in params_with_units:
                 param_unit = param_value.unit
-                # Determine if we need to convert or promote
-                min_ = bounds_range.min
-                max_ = bounds_range.max
-
-                def to_unit(v):
-                    if isinstance(v, Quantity):
-                        if v.unit == u.dimensionless_unscaled:
-                            return v.value * param_unit  # promote dimensionless Quantity
-                        return v.to(param_unit)  # convert to correct unit
-                    return v * param_unit  # promote raw float/int
-
-                new_range = BoundRange(min=to_unit(min_), max=to_unit(max_))
-                setattr(bounds, param, new_range)
-            else:
-                # Ensure unitless parameters don't have Quantity values
                 if isinstance(bounds_range.min, Quantity):
-                    if bounds_range.min.unit != u.dimensionless_unscaled:
-                        raise TypeError(
-                            f"{param} has units ({bounds_range.min.unit}), but it shouldn't."
-                        )
+                    new_min = bounds_range.min.to(param_unit)
+                    new_max = bounds_range.max.to(param_unit)
+                else:
+                    new_min = bounds_range.min * param_unit
+                    new_max = bounds_range.max * param_unit
+                new_range = BoundRange(min=new_min, max=new_max)
+                setattr(bounds, param, new_range)
+
+            else:
+                if isinstance(bounds_range.min, Quantity):
+                    raise TypeError(
+                        f"{param} has units ({bounds_range.min.unit}), but it shouldn't."
+                    )
 
         return bounds
 
@@ -223,22 +220,22 @@ class WavelengthCalibrationParameters(BaseModel):
             "resolving_power",
             vary=self.fit_flags.resolving_power,
             value=self.resolving_power,
-            min=self.bounds.resolving_power.min.value,
-            max=self.bounds.resolving_power.max.value,
+            min=self.bounds.resolving_power.min,
+            max=self.bounds.resolving_power.max,
         )
         param.add(
             "opacity_factor",
             vary=self.fit_flags.opacity_factor,
             value=self.opacity_factor,
-            min=self.bounds.opacity_factor.min.value,
-            max=self.bounds.opacity_factor.max.value,
+            min=self.bounds.opacity_factor.min,
+            max=self.bounds.opacity_factor.max,
         )
         param.add(
             "straylight_fraction",
             vary=self.fit_flags.straylight_fraction,
             value=self.straylight_fraction,
-            min=self.bounds.straylight_fraction.min.value,
-            max=self.bounds.straylight_fraction.max.value,
+            min=self.bounds.straylight_fraction.min,
+            max=self.bounds.straylight_fraction.max,
         )
 
         spectrum_percentile = np.nanpercentile(self.unfit_1d_spectrum, self.quartile)
