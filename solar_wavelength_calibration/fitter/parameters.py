@@ -174,41 +174,6 @@ class WavelengthCalibrationParameters(BaseModel):
 
         return bounds
 
-    '''@field_validator("bounds")
-    @classmethod
-    def ensure_correct_bounds_units(cls, bounds: BoundsModel, info: ValidationInfo) -> BoundsModel:
-        """
-        Ensure that all bounds in the BoundsModel have units compatible with their corresponding parameter values.
-
-        For parameters that are expected to have units (e.g., crval1, dispersion, incident_light_angle),
-        this method converts the bound values to match the units of the corresponding parameter in the model input.
-
-        For unitless parameters, it raises an error if bounds are incorrectly specified with units.
-        """
-        params_with_units = ["crval1", "dispersion", "incident_light_angle"]
-        for param in bounds.model_fields.keys():
-            param_value = info.data[param]
-            bounds_range = getattr(bounds, param)
-            if param in params_with_units:
-                param_unit = param_value.unit
-                if isinstance(bounds_range.min, Quantity):
-                    new_min = bounds_range.min.to(param_unit)
-                    new_max = bounds_range.max.to(param_unit)
-                else:
-                    new_min = bounds_range.min * param_unit
-                    new_max = bounds_range.max * param_unit
-                new_range = BoundRange(min=new_min, max=new_max)
-                setattr(bounds, param, new_range)
-
-            else:
-                if isinstance(bounds_range.min, Quantity):
-                    if bounds_range.min.unit != u.dimensionless_unscaled:
-                        raise TypeError(
-                            f"{param} has units ({bounds_range.min.unit}), but it shouldn't."
-                        )
-
-        return bounds'''
-
     @field_validator("bounds")
     @classmethod
     def ensure_value_in_bounds_range(cls, bounds: BoundsModel, info: ValidationInfo) -> BoundsModel:
