@@ -1,7 +1,6 @@
 import astropy.units as u
 import numpy as np
 import pytest
-from astropy import constants as const
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
@@ -115,8 +114,8 @@ def test_fit_is_correct(
     shift = 0.5 * u.nm  # dummy shift
     dispersion_scale = 1.003  # dummy dispersion scale factor
     simulated_unfit_1d_wavelength = dummy_wavelength * dispersion_scale + shift
-    simulated_unfit_1d_transmission = (
-        np.interp(simulated_unfit_1d_wavelength, dummy_wavelength, linear_spectrum) * u.nm
+    simulated_unfit_1d_transmission = np.interp(
+        simulated_unfit_1d_wavelength, dummy_wavelength, linear_spectrum
     )
 
     fitter = WaveCalFitter(

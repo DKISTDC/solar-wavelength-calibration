@@ -241,7 +241,7 @@ class WavelengthCalibrationParameters(BaseModel):
         param.add(
             "continuum_intensity_correction",
             vary=self.fit_flags.continuum_intensity_correction,
-            value=spectrum_percentile.value,
+            value=spectrum_percentile,
             min=-np.inf,
             max=np.inf,
         )

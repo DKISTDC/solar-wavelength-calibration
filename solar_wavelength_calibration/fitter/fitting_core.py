@@ -112,6 +112,6 @@ def fitness(
     sigma_pix = sigma_wavelength / np.abs(dispersion)  # used to match FTS resolution to our data
     fts_final_spectrum = gaussian_filter1d(fts_solar_normalized, sigma_pix)
 
-    res_amplitude = unfit_1d_spectrum.to_value(u.nm) - fts_final_spectrum
+    res_amplitude = unfit_1d_spectrum - fts_final_spectrum
 
     return res_amplitude

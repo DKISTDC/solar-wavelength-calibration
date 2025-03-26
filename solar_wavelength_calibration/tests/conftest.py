@@ -26,7 +26,7 @@ def atlas(config: DownloadConfig | None) -> Atlas:
 
 @pytest.fixture(scope="session")
 def test_unfit_1d_spectrum():
-    return np.linspace(0, 1, 1000) * u.nm
+    return np.linspace(0, 1, 1000)
 
 
 @pytest.fixture(scope="session")
