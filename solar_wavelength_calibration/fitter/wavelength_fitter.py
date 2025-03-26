@@ -27,24 +27,7 @@ class WaveCalFitter(BaseModel):
     atlas: AtlasBase
     expected_wavelength_vector: u.Quantity
     unfit_1d_spectrum: NDArray
-    full: Optional[bool] = False
-
-    def __init__(
-        self,
-        input_parameters,
-        atlas,
-        expected_wavelength_vector,
-        unfit_1d_spectrum,
-        full: Optional[bool] = False,
-    ):
-        """Call Pydantic validation."""
-        super().__init__(
-            input_parameters=input_parameters,
-            atlas=atlas,
-            expected_wavelength_vector=expected_wavelength_vector,
-            unfit_1d_spectrum=unfit_1d_spectrum,
-            full=full,
-        )
+    full: bool = False
 
     @cached_property
     def fit_result(self) -> dict:
@@ -144,6 +127,6 @@ class WaveCalFitter(BaseModel):
         }
 
         if self.full:
-            return [WCS(fit_result_header), fit_result_params]
+            return WCS(fit_result_header), fit_result_params
 
         return WCS(fit_result_header)
