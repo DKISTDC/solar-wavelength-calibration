@@ -85,6 +85,20 @@ class WavelengthCalibrationParameters(BaseModel):
     fit_flags: FitFlagsModel = FitFlagsModel()
     bounds: BoundsModel = BoundsModel()
 
+    @field_validator("bounds", mode="before")
+    @classmethod
+    def merge_bounds_with_defaults(cls, user_bounds: BoundsModel | None) -> BoundsModel:
+        """Ensure that only BoundsModel instances are accepted, and merge with defaults to fill in any unspecified bounds."""
+        default = BoundsModel()
+
+        if user_bounds is None:
+            return default
+
+        if isinstance(user_bounds, BoundsModel):
+            return BoundsModel(**{**default.model_dump(), **user_bounds.model_dump()})
+
+        raise TypeError("bounds must be an instance of BoundsModel.")
+
     @field_validator("quartile", mode="before")
     @classmethod
     def validate_quartile(cls, value):
@@ -127,6 +141,43 @@ class WavelengthCalibrationParameters(BaseModel):
     @classmethod
     def ensure_correct_bounds_units(cls, bounds: BoundsModel, info: ValidationInfo) -> BoundsModel:
         """
+        Ensure all bounds in BoundsModel have units compatible with their corresponding parameter values.
+
+        Promote float/int values (but not dimensionless Quantity) to the expected unit.
+        """
+        params_with_units = ["crval1", "dispersion", "incident_light_angle"]
+        for param in bounds.model_fields.keys():
+            param_value = info.data[param]
+            bounds_range = getattr(bounds, param)
+            if param in params_with_units:
+                param_unit = param_value.unit
+                # Determine if we need to convert or promote
+                min_ = bounds_range.min
+                max_ = bounds_range.max
+
+                def to_unit(v):
+                    if isinstance(v, Quantity):
+                        if v.unit == u.dimensionless_unscaled:
+                            return v.value * param_unit  # promote dimensionless Quantity
+                        return v.to(param_unit)  # convert to correct unit
+                    return v * param_unit  # promote raw float/int
+
+                new_range = BoundRange(min=to_unit(min_), max=to_unit(max_))
+                setattr(bounds, param, new_range)
+            else:
+                # Ensure unitless parameters don't have Quantity values
+                if isinstance(bounds_range.min, Quantity):
+                    if bounds_range.min.unit != u.dimensionless_unscaled:
+                        raise TypeError(
+                            f"{param} has units ({bounds_range.min.unit}), but it shouldn't."
+                        )
+
+        return bounds
+
+    '''@field_validator("bounds")
+    @classmethod
+    def ensure_correct_bounds_units(cls, bounds: BoundsModel, info: ValidationInfo) -> BoundsModel:
+        """
         Ensure that all bounds in the BoundsModel have units compatible with their corresponding parameter values.
 
         For parameters that are expected to have units (e.g., crval1, dispersion, incident_light_angle),
@@ -156,7 +207,7 @@ class WavelengthCalibrationParameters(BaseModel):
                             f"{param} has units ({bounds_range.min.unit}), but it shouldn't."
                         )
 
-        return bounds
+        return bounds'''
 
     @field_validator("bounds")
     @classmethod
