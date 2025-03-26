@@ -9,6 +9,7 @@ from numpydantic import NDArray
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import field_validator
+from pydantic import model_validator
 from pydantic_core.core_schema import ValidationInfo
 
 logger = logging.getLogger(__name__)
@@ -21,8 +22,19 @@ class BoundRange(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    min: QUANTITY_OR_NUMBER = -np.inf
-    max: QUANTITY_OR_NUMBER = np.inf
+    min: QUANTITY_OR_NUMBER = -np.inf * u.dimensionless_unscaled
+    max: QUANTITY_OR_NUMBER = np.inf * u.dimensionless_unscaled
+
+    @model_validator(mode="after")
+    def validate_units_match(self) -> "BoundRange":
+        """Ensure that if both min and max are Quantities, they have the same physical units."""
+        if isinstance(self.min, Quantity) and isinstance(self.max, Quantity):
+            if not self.min.unit.is_equivalent(self.max.unit):
+                raise ValueError(
+                    f"Incompatible units: min has unit {self.min.unit}, "
+                    f"but max has unit {self.max.unit}"
+                )
+        return self
 
 
 class BoundsModel(BaseModel):
@@ -81,23 +93,6 @@ class WavelengthCalibrationParameters(BaseModel):
             raise ValueError("Quartile value must be between 0 and 100.")
         return value
 
-    @field_validator("fit_flags", mode="before")
-    @classmethod
-    def validate_fit_flags(cls, value):
-        """Ensure fit_flags is always an instance of FitFlagsModel, merging defaults if necessary."""
-        if value is None:
-            return FitFlagsModel()  # Default all to True
-
-        if isinstance(value, dict):
-            return FitFlagsModel(
-                **{**FitFlagsModel().dict(), **value}
-            )  # Merge defaults with user values
-
-        if isinstance(value, FitFlagsModel):
-            return value
-
-        raise ValueError("fit_flags must be a dictionary or a FitFlagsModel instance.")
-
     @field_validator("crval1", mode="after")
     @classmethod
     def validate_crval1_units(cls, value):
@@ -128,14 +123,6 @@ class WavelengthCalibrationParameters(BaseModel):
         """Ensure doppler_velocity has correct length units."""
         return value.to(u.km / u.s)
 
-    @field_validator("unfit_1d_spectrum", mode="after")
-    @classmethod
-    def validate_unfit_1d_spectrum(cls, value):
-        """Ensure unfit_1d_spectrum is an NDArray."""
-        if not isinstance(value, np.ndarray):
-            raise TypeError("unfit_1d_spectrum must be a NumPy array.")
-        return value
-
     @field_validator("bounds")
     @classmethod
     def ensure_correct_bounds_units(cls, bounds: BoundsModel, info: ValidationInfo) -> BoundsModel:
@@ -164,9 +151,10 @@ class WavelengthCalibrationParameters(BaseModel):
 
             else:
                 if isinstance(bounds_range.min, Quantity):
-                    raise TypeError(
-                        f"{param} has units ({bounds_range.min.unit}), but it shouldn't."
-                    )
+                    if bounds_range.min.unit != u.dimensionless_unscaled:
+                        raise TypeError(
+                            f"{param} has units ({bounds_range.min.unit}), but it shouldn't."
+                        )
 
         return bounds
 
@@ -198,43 +186,43 @@ class WavelengthCalibrationParameters(BaseModel):
             "crval1",
             vary=self.fit_flags.crval1,
             value=self.crval1.value,
-            min=self.bounds.crval1.min,
-            max=self.bounds.crval1.max,
+            min=self.bounds.crval1.min.value,
+            max=self.bounds.crval1.max.value,
         )
         param.add(
             "dispersion",
             vary=self.fit_flags.dispersion,
             value=self.dispersion.value,
-            min=self.bounds.dispersion.min,
-            max=self.bounds.dispersion.max,
+            min=self.bounds.dispersion.min.value,
+            max=self.bounds.dispersion.max.value,
         )
         param.add(
             "incident_light_angle",
             vary=self.fit_flags.incident_light_angle,
             value=self.incident_light_angle.value,
-            min=self.bounds.incident_light_angle.min,
-            max=self.bounds.incident_light_angle.max,
+            min=self.bounds.incident_light_angle.min.value,
+            max=self.bounds.incident_light_angle.max.value,
         )
         param.add(
             "resolving_power",
             vary=self.fit_flags.resolving_power,
             value=self.resolving_power,
-            min=self.bounds.resolving_power.min,
-            max=self.bounds.resolving_power.max,
+            min=self.bounds.resolving_power.min.value,
+            max=self.bounds.resolving_power.max.value,
         )
         param.add(
             "opacity_factor",
             vary=self.fit_flags.opacity_factor,
             value=self.opacity_factor,
-            min=self.bounds.opacity_factor.min,
-            max=self.bounds.opacity_factor.max,
+            min=self.bounds.opacity_factor.min.value,
+            max=self.bounds.opacity_factor.max.value,
         )
         param.add(
             "straylight_fraction",
             vary=self.fit_flags.straylight_fraction,
             value=self.straylight_fraction,
-            min=self.bounds.straylight_fraction.min,
-            max=self.bounds.straylight_fraction.max,
+            min=self.bounds.straylight_fraction.min.value,
+            max=self.bounds.straylight_fraction.max.value,
         )
 
         spectrum_percentile = np.nanpercentile(self.unfit_1d_spectrum, self.quartile)
