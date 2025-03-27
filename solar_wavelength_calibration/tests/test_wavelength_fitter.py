@@ -79,6 +79,7 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
         atlas=atlas,
         expected_wavelength_vector=test_expected_wavelength_vector,
         unfit_1d_spectrum=test_unfit_1d_spectrum,
+        full=True,
     )
 
     # make sure that the dispersion was not fit (wasn't changed)
