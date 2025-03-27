@@ -86,7 +86,7 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
     print(test_parameters_dict["dispersion"].value)
     wcs_fit_result_header, fit_result_params = fitter.fit_result
     print(fit_result_params["dispersion"].value)
-    assert test_parameters_dict["dispersion"].value == fit_result_params["dispersion"].value
+    assert test_parameters_dict["dispersion"].value == fit_result_params["dispersion"]
 
 
 def test_fit_is_correct(
