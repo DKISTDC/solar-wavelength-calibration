@@ -150,7 +150,10 @@ class WavelengthCalibrationParameters(BaseModel):
         """
         params_with_units = ["crval1", "dispersion", "incident_light_angle"]
         for param in bounds.model_fields.keys():
-            param_value = info.data[param]
+            try:
+                param_value = info.data[param]
+            except KeyError:
+                continue
             bounds_range = getattr(bounds, param)
             if param in params_with_units:
                 param_unit = param_value.unit
@@ -181,7 +184,11 @@ class WavelengthCalibrationParameters(BaseModel):
         min and max bounds and raises an error if any value falls outside its allowed range.
         """
         for param in bounds.model_fields.keys():
-            param_value = info.data[param]
+            try:
+                param_value = info.data[param]
+            except KeyError:
+                # if param not in info.data, it is probably an invalid type and Pydantic will handle this soon.
+                continue
             bounds_range = getattr(bounds, param)
             if not (bounds_range.min <= param_value <= bounds_range.max):
                 raise TypeError(
