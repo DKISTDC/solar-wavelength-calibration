@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import BoundRange
 from solar_wavelength_calibration.fitter.parameters import BoundsModel
+from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
 
@@ -327,7 +328,6 @@ def test_default_fit_flags(test_parameters_dict):
     assert input_params.fit_flags.resolving_power == True
     assert input_params.fit_flags.opacity_factor == True
     assert input_params.fit_flags.straylight_fraction == True
-    assert input_params.fit_flags.continuum_intensity_correction == True
 
 
 def test_custom_fit_flags(test_parameters_dict):
@@ -336,12 +336,7 @@ def test_custom_fit_flags(test_parameters_dict):
     When: Initializing the fit parameters
     Then: The customized input fit flags are set to the custom values and others are set to the default values
     """
-    fit_flags = {
-        "dispersion": False,
-        "resolving_power": False,
-        "opacity_factor": False,
-        "continuum_intensity_correction": False,
-    }
+    fit_flags = FitFlagsModel(dispersion=False, resolving_power=False, opacity_factor=False)
 
     input_params = WavelengthCalibrationParameters(
         crval1=test_parameters_dict["crval1"],
@@ -363,4 +358,109 @@ def test_custom_fit_flags(test_parameters_dict):
     assert input_params.fit_flags.resolving_power == False
     assert input_params.fit_flags.opacity_factor == False
     assert input_params.fit_flags.straylight_fraction == True
-    assert input_params.fit_flags.continuum_intensity_correction == False
+
+
+def test_bounds_min_max_have_different_units(test_parameters_dict):
+    """
+    Given: Some bounds that have different min/max units.
+    When: Initializing the fit parameters.
+    Then: The bounds should have been converted to the same units.
+    """
+    bounds = BoundsModel(
+        crval1=BoundRange(
+            min=(test_parameters_dict["crval1"].to_value(u.Angstrom)) / 10.0 - 0.3,
+            max=test_parameters_dict["crval1"].to_value(u.nm) + 0.3,
+        ),
+        dispersion=BoundRange(
+            min=test_parameters_dict["dispersion"].to_value(u.um / u.pix) - 55,
+            max=test_parameters_dict["dispersion"].to_value(u.nm / u.pix) + 55,
+        ),
+        incident_light_angle=BoundRange(
+            min=test_parameters_dict["incident_light_angle"].to_value(u.rad) - 5,
+            max=test_parameters_dict["incident_light_angle"].to_value(u.deg) + 103,
+        ),
+    )
+
+    input_params = WavelengthCalibrationParameters(
+        crval1=test_parameters_dict["crval1"],
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=test_parameters_dict["incident_light_angle"],
+        resolving_power=test_parameters_dict["resolving_power"],
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        straylight_fraction=test_parameters_dict["straylight_fraction"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=test_parameters_dict["grating_constant"],
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
+        order=test_parameters_dict["order"],
+        bounds=bounds,
+    )
+
+    # make sure min units were converted
+    assert input_params.bounds.crval1.min.unit.is_equivalent(u.nm)
+    assert input_params.bounds.dispersion.min.unit.is_equivalent(u.nm / u.pix)
+    assert input_params.bounds.incident_light_angle.min.unit.is_equivalent(u.deg)
+
+
+def test_bounds_given_as_dict(test_parameters_dict):
+    """
+    Given: Custom bounds given as a dictionary instead of a BoundsModel
+    When:
+    Then:
+    """
+    bounds = {
+        "crval1": {
+            "min": test_parameters_dict["crval1"] - (0.3 * u.nm),
+            "max": test_parameters_dict["crval1"] + (0.3 * u.nm),
+        },
+        "dispersion": {
+            "min": test_parameters_dict["dispersion"] - (55 * u.nm / u.pix),
+            "max": test_parameters_dict["dispersion"] + (55 * u.nm / u.pix),
+        },
+        "incident_light_angle": {
+            "min": test_parameters_dict["incident_light_angle"] - (5 * u.deg),
+            "max": test_parameters_dict["incident_light_angle"] + (103 * u.deg),
+        },
+        "resolving_power": {
+            "min": test_parameters_dict["resolving_power"] - 50,
+            "max": test_parameters_dict["resolving_power"] + 0.0001,
+        },
+        "opacity_factor": {
+            "min": test_parameters_dict["opacity_factor"] - 1,
+            "max": test_parameters_dict["opacity_factor"] + 1,
+        },
+    }
+
+    input_params = WavelengthCalibrationParameters(
+        crval1=test_parameters_dict["crval1"],
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=test_parameters_dict["incident_light_angle"],
+        resolving_power=test_parameters_dict["resolving_power"],
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        straylight_fraction=test_parameters_dict["straylight_fraction"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=test_parameters_dict["grating_constant"],
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
+        order=test_parameters_dict["order"],
+        bounds=bounds,
+    )
+
+
+def test_parameters_have_no_units(test_parameters_dict):
+    """
+    Given: Input parameters without units.
+    When: Initializing the fit parameters.
+    Then: A ValidationError is raised.
+    """
+    with pytest.raises(ValidationError, match="Input should be an instance of Quantity"):
+        input_params = WavelengthCalibrationParameters(
+            crval1=test_parameters_dict["crval1"].value,
+            dispersion=test_parameters_dict["dispersion"].value,
+            incident_light_angle=test_parameters_dict["incident_light_angle"].value,
+            resolving_power=test_parameters_dict["resolving_power"],
+            opacity_factor=test_parameters_dict["opacity_factor"],
+            straylight_fraction=test_parameters_dict["straylight_fraction"],
+            unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+            grating_constant=test_parameters_dict["grating_constant"].value,
+            doppler_velocity=test_parameters_dict["doppler_velocity"].value,
+            order=test_parameters_dict["order"],
+        )

@@ -1,6 +1,8 @@
+import astropy
 import astropy.units as u
 import numpy as np
 import pytest
+from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
@@ -44,7 +46,7 @@ def test_incorrect_atlas(parameters: WavelengthCalibrationParameters, test_unfit
     """
     test_expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
     atlas = np.linspace(1000, 3000, 1000) * u.nm
-    with pytest.raises(ValueError, match="Input should be an instance of AtlasBase"):
+    with pytest.raises(ValidationError, match="Input should be an instance of AtlasBase"):
         fitter = WaveCalFitter(
             input_parameters=parameters,
             atlas=atlas,
@@ -163,3 +165,50 @@ def test_prepare_atlas(
         < np.mean(test_expected_wavelength_vector).value
         < fts_telluric_wavelength[len(fts_telluric_wavelength) - 1]
     )
+
+
+def test_full_flag_true(
+    parameters: WavelengthCalibrationParameters, test_unfit_1d_spectrum, atlas: AtlasBase
+):
+    """
+    Given: WaveCal inputs with the full flag set to true
+    When: Initializing a WaveCalFitter object
+    Then: We get two fit results back; one WCS object, and one dictionary
+    """
+    test_expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
+    fitter = WaveCalFitter(
+        input_parameters=parameters,
+        atlas=atlas,
+        expected_wavelength_vector=test_expected_wavelength_vector,
+        unfit_1d_spectrum=test_unfit_1d_spectrum,
+        full=True,
+    )
+
+    # make sure we get 2 outputs
+    assert len(fitter.fit_result) == 2
+    wcs_fit_result_header, fit_result_params = fitter.fit_result
+    # and make sure that the first output is the WCS object...
+    assert isinstance(wcs_fit_result_header, astropy.wcs.wcs.WCS)
+    # and the second is a dictionary containing the rest of the fitted parameters
+    assert isinstance(fit_result_params, dict)
+
+
+def test_full_flag_false(
+    parameters: WavelengthCalibrationParameters, test_unfit_1d_spectrum, atlas: AtlasBase
+):
+    """
+    Given: WaveCal inputs with the full flag set to false (default)
+    When: Initializing a WaveCalFitter object
+    Then: We get one fit result back, and it is a WCS object
+    """
+    test_expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
+    fitter = WaveCalFitter(
+        input_parameters=parameters,
+        atlas=atlas,
+        expected_wavelength_vector=test_expected_wavelength_vector,
+        unfit_1d_spectrum=test_unfit_1d_spectrum,
+        full=False,
+    )
+
+    # make sure we get one fit result back, and it is a WCS object
+    assert isinstance(fitter.fit_result, astropy.wcs.wcs.WCS)
