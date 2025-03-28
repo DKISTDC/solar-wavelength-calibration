@@ -61,8 +61,9 @@ markers = [
 
 [tool.coverage.run]
 omit = [
-    "solar_wavelength_calibration/tests/*",
-    "solar_wavelength_calibration/__init__.py",
+    "*/solar_wavelength_calibration/tests/*",
+    "*/solar_wavelength_calibration/__init__.py",
+    "*/solar_wavelength_calibration/*/__init__.py",
 ]
 
 [tool.coverage.report]
