@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
+from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.wavelength_fitter import WaveCalFitter
 
@@ -70,7 +71,7 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
         grating_constant=test_parameters_dict["grating_constant"],
         doppler_velocity=test_parameters_dict["doppler_velocity"],
         order=test_parameters_dict["order"],
-        fit_flags={"dispersion": False},
+        fit_flags=FitFlagsModel(dispersion=False),
     )
 
     test_expected_wavelength_vector = np.linspace(1500, 2000, 1000) * u.nm
@@ -83,9 +84,7 @@ def test_dispersion_not_fit(test_parameters_dict, test_unfit_1d_spectrum, atlas:
     )
 
     # make sure that the dispersion was not fit (wasn't changed)
-    print(test_parameters_dict["dispersion"].value)
     wcs_fit_result_header, fit_result_params = fitter.fit_result
-    print(fit_result_params["dispersion"])
     assert test_parameters_dict["dispersion"].value == fit_result_params["dispersion"]
 
 

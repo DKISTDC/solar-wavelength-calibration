@@ -28,7 +28,7 @@ class BoundRange(BaseModel):
     @model_validator(mode="after")
     def validate_units_match(self) -> "BoundRange":
         """Ensure that if both min and max are Quantities, they have the same physical units."""
-        if isinstance(self.min, Quantity) and isinstance(self.max, Quantity):
+        if isinstance(self.min, Quantity) or isinstance(self.max, Quantity):
             if not self.min.unit.is_equivalent(self.max.unit):
                 raise ValueError(
                     f"Incompatible units: min has unit {self.min.unit}, "
@@ -85,21 +85,7 @@ class WavelengthCalibrationParameters(BaseModel):
     fit_flags: FitFlagsModel = FitFlagsModel()
     bounds: BoundsModel = BoundsModel()
 
-    @field_validator("bounds", mode="before")
-    @classmethod
-    def merge_bounds_with_defaults(cls, user_bounds: BoundsModel | None) -> BoundsModel:
-        """Ensure that only BoundsModel instances are accepted, and merge with defaults to fill in any unspecified bounds."""
-        default = BoundsModel()
-
-        if user_bounds is None:
-            return default
-
-        if isinstance(user_bounds, BoundsModel):
-            return BoundsModel(**{**default.model_dump(), **user_bounds.model_dump()})
-
-        raise TypeError("bounds must be an instance of BoundsModel.")
-
-    @field_validator("quartile", mode="before")
+    @field_validator("quartile", mode="after")
     @classmethod
     def validate_quartile(cls, value):
         """Ensure the quartile value is between 0 and 100."""
