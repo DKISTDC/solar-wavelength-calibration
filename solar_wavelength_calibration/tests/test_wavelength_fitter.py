@@ -5,6 +5,8 @@ import pytest
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
+from solar_wavelength_calibration.fitter.parameters import BoundRange
+from solar_wavelength_calibration.fitter.parameters import BoundsModel
 from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.wavelength_fitter import WaveCalFitter
@@ -119,7 +121,7 @@ def test_fit_is_correct(
     simulated_unfit_1d_wavelength = dummy_wavelength * dispersion_scale + shift
     simulated_unfit_1d_transmission = np.interp(
         simulated_unfit_1d_wavelength, dummy_wavelength, linear_spectrum
-    )
+    )  # use atlas here instead?
 
     fitter = WaveCalFitter(
         input_parameters=parameters,
@@ -129,6 +131,7 @@ def test_fit_is_correct(
     )
     print(fitter.fit_result.wcs.cdelt[0])
     print(dispersion * dispersion_scale)
+    # TODO: check other fit values
     assert np.isclose(fitter.fit_result.wcs.cdelt[0], dispersion * dispersion_scale)
 
 

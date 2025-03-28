@@ -5,7 +5,6 @@ import astropy.units as u
 import numpy as np
 from astropy.units import Quantity
 from lmfit import Parameters
-from numpydantic import NDArray
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import field_validator
@@ -74,7 +73,7 @@ class WavelengthCalibrationParameters(BaseModel):
     crval1: Quantity
     dispersion: Quantity
     incident_light_angle: Quantity
-    unfit_1d_spectrum: NDArray
+    unfit_1d_spectrum: np.ndarray
     grating_constant: Quantity
     doppler_velocity: Quantity
     order: int
