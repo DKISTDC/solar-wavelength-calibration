@@ -168,11 +168,6 @@ def test_fit_is_correct(
         order=test_order,
         bounds=BoundsModel(
             crval1=BoundRange(min=1070 * u.nm, max=1080 * u.nm),
-            dispersion=BoundRange(min=0 * u.nm / u.pix, max=np.inf * u.nm / u.pix),
-            incident_light_angle=BoundRange(min=-360 * u.deg, max=360 * u.deg),
-            opacity_factor=BoundRange(min=0),
-            straylight_fraction=BoundRange(min=0),
-            resolving_power=BoundRange(min=0),
         ),
     )
 
