@@ -156,9 +156,9 @@ def test_fit_is_correct(
     """
 
     parameters = WavelengthCalibrationParameters(
-        crval1=test_crval1,
-        dispersion=test_dispersion,
-        incident_light_angle=test_incident_light_angle,
+        crval1=test_crval1 + 1.0 * u.nm,
+        dispersion=test_dispersion * 1.01,
+        incident_light_angle=test_incident_light_angle * 1.01,
         resolving_power=72500,
         opacity_factor=1,
         straylight_fraction=0.0,
@@ -167,6 +167,7 @@ def test_fit_is_correct(
         doppler_velocity=0 * u.km / u.s,
         order=test_order,
         bounds=BoundsModel(
+            crval1=BoundRange(min=1070 * u.nm, max=1080 * u.nm),
             dispersion=BoundRange(min=0 * u.nm / u.pix, max=np.inf * u.nm / u.pix),
             incident_light_angle=BoundRange(min=-360 * u.deg, max=360 * u.deg),
             opacity_factor=BoundRange(min=0),
@@ -182,6 +183,7 @@ def test_fit_is_correct(
         unfit_1d_spectrum=observed_spec,
     )
     assert np.isclose(fitter.fit_result.wcs.crval[0], test_crval1.to_value("m"))
+    # TODO: test other fit parameters
 
 
 def test_prepare_atlas(
