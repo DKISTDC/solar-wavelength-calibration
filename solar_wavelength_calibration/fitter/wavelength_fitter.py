@@ -1,7 +1,6 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 import logging
 from functools import cached_property
-from typing import Optional
 
 import astropy.units as u
 import lmfit
