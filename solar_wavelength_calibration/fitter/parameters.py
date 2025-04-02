@@ -45,7 +45,7 @@ class BoundsModel(BaseModel):
     dispersion: BoundRange = BoundRange()
     incident_light_angle: BoundRange = BoundRange()
     resolving_power: BoundRange = BoundRange()
-    opacity_factor: BoundRange = BoundRange()
+    opacity_factor: BoundRange = BoundRange(min=0.0)
     straylight_fraction: BoundRange = BoundRange()
 
 

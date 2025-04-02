@@ -79,10 +79,15 @@ def fitness(
         "PV1_2": incident_light_angle,  # Incident angle [deg] (<<<< TO BE OPTIMIZED <<<<<<)
     }
 
+    print("non_linear_header:", non_linear_header)
     non_linear_wcs = WCS(non_linear_header)
+    print(non_linear_wcs)
     linear_wave = (  # linear_wavelength_vector
         non_linear_wcs.spectral.pixel_to_world(np.arange(number_of_wave_pix))
     ).to_value(u.nm)
+    print(number_of_wave_pix)
+    print(linear_wave)
+    print("a")
 
     # interpolate the telluric spectral atlas onto the new wavelength axis and scale by the opacity value that is being optimized
     linear_fts_telluric_transmission = np.interp(linear_wave, fts_telluric_wave, fts_telluric)

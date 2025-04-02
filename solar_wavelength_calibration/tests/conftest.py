@@ -1,7 +1,9 @@
 import astropy.units as u
 import numpy as np
 import pytest
+from astropy.wcs import WCS
 from lmfit import Parameters
+from scipy.interpolate import interp1d
 
 from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.atlas import DownloadConfig
@@ -25,9 +27,39 @@ def atlas(config: DownloadConfig | None) -> Atlas:
 
 
 @pytest.fixture(scope="session")
-def test_unfit_1d_spectrum():
-    # take atlas and scale by a random number, etc.
-    return np.linspace(0, 1, 1000)
+def test_expected_wavelength_vector(atlas):
+    """Use telluric atlas to simulate an expected wavelength vector."""
+    return atlas.telluric_atlas_wavelength
+
+
+@pytest.fixture(scope="session")
+def test_unfit_1d_spectrum(atlas):
+    """Use telluric atlas and shift and scale by random numbers and resample onto a known WCS-based wavelength grid to simulate an unfit 1d spectra."""
+    telluric_atlas = atlas.telluric_atlas_transmission
+    telluric_atlas_shifted = telluric_atlas + 30.0  # shift by a random amount
+    telluric_atlas_scaled = telluric_atlas_shifted * 2.3  # scale by a random amount
+
+    # Create a dummy WCS object for the known wavelength grid
+    wcs = WCS(naxis=1)
+    wcs.wcs.ctype = ["AWAV-GRA"]
+    wcs.wcs.crval = [telluric_atlas_scaled[0]]
+    wcs.wcs.cdelt = [0.01]  # example dispersion value
+    wcs.wcs.crpix = [1]
+    wcs.wcs.cunit = ["nm"]
+
+    # Generate the wavelength grid from the WCS object
+    wavelength_grid = wcs.wcs_pix2world(np.arange(len(telluric_atlas_scaled)), 0)[0] * u.nm
+
+    # Interpolate the unfit spectrum onto the new wavelength grid
+    interpolator = interp1d(
+        atlas.telluric_atlas_wavelength,
+        telluric_atlas_scaled,
+        bounds_error=False,
+        fill_value="extrapolate",
+    )
+    resampled_spectrum = interpolator(wavelength_grid.value)
+
+    return resampled_spectrum
 
 
 @pytest.fixture(scope="session")
