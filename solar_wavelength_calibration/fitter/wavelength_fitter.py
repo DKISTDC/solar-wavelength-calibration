@@ -7,7 +7,6 @@ import astropy.units as u
 import lmfit
 import numpy as np
 from astropy.wcs import WCS
-from numpydantic import NDArray
 from pydantic import BaseModel
 from pydantic import ConfigDict
 
@@ -26,7 +25,7 @@ class WaveCalFitter(BaseModel):
     input_parameters: WavelengthCalibrationParameters
     atlas: AtlasBase
     expected_wavelength_vector: u.Quantity
-    unfit_1d_spectrum: NDArray
+    unfit_1d_spectrum: np.ndarray
     full: bool = False
 
     @cached_property
