@@ -28,13 +28,13 @@ def atlas(config: DownloadConfig | None) -> Atlas:
 
 @pytest.fixture(scope="session")
 def test_expected_wavelength_vector(atlas):
-    """Use telluric atlas to simulate an expected wavelength vector."""
-    return atlas.telluric_atlas_wavelength
+    """Use a chunk of the telluric atlas to simulate an expected wavelength vector."""
+    return atlas.telluric_atlas_wavelength[500:2000]
 
 
 @pytest.fixture(scope="session")
 def test_unfit_1d_spectrum(atlas):
-    """Use telluric atlas and shift and scale by random numbers and resample onto a known WCS-based wavelength grid to simulate an unfit 1d spectra."""
+    """Use a chunk of the telluric atlas and shift and scale by random numbers and resample onto a known WCS-based wavelength grid to simulate an unfit 1d spectra."""
     telluric_atlas = atlas.telluric_atlas_transmission
     telluric_atlas_shifted = telluric_atlas + 30.0  # shift by a random amount
     telluric_atlas_scaled = telluric_atlas_shifted * 2.3  # scale by a random amount
@@ -59,7 +59,7 @@ def test_unfit_1d_spectrum(atlas):
     )
     resampled_spectrum = interpolator(wavelength_grid.value)
 
-    return resampled_spectrum
+    return resampled_spectrum[500:2000]
 
 
 @pytest.fixture(scope="session")

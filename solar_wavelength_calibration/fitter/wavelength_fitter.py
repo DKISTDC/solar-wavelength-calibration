@@ -104,6 +104,7 @@ class WaveCalFitter(BaseModel):
                 number_of_wave_pix,
             ),
             fcn_kws=constant_parameters,
+            nan_policy="propagate",
         )
         fit_result = minimizer.minimize(method="leastsq", params=params_to_fit)
         logger.info("Finished fit.")

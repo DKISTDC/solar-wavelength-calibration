@@ -42,11 +42,11 @@ class BoundsModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     crval1: BoundRange = BoundRange()
-    dispersion: BoundRange = BoundRange()
-    incident_light_angle: BoundRange = BoundRange()
-    resolving_power: BoundRange = BoundRange()
-    opacity_factor: BoundRange = BoundRange()
-    straylight_fraction: BoundRange = BoundRange()
+    dispersion: BoundRange = BoundRange(min=0 * u.nm / u.pix, max=np.inf * u.nm / u.pix)
+    incident_light_angle: BoundRange = BoundRange(min=-360 * u.deg, max=360 * u.deg)
+    resolving_power: BoundRange = BoundRange(min=0)
+    opacity_factor: BoundRange = BoundRange(min=0)
+    straylight_fraction: BoundRange = BoundRange(min=0)
 
 
 class FitFlagsModel(BaseModel):
