@@ -98,8 +98,13 @@ def test_dispersion_not_fit(
 
 
 def test_fit_is_correct(
-    parameters: WavelengthCalibrationParameters,
-    test_unfit_1d_spectrum,
+    test_crval1,
+    test_dispersion,
+    test_incident_light_angle,
+    test_grating_constant,
+    test_order,
+    observed_spec,
+    observed_wave,
     atlas: AtlasBase,
     test_parameters_dict,
 ):
@@ -109,35 +114,30 @@ def test_fit_is_correct(
     Then: The fitted dispersion (CDELT1) is approximately equal to the expected dispersion.
     """
 
-    # centered around 1083 nm
-    idx = np.where(
-        (atlas.solar_atlas_wavelength.value > 1078.0)
-        & (atlas.solar_atlas_wavelength.value < 1082.0)
-    )[0]
-
-    dispersion = 0.01
-    dummy_wavelength = np.arange(1078.0, 1082.0, dispersion) * u.nm
-    linear_spectrum = np.interp(
-        dummy_wavelength, atlas.solar_atlas_wavelength[idx], atlas.solar_atlas_transmission[idx]
+    parameters = WavelengthCalibrationParameters(
+        crval1=test_crval1 + 1.0 * u.nm,
+        dispersion=test_dispersion * 1.01,
+        incident_light_angle=test_incident_light_angle * 1.01,
+        resolving_power=72500,
+        opacity_factor=1,
+        straylight_fraction=0.0,
+        unfit_1d_spectrum=observed_spec,
+        grating_constant=test_grating_constant,
+        doppler_velocity=0 * u.km / u.s,
+        order=test_order,
+        bounds=BoundsModel(
+            crval1=BoundRange(min=1070 * u.nm, max=1080 * u.nm),
+        ),
     )
-
-    shift = 0.5 * u.nm  # dummy shift
-    dispersion_scale = 1.003  # dummy dispersion scale factor
-    simulated_unfit_1d_wavelength = dummy_wavelength * dispersion_scale + shift
-    simulated_unfit_1d_transmission = np.interp(
-        simulated_unfit_1d_wavelength, dummy_wavelength, linear_spectrum
-    )  # use atlas here instead?
 
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        expected_wavelength_vector=dummy_wavelength,
-        unfit_1d_spectrum=simulated_unfit_1d_transmission,
+        expected_wavelength_vector=observed_wave * u.nm,
+        unfit_1d_spectrum=observed_spec,
     )
-    print(fitter.fit_result.wcs.cdelt[0])
-    print(dispersion * dispersion_scale)
-    # TODO: check other fit values
-    assert np.isclose(fitter.fit_result.wcs.cdelt[0], dispersion * dispersion_scale)
+    assert np.isclose(fitter.fit_result.wcs.crval[0], test_crval1.to_value("m"))
+    # TODO: test other fit parameters
 
 
 def test_prepare_atlas(
