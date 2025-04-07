@@ -123,15 +123,15 @@ def test_default_bounds(test_parameters_dict):
 
     assert input_params.bounds.crval1.min == -np.inf
     assert input_params.bounds.crval1.max == np.inf
-    assert input_params.bounds.dispersion.min == -np.inf
+    assert input_params.bounds.dispersion.min == 0 * u.nm / u.pix
     assert input_params.bounds.dispersion.max == np.inf
-    assert input_params.bounds.incident_light_angle.min == -np.inf
-    assert input_params.bounds.incident_light_angle.max == np.inf
-    assert input_params.bounds.resolving_power.min == -np.inf
+    assert input_params.bounds.incident_light_angle.min == -360 * u.deg
+    assert input_params.bounds.incident_light_angle.max == 360 * u.deg
+    assert input_params.bounds.resolving_power.min == 0
     assert input_params.bounds.resolving_power.max == np.inf
-    assert input_params.bounds.opacity_factor.min == -np.inf
+    assert input_params.bounds.opacity_factor.min == 0
     assert input_params.bounds.opacity_factor.max == np.inf
-    assert input_params.bounds.straylight_fraction.min == -np.inf
+    assert input_params.bounds.straylight_fraction.min == 0
     assert input_params.bounds.straylight_fraction.max == np.inf
 
 
@@ -212,7 +212,7 @@ def test_custom_bounds(test_parameters_dict):
     assert np.isclose(
         input_params.bounds.opacity_factor.max, test_parameters_dict["opacity_factor"] + 1
     )
-    assert input_params.bounds.straylight_fraction.min == -np.inf  # default bounds
+    assert input_params.bounds.straylight_fraction.min == 0  # default bounds
     assert input_params.bounds.straylight_fraction.max == np.inf  # default bounds
 
 

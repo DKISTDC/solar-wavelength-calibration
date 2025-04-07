@@ -1,13 +1,11 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 import logging
 from functools import cached_property
-from typing import Optional
 
 import astropy.units as u
 import lmfit
 import numpy as np
 from astropy.wcs import WCS
-from numpydantic import NDArray
 from pydantic import BaseModel
 from pydantic import ConfigDict
 
@@ -26,7 +24,7 @@ class WaveCalFitter(BaseModel):
     input_parameters: WavelengthCalibrationParameters
     atlas: AtlasBase
     expected_wavelength_vector: u.Quantity
-    unfit_1d_spectrum: NDArray
+    unfit_1d_spectrum: np.ndarray
     full: bool = False
 
     @cached_property
@@ -106,6 +104,7 @@ class WaveCalFitter(BaseModel):
                 number_of_wave_pix,
             ),
             fcn_kws=constant_parameters,
+            # nan_policy="propagate",
         )
         fit_result = minimizer.minimize(method="leastsq", params=params_to_fit)
         logger.info("Finished fit.")

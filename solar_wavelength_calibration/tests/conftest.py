@@ -1,7 +1,9 @@
 import astropy.units as u
 import numpy as np
 import pytest
+from astropy.wcs import WCS
 from lmfit import Parameters
+from scipy.interpolate import interp1d
 
 from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.atlas import DownloadConfig
@@ -25,9 +27,51 @@ def atlas(config: DownloadConfig | None) -> Atlas:
 
 
 @pytest.fixture(scope="session")
-def test_unfit_1d_spectrum():
-    # take atlas and scale by a random number, etc.
-    return np.linspace(0, 1, 1000)
+def test_expected_wavelength_vector(atlas):
+    """Use a chunk of the telluric atlas to simulate an expected wavelength vector."""
+    return atlas.telluric_atlas_wavelength[500:2000]
+
+
+@pytest.fixture(scope="session")
+def test_unfit_1d_spectrum(
+    atlas, test_grating_constant, test_order, test_dispersion, test_incident_light_angle
+):
+    """Use a chunk of the telluric atlas and shift and scale by random numbers and resample onto a known WCS-based wavelength grid to simulate an unfit 1d spectra."""
+    telluric_atlas = atlas.telluric_atlas_transmission
+    telluric_atlas_shifted = telluric_atlas + 30.0  # shift by a random amount
+    telluric_atlas_scaled = telluric_atlas_shifted * 2.3  # scale by a random amount
+
+    # Create a dummy WCS object for the known wavelength grid
+    non_linear_header = {
+        "CTYPE1": "AWAV-GRA",  # Grating dispersion function with air wavelengths
+        "CUNIT1": "nm",  # Dispersion units
+        "CRPIX1": np.size(telluric_atlas) // 2 + 1,  # Reference pixel [pix]
+        "PV1_0": test_grating_constant.value,  # Grating density
+        "PV1_1": test_order,  # Diffraction order
+        "CRVAL1": atlas.telluric_atlas_wavelength[
+            np.size(telluric_atlas) // 2 + 1
+        ].value,  # Reference value [nm] (<<<< TO BE OPTIMIZED <<<<<<)
+        "CDELT1": test_dispersion.value,  # Linear dispersion [nm/pix] (<<<< TO BE OPTIMIZED <<<<<<)
+        "PV1_2": test_incident_light_angle.value,  # Incident angle [deg] (<<<< TO BE OPTIMIZED <<<<<<)
+    }
+
+    non_linear_wcs = WCS(non_linear_header)
+    # Generate the wavelength grid from the WCS object
+    linear_wave = (  # linear_wavelength_vector
+        non_linear_wcs.spectral.pixel_to_world(np.arange(np.size(telluric_atlas)))
+    ).to_value(u.nm)
+    print(linear_wave)
+
+    # Interpolate the unfit spectrum onto the new wavelength grid
+    interpolator = interp1d(
+        atlas.telluric_atlas_wavelength,
+        telluric_atlas_scaled,
+        bounds_error=False,
+        fill_value="extrapolate",
+    )
+    resampled_spectrum = interpolator(linear_wave)
+
+    return resampled_spectrum[500:2000]
 
 
 @pytest.fixture(scope="session")

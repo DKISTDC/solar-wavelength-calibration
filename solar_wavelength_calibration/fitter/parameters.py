@@ -43,7 +43,7 @@ class BoundsModel(BaseModel):
 
     crval1: BoundRange = BoundRange()
     dispersion: BoundRange = BoundRange(min=0 * u.nm / u.pix, max=np.inf * u.nm / u.pix)
-    incident_light_angle: BoundRange = BoundRange(min=-360 * u.deg, max=360 * u.deg)
+    incident_light_angle: BoundRange = BoundRange(min=0 * u.deg, max=360 * u.deg)
     resolving_power: BoundRange = BoundRange(min=0)
     opacity_factor: BoundRange = BoundRange(min=0)
     straylight_fraction: BoundRange = BoundRange(min=0)
