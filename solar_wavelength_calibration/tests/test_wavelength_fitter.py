@@ -2,6 +2,8 @@ import astropy
 import astropy.units as u
 import numpy as np
 import pytest
+from astropy.units import Quantity
+from astropy.wcs import WCS
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
@@ -95,6 +97,50 @@ def test_dispersion_not_fit(
     # make sure that the dispersion was not fit (wasn't changed)
     wcs_fit_result_header, fit_result_params = fitter.fit_result
     assert test_parameters_dict["dispersion"].value == fit_result_params["dispersion"]
+
+
+@pytest.fixture
+def num_wave_pix() -> int:
+    return 987
+
+
+@pytest.fixture
+def test_crval1() -> Quantity:
+    return 1072 * u.nm
+
+
+@pytest.fixture
+def test_WCS_header(
+    test_crval1, test_dispersion, test_incident_light_angle, test_grating_constant, test_order
+) -> dict:
+    return {
+        "CTYPE1": "AWAV-GRA",
+        "CUNIT1": "nm",
+        "CRPIX1": 1,
+        "CRVAL1": test_crval1.to_value("nm"),
+        "CDELT1": test_dispersion.to_value("nm / pix"),
+        "PV1_0": test_grating_constant.to_value("1 / mm"),
+        "PV1_1": test_order,
+        "PV1_2": test_incident_light_angle.to_value("deg"),
+    }
+
+
+@pytest.fixture
+def observed_wave(test_WCS_header, num_wave_pix) -> np.ndarray:
+    wcs = WCS(test_WCS_header)
+
+    obs_wave = wcs.spectral.pixel_to_world(np.arange(num_wave_pix)).to_value("nm")
+
+    return obs_wave
+
+
+@pytest.fixture
+def observed_spec(atlas, observed_wave) -> np.ndarray:
+    obs_spec = np.interp(
+        observed_wave, atlas.solar_atlas_wavelength.to_value("nm"), atlas.solar_atlas_transmission
+    )
+
+    return obs_spec
 
 
 def test_fit_is_correct(
