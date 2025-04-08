@@ -97,9 +97,7 @@ class BoundsModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     crval1: LengthBoundRange = LengthBoundRange(min=0 * u.nm)
-    dispersion: DispersionBoundRange = DispersionBoundRange(
-        min=0 * u.nm / u.pix, max=np.inf * u.nm / u.pix
-    )
+    dispersion: DispersionBoundRange = DispersionBoundRange(min=0 * u.nm / u.pix)
     incident_light_angle: AngleBoundRange = AngleBoundRange(min=0 * u.deg, max=180 * u.deg)
     resolving_power: UnitlessBoundRange = UnitlessBoundRange(min=0)
     opacity_factor: UnitlessBoundRange = UnitlessBoundRange(min=0)
