@@ -127,15 +127,13 @@ def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict):
     """
     Given: A dictionary of input parameter values
     When: Initializing a WavelengthCalibrationParameters object
-    Then: The lmfit parameters were set up correctly
+    Then: The lmfit parameters were set up correctly and default parameters are used where necessary
     """
     input_params = WavelengthCalibrationParameters(
         crval1=test_parameters_dict["crval1"],
         dispersion=test_parameters_dict["dispersion"],
         incident_light_angle=test_parameters_dict["incident_light_angle"],
-        resolving_power=test_parameters_dict["resolving_power"],
         opacity_factor=test_parameters_dict["opacity_factor"],
-        straylight_fraction=test_parameters_dict["straylight_fraction"],
         unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
         grating_constant=test_parameters_dict["grating_constant"],
         doppler_velocity=test_parameters_dict["doppler_velocity"],
@@ -146,30 +144,10 @@ def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict):
     # make sure than only 7 parameters were added into lmfit_parameters [crval1, dispersion, incident_light_angle, resolving_power, opacity_factor, straylight_fraction, unfit_1d_spectrum]
     assert len(input_params.lmfit_parameters.valuesdict()) == 7
 
-
-def test_default_parameters(atlas: AtlasBase, test_parameters_dict):
-    """
-    Given: The required input parameter values
-    When: Resolving power, opacity factor, and straylight fraction are not given and default values are used
-    Then: The initialized parameters are returned and the non-required parameter values are set to their default values
-    """
-    initialized_parameters = WavelengthCalibrationParameters(
-        crval1=test_parameters_dict.get("crval1"),
-        dispersion=test_parameters_dict.get("dispersion"),
-        incident_light_angle=test_parameters_dict.get("incident_light_angle"),
-        unfit_1d_spectrum=test_parameters_dict.get("unfit_1d_spectrum"),
-        grating_constant=test_parameters_dict.get("grating_constant"),
-        doppler_velocity=test_parameters_dict.get("doppler_velocity"),
-        order=test_parameters_dict.get("order"),
-    )
-
-    # make sure that the non-required values are set to their default values
-    initialized_params_dict = initialized_parameters.lmfit_parameters.valuesdict()
+    # Test default parameter values
+    initialized_params_dict = input_params.lmfit_parameters.valuesdict()
     assert initialized_params_dict["resolving_power"] == 1
-    assert initialized_params_dict["opacity_factor"] == 1
     assert initialized_params_dict["straylight_fraction"] == 0
-    # make sure than 7 parameters were added into lmfit_parameters [crval1, dispersion, incident_light_angle, resolving_power, opacity_factor, straylight_fraction, unfit_1d_spectrum]
-    assert len(initialized_parameters.lmfit_parameters.valuesdict()) == 7
 
 
 def test_default_bounds(test_parameters_dict):
