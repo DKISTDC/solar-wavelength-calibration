@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from typing import Annotated
+from typing import Callable
 
 import astropy.units as u
 import numpy as np
@@ -171,17 +172,57 @@ class WavelengthCalibrationParameters(BaseModel):
         return bounds
 
     @property
+    def delta(self) -> float:
+        r"""
+        Compute initial guess for internal lmfit `_delta` parameter.
+
+        To ensure an invertible grating equation we need
+
+        .. math::
+            -1 \leq G m \lambda - \sin\alpha \leq 1
+
+        where :math:`G` (grating constant) and :math:`m` (diffraction order) are fixed parameters while
+        :math:`\lambda` (CRVAL1) and :math:`\alpha` (incident light angle) are free in the fit.
+
+        As suggested by `lmfit <https://lmfit.github.io/lmfit-py/constraints.html#using-inequality-constraints>`_ we
+        ensure this constraint by forcing CRVAL1 to follow the equation
+
+        .. math::
+            \lambda = \frac{\delta + \sin(\alpha)}{G m}
+
+        where :math:`\delta` (`_delta`) is a free parameter whose bounds are [-1, 1].
+        """
+        unit_value = (self.grating_constant * self.order * self.crval1).to_value(
+            u.dimensionless_unscaled
+        )
+        sin_value = np.sin(self.incident_light_angle.to_value("rad"))
+        return unit_value - sin_value
+
+    @property
+    def crval1_constraint_function(self) -> Callable[[float, float], float]:
+        """
+        Return a function that computes `crval1` given values of `_delta` and `incident_light_angle`.
+
+        See `delta` for more information.
+        """
+
+        def constrain_crval1(_delta: float, incident_light_angle_deg: float) -> float:
+            numerator = _delta + np.sin(np.deg2rad(incident_light_angle_deg))
+            denominator = (self.grating_constant * self.order).to_value(1 / u.nm)
+            return numerator / denominator
+
+        return constrain_crval1
+
+    @property
     def lmfit_parameters(self) -> Parameters:
         """Create a single lmfit `Parameters` object with custom bounds and free/fixed status."""
         param = Parameters()
 
-        param.add(
-            "crval1",
-            vary=self.fit_flags.crval1,
-            value=self.crval1.value,
-            min=self.bounds.crval1.min.value,
-            max=self.bounds.crval1.max.value,
-        )
+        # Give lmfit knowledge of the constraint function
+        # Fear not! This accessing of the private API is the official method recommended by lmfit:
+        #  https://lmfit.github.io/lmfit-py/constraints.html#advanced-usage-of-expressions-in-lmfit
+        param._asteval.symtable["constrain_crval1"] = self.crval1_constraint_function
+
         param.add(
             "dispersion",
             vary=self.fit_flags.dispersion,
@@ -190,11 +231,18 @@ class WavelengthCalibrationParameters(BaseModel):
             max=self.bounds.dispersion.max.value,
         )
         param.add(
+            "_delta", vary=self.fit_flags.incident_light_angle, value=self.delta, min=-1, max=1.0
+        )
+        param.add(
             "incident_light_angle",
             vary=self.fit_flags.incident_light_angle,
             value=self.incident_light_angle.value,
             min=self.bounds.incident_light_angle.min.value,
             max=self.bounds.incident_light_angle.max.value,
+        )
+        param.add(
+            "crval1",
+            expr="constrain_crval1(_delta, incident_light_angle)",
         )
         param.add(
             "resolving_power",
