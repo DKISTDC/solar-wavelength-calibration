@@ -110,7 +110,7 @@ def fitness(
     # convolution for spectrograph line spread function
     sigma_wavelength = (crval1 / resolving_power) * gaussian_fwhm_to_sigma
     sigma_pix = sigma_wavelength / np.abs(dispersion)  # used to match FTS resolution to our data
-    fts_final_spectrum = gaussian_filter1d(fts_solar_normalized, sigma_pix)
+    fts_final_spectrum = gaussian_filter1d(fts_solar_normalized, np.abs(sigma_pix))
 
     res_amplitude = unfit_1d_spectrum - fts_final_spectrum
 
