@@ -157,6 +157,31 @@ def test_missing_parameters(
         assert key in str(excinfo.value)
 
 
+def test_parameter_outside_bounds_range():
+    """
+    Given: A WavelengthCalibrationParameters class where the input value of a parameter is outside of its bounds
+    When: Instantiating the class
+    Then: The correct error is raised
+    """
+    bounds = BoundsModel(crval1=LengthBoundRange(min=1000 * u.nm, max=1001 * u.nm))
+
+    with pytest.raises(
+        ValidationError,
+        match="crval1 with value 999.0 nm is outside the bounds range of \(1000.0 nm, 1001.0 nm\)",
+    ):
+        WavelengthCalibrationParameters(
+            crval1=999 * u.nm,
+            dispersion=1 * u.nm / u.pix,
+            incident_light_angle=45 * u.deg,
+            grating_constant=1 / u.m,
+            doppler_velocity=3 * u.km / u.s,
+            unfit_1d_spectrum=np.arange(3),
+            opacity_factor=0,
+            order=51,
+            bounds=bounds,
+        )
+
+
 def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict):
     """
     Given: A dictionary of input parameter values

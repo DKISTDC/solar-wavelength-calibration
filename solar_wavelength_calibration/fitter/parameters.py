@@ -164,7 +164,7 @@ class WavelengthCalibrationParameters(BaseModel):
                 continue
             bounds_range = getattr(bounds, param)
             if not (bounds_range.min <= param_value <= bounds_range.max):
-                raise TypeError(
+                raise ValueError(
                     f"{param} with value {param_value} is outside the bounds range of ({bounds_range.min}, {bounds_range.max})"
                 )
 
