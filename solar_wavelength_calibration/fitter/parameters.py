@@ -1,10 +1,14 @@
 """Objects for storing fit parameters."""
+from __future__ import annotations
+
 import logging
+from typing import Annotated
 
 import astropy.units as u
 import numpy as np
 from astropy.units import Quantity
 from lmfit import Parameters
+from pydantic import AfterValidator
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import field_validator
@@ -13,40 +17,93 @@ from pydantic_core.core_schema import ValidationInfo
 
 logger = logging.getLogger(__name__)
 
-QUANTITY_OR_NUMBER = Quantity | float | int
+
+def to_nm(value: Quantity) -> Quantity:
+    """Convert a length unit to nm."""
+    return value.to(u.nm)
 
 
-class BoundRange(BaseModel):
+def to_deg(value: Quantity) -> Quantity:
+    """Convert an angle unit to degrees."""
+    return value.to(u.deg)
+
+
+def to_nmperpx(value: Quantity) -> Quantity:
+    """Convert a dispersion unit to nm / px."""
+    return value.to(u.nm / u.pix)
+
+
+def to_overm(value: Quantity) -> Quantity:
+    """Convert an inverse length unit to 1 / m."""
+    return value.to(1 / u.m)
+
+
+def to_kmpers(value: Quantity) -> Quantity:
+    """Convert a speed unit to km / s."""
+    return value.to(u.km / u.s)
+
+
+length_quantity = Annotated[Quantity, AfterValidator(to_nm)]
+angle_quantity = Annotated[Quantity, AfterValidator(to_deg)]
+dispersion_quantity = Annotated[Quantity, AfterValidator(to_nmperpx)]
+inverse_length_quantity = Annotated[Quantity, AfterValidator(to_overm)]
+speed_quantity = Annotated[Quantity, AfterValidator(to_kmpers)]
+
+
+class UnitlessBoundRange(BaseModel):
     """Represents a min and max bound for a parameter."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True)
 
-    min: QUANTITY_OR_NUMBER = -np.inf
-    max: QUANTITY_OR_NUMBER = np.inf
+    min: int | float = -np.inf
+    max: int | float = np.inf
 
     @model_validator(mode="after")
-    def validate_units_match(self) -> "BoundRange":
-        """Ensure that if both min and max are Quantities, they have the same physical units."""
-        if isinstance(self.min, Quantity) or isinstance(self.max, Quantity):
-            if not self.min.unit.is_equivalent(self.max.unit):
-                raise ValueError(
-                    f"Incompatible units: min has unit {self.min.unit}, "
-                    f"but max has unit {self.max.unit}"
-                )
+    def ensure_min_less_than_max(self) -> UnitlessBoundRange:
+        """Ensure that the min and max properties are ordered correctly."""
+        if self.min >= self.max:
+            raise ValueError(f"{self.min = } is greater than or equal to {self.max = }")
         return self
 
 
+class LengthBoundRange(UnitlessBoundRange):
+    """BoundRange subclass that enforces inputs to have 'length' units."""
+
+    min: length_quantity = -np.inf * u.nm
+    max: length_quantity = np.inf * u.nm
+
+
+class AngleBoundRange(UnitlessBoundRange):
+    """BoundRange subclass that enforces inputs to be angles (rad or deg)."""
+
+    min: angle_quantity = -np.inf * u.deg
+    max: angle_quantity = np.inf * u.deg
+
+
+class DispersionBoundRange(UnitlessBoundRange):
+    """BoundRange subclass that enforces inputs to have 'length / pix' units."""
+
+    min: dispersion_quantity = -np.inf * u.nm / u.pix
+    max: dispersion_quantity = np.inf * u.nm / u.pix
+
+
 class BoundsModel(BaseModel):
-    """Base model for bounds with default values set to None."""
+    """
+    Container for *BoundRanges that match the fit parameters in `WavelengthCalibrationParameters.
+
+    This container also defines sensible defaults.
+    """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    crval1: BoundRange = BoundRange()
-    dispersion: BoundRange = BoundRange(min=0 * u.nm / u.pix, max=np.inf * u.nm / u.pix)
-    incident_light_angle: BoundRange = BoundRange(min=0 * u.deg, max=360 * u.deg)
-    resolving_power: BoundRange = BoundRange(min=0)
-    opacity_factor: BoundRange = BoundRange(min=0)
-    straylight_fraction: BoundRange = BoundRange(min=0)
+    crval1: LengthBoundRange = LengthBoundRange(min=0 * u.nm)
+    dispersion: DispersionBoundRange = DispersionBoundRange(
+        min=0 * u.nm / u.pix, max=np.inf * u.nm / u.pix
+    )
+    incident_light_angle: AngleBoundRange = AngleBoundRange(min=0 * u.deg, max=180 * u.deg)
+    resolving_power: UnitlessBoundRange = UnitlessBoundRange(min=0)
+    opacity_factor: UnitlessBoundRange = UnitlessBoundRange(min=0)
+    straylight_fraction: UnitlessBoundRange = UnitlessBoundRange(min=0)
 
 
 class FitFlagsModel(BaseModel):

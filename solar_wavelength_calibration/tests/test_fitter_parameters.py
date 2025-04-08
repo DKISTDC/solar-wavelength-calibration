@@ -1,15 +1,79 @@
+import re
+
 import astropy.units as u
 import numpy as np
 import pytest
-from astropy.units import Quantity
 from lmfit import Parameters
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
-from solar_wavelength_calibration.fitter.parameters import BoundRange
+from solar_wavelength_calibration.fitter.parameters import AngleBoundRange
 from solar_wavelength_calibration.fitter.parameters import BoundsModel
+from solar_wavelength_calibration.fitter.parameters import DispersionBoundRange
 from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
+from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
+from solar_wavelength_calibration.fitter.parameters import UnitlessBoundRange
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
+
+
+def test_unitless_bound_range():
+    """
+    Given: The `UnitlessBoundRange` class
+    When: Instantiating with valid and invalid inputs
+    Then: Correct inputs are assigned to the min/max properties and invlaid inputs rais the correct error
+    """
+    bounds = UnitlessBoundRange(min=-10, max=1e35)
+    assert bounds.min == -10
+    assert bounds.max == 1e35
+    with pytest.raises(
+        ValidationError, match="self.min = 10 is greater than or equal to self.max = 0"
+    ):
+        UnitlessBoundRange(min=10, max=0)
+
+    with pytest.raises(ValidationError, match="input_type=Quantity"):
+        UnitlessBoundRange(max=6.28 * u.m)
+
+
+@pytest.mark.parametrize(
+    "bound_range_class, min, max, expected_unit, expected_min, expected_max",
+    [
+        pytest.param(
+            LengthBoundRange, "default", 3 * u.m, u.nm, -np.inf, 3e9, id="LengthBoundRange"
+        ),
+        pytest.param(
+            AngleBoundRange, np.pi * u.rad, "default", u.deg, 180.0, np.inf, id="AngleBoundRange"
+        ),
+        pytest.param(
+            DispersionBoundRange,
+            "default",
+            6.28 * u.um / u.pix,
+            u.nm / u.pix,
+            -np.inf,
+            6.28e3,
+            id="DispersionBoundRange",
+        ),
+    ],
+)
+def test_typed_bound_ranges(bound_range_class, min, max, expected_unit, expected_min, expected_max):
+    """
+    Given: A typed subclass of `UnitlessBoundRange` and inputs that have the same type, but different units, as expected
+      by the subclass
+    When: Instantiating the class with valid and invalid inputs
+    Then: Units are converted correctly and the correct error is raised with inputs with either the wrong type of units
+      or no units at all.
+    """
+    args = {"min": m for m in [min] if m != "default"} | {"max": m for m in [max] if m != "default"}
+    bounds = bound_range_class(**args)
+    assert bounds.min.unit == bounds.max.unit == expected_unit
+    np.testing.assert_allclose(bounds.min.value, expected_min)
+    np.testing.assert_allclose(bounds.max.value, expected_max)
+
+    # None of the units are, or will ever be, mass so lets use "kg" as a wrong unit
+    with pytest.raises(ValidationError, match=re.escape("'kg' (mass) and")):
+        bound_range_class(min=314 * u.kg)
+
+    with pytest.raises(ValidationError, match="Input should be an instance of Quantity"):
+        bound_range_class(max=6.28)
 
 
 def test_incorrect_parameter_types(test_unfit_1d_spectrum):
@@ -214,93 +278,6 @@ def test_custom_bounds(test_parameters_dict):
     )
     assert input_params.bounds.straylight_fraction.min == 0  # default bounds
     assert input_params.bounds.straylight_fraction.max == np.inf  # default bounds
-
-
-def test_custom_bounds_incorrect_units(test_parameters_dict):
-    """
-    Given: Some custom input bounds with incorrect input units
-    When: Initializing the fit parameters
-    Then: The customized input bounds are converted to the correct units and others are set to the default values
-    """
-    bounds = BoundsModel(
-        crval1=BoundRange(
-            min=test_parameters_dict["crval1"] - (3 * u.Angstrom),
-            max=test_parameters_dict["crval1"] + (3 * u.Angstrom),
-        )
-    )
-
-    input_params = WavelengthCalibrationParameters(
-        crval1=test_parameters_dict["crval1"],
-        dispersion=test_parameters_dict["dispersion"],
-        incident_light_angle=test_parameters_dict["incident_light_angle"],
-        resolving_power=test_parameters_dict["resolving_power"],
-        opacity_factor=test_parameters_dict["opacity_factor"],
-        straylight_fraction=test_parameters_dict["straylight_fraction"],
-        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
-        grating_constant=test_parameters_dict["grating_constant"],
-        doppler_velocity=test_parameters_dict["doppler_velocity"],
-        order=test_parameters_dict["order"],
-        bounds=bounds,
-    )
-
-    # bound value was converted to correct units
-    assert np.isclose(
-        input_params.bounds.crval1.min.value, test_parameters_dict["crval1"].to_value(u.nm) - 0.3
-    )
-    assert np.isclose(
-        input_params.bounds.crval1.max.value, test_parameters_dict["crval1"].to_value(u.nm) + 0.3
-    )
-
-
-def test_bounds_have_no_units(test_parameters_dict):
-    """
-    Given: Some custom input bounds with no units
-    When: Initializing the fit parameters
-    Then: Bounds are assigned the correct units
-    """
-    bounds = BoundsModel(
-        crval1=BoundRange(
-            min=test_parameters_dict["crval1"].to_value(u.nm) - 0.3,
-            max=test_parameters_dict["crval1"].to_value(u.nm) + 0.3,
-        ),
-        dispersion=BoundRange(
-            min=test_parameters_dict["dispersion"].to_value(u.nm / u.pix) - 55,
-            max=test_parameters_dict["dispersion"].to_value(u.nm / u.pix) + 55,
-        ),
-        incident_light_angle=BoundRange(
-            min=test_parameters_dict["incident_light_angle"].to_value(u.deg) - 5,
-            max=test_parameters_dict["incident_light_angle"].to_value(u.deg) + 103,
-        ),
-        resolving_power=BoundRange(
-            min=test_parameters_dict["resolving_power"] - 50,
-            max=test_parameters_dict["resolving_power"] + 0.0001,
-        ),
-        opacity_factor=BoundRange(
-            min=test_parameters_dict["opacity_factor"] - 1,
-            max=test_parameters_dict["opacity_factor"] + 1,
-        ),
-    )
-
-    input_params = WavelengthCalibrationParameters(
-        crval1=test_parameters_dict["crval1"],
-        dispersion=test_parameters_dict["dispersion"],
-        incident_light_angle=test_parameters_dict["incident_light_angle"],
-        resolving_power=test_parameters_dict["resolving_power"],
-        opacity_factor=test_parameters_dict["opacity_factor"],
-        straylight_fraction=test_parameters_dict["straylight_fraction"],
-        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
-        grating_constant=test_parameters_dict["grating_constant"],
-        doppler_velocity=test_parameters_dict["doppler_velocity"],
-        order=test_parameters_dict["order"],
-        bounds=bounds,
-    )
-
-    assert isinstance(input_params.bounds.crval1.min, Quantity)
-    assert isinstance(input_params.bounds.crval1.max, Quantity)
-    assert isinstance(input_params.bounds.dispersion.min, Quantity)
-    assert isinstance(input_params.bounds.dispersion.max, Quantity)
-    assert isinstance(input_params.bounds.incident_light_angle.min, Quantity)
-    assert isinstance(input_params.bounds.incident_light_angle.max, Quantity)
 
 
 def test_default_fit_flags(test_parameters_dict):
