@@ -182,6 +182,32 @@ def test_parameter_outside_bounds_range():
         )
 
 
+def test_annotated_types_unit_conversion():
+    """
+    Given: A WavelengthCalibrationParameters object initialized with values that are the same unit type, but not
+      identical to units in the internal representation of that value
+    When: Accessing the parameter values
+    Then: The value with the correct, internal units is returned
+    """
+    params = WavelengthCalibrationParameters(
+        crval1=999 * u.m,
+        dispersion=1 * u.um / u.pix,
+        incident_light_angle=np.pi / 2 * u.rad,
+        grating_constant=1 / u.km,
+        doppler_velocity=3 * u.m / u.s,
+        unfit_1d_spectrum=np.arange(3),
+        opacity_factor=0,
+        order=51,
+    )
+
+    # Use `.value` here directly because we want to NOT rely on automatic unit conversion provided by `Quantity`
+    np.testing.assert_allclose(params.crval1.value, 999e9)
+    np.testing.assert_allclose(params.dispersion.value, 1e3)
+    np.testing.assert_allclose(params.incident_light_angle.value, 90.0)
+    np.testing.assert_allclose(params.grating_constant.value, 1e-3)
+    np.testing.assert_allclose(params.doppler_velocity.value, 3e-3)
+
+
 def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict):
     """
     Given: A dictionary of input parameter values
