@@ -28,26 +28,26 @@ def to_deg(value: Quantity) -> Quantity:
     return value.to(u.deg)
 
 
-def to_nmperpx(value: Quantity) -> Quantity:
+def to_nm_per_px(value: Quantity) -> Quantity:
     """Convert a dispersion unit to nm / px."""
     return value.to(u.nm / u.pix)
 
 
-def to_overm(value: Quantity) -> Quantity:
+def to_over_m(value: Quantity) -> Quantity:
     """Convert an inverse length unit to 1 / m."""
     return value.to(1 / u.m)
 
 
-def to_kmpers(value: Quantity) -> Quantity:
+def to_km_per_s(value: Quantity) -> Quantity:
     """Convert a speed unit to km / s."""
     return value.to(u.km / u.s)
 
 
 length_quantity = Annotated[Quantity, AfterValidator(to_nm)]
 angle_quantity = Annotated[Quantity, AfterValidator(to_deg)]
-dispersion_quantity = Annotated[Quantity, AfterValidator(to_nmperpx)]
-inverse_length_quantity = Annotated[Quantity, AfterValidator(to_overm)]
-speed_quantity = Annotated[Quantity, AfterValidator(to_kmpers)]
+dispersion_quantity = Annotated[Quantity, AfterValidator(to_nm_per_px)]
+inverse_length_quantity = Annotated[Quantity, AfterValidator(to_over_m)]
+speed_quantity = Annotated[Quantity, AfterValidator(to_km_per_s)]
 
 
 class UnitlessBoundRange(BaseModel):
