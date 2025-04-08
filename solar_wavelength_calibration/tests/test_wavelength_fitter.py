@@ -7,7 +7,6 @@ from astropy.wcs import WCS
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
-from solar_wavelength_calibration.fitter.parameters import BoundRange
 from solar_wavelength_calibration.fitter.parameters import BoundsModel
 from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters

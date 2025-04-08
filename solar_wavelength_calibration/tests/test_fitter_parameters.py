@@ -82,7 +82,7 @@ def test_incorrect_parameter_types(test_unfit_1d_spectrum):
     When: Initializing a WavelengthCalibrationParameters object with these incorrect inputs
     Then: Raise a ValidationError
     """
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError) as excinfo:
         WavelengthCalibrationParameters(
             crval1=3,
             dispersion="shouldbeafloat",
@@ -91,10 +91,17 @@ def test_incorrect_parameter_types(test_unfit_1d_spectrum):
             opacity_factor=5,
             straylight_fraction=2,
             unfit_1d_spectrum=test_unfit_1d_spectrum,
-            grating_constant=5,
-            doppler_velocity=12,
+            grating_constant=5 / u.m,
+            doppler_velocity=12 * u.km / u.s,
             order=1.5,
         )
+
+    assert excinfo.match("crval1\s+Input should be an instance of Quantity")
+    assert excinfo.match("dispersion\s+Input should be an instance of Quantity")
+    assert excinfo.match(
+        "incident_light_angle\s+Value error, 'nm' \(length\) and 'deg' \(angle\) are not convertible"
+    )
+    assert excinfo.match("order\s+Input should be a valid integer")
 
 
 def test_missing_parameters(
@@ -420,24 +427,3 @@ def test_bounds_given_as_dict(test_parameters_dict):
         order=test_parameters_dict["order"],
         bounds=bounds,
     )
-
-
-def test_parameters_have_no_units(test_parameters_dict):
-    """
-    Given: Input parameters without units.
-    When: Initializing the fit parameters.
-    Then: A ValidationError is raised.
-    """
-    with pytest.raises(ValidationError, match="Input should be an instance of Quantity"):
-        input_params = WavelengthCalibrationParameters(
-            crval1=test_parameters_dict["crval1"].value,
-            dispersion=test_parameters_dict["dispersion"].value,
-            incident_light_angle=test_parameters_dict["incident_light_angle"].value,
-            resolving_power=test_parameters_dict["resolving_power"],
-            opacity_factor=test_parameters_dict["opacity_factor"],
-            straylight_fraction=test_parameters_dict["straylight_fraction"],
-            unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
-            grating_constant=test_parameters_dict["grating_constant"].value,
-            doppler_velocity=test_parameters_dict["doppler_velocity"].value,
-            order=test_parameters_dict["order"],
-        )

@@ -127,12 +127,12 @@ class WavelengthCalibrationParameters(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True)
 
-    crval1: Quantity
-    dispersion: Quantity
-    incident_light_angle: Quantity
+    crval1: length_quantity
+    dispersion: dispersion_quantity
+    incident_light_angle: angle_quantity
     unfit_1d_spectrum: np.ndarray
-    grating_constant: Quantity
-    doppler_velocity: Quantity
+    grating_constant: inverse_length_quantity
+    doppler_velocity: speed_quantity
     order: int
     resolving_power: int = 1
     opacity_factor: float = 1
@@ -148,73 +148,6 @@ class WavelengthCalibrationParameters(BaseModel):
         if not (0 <= value <= 100):
             raise ValueError("Quartile value must be between 0 and 100.")
         return value
-
-    @field_validator("crval1")
-    @classmethod
-    def validate_crval1_units(cls, value):
-        """Ensure crval1 has correct length units."""
-        return value.to(u.nm)
-
-    @field_validator("incident_light_angle")
-    @classmethod
-    def validate_incident_light_angle_units(cls, value):
-        """Ensure incident_light_angle has correct length units."""
-        return value.to(u.deg)
-
-    @field_validator("dispersion")
-    @classmethod
-    def validate_dispersion_units(cls, value):
-        """Ensure dispersion has correct length units."""
-        return value.to(u.nm / u.pix)
-
-    @field_validator("grating_constant")
-    @classmethod
-    def validate_grating_constant_units(cls, value):
-        """Ensure grating_constant has correct length units."""
-        return value.to(1 / u.mm)
-
-    @field_validator("doppler_velocity")
-    @classmethod
-    def validate_doppler_velocity_units(cls, value):
-        """Ensure doppler_velocity has correct length units."""
-        return value.to(u.km / u.s)
-
-    @field_validator("bounds")
-    @classmethod
-    def ensure_correct_bounds_units(cls, bounds: BoundsModel, info: ValidationInfo) -> BoundsModel:
-        """
-        Ensure that all bounds in the BoundsModel have units compatible with their corresponding parameter values.
-
-        For parameters that are expected to have units (e.g., crval1, dispersion, incident_light_angle),
-        this method converts the bound values to match the units of the corresponding parameter in the model input.
-
-        For unitless parameters, it raises an error if bounds are incorrectly specified with units.
-        """
-        params_with_units = ["crval1", "dispersion", "incident_light_angle"]
-        for param in bounds.model_fields.keys():
-            try:
-                param_value = info.data[param]
-            except KeyError:
-                continue
-            bounds_range = getattr(bounds, param)
-            if param in params_with_units:
-                param_unit = param_value.unit
-                if isinstance(bounds_range.min, Quantity):
-                    new_min = bounds_range.min.to(param_unit)
-                    new_max = bounds_range.max.to(param_unit)
-                else:
-                    new_min = bounds_range.min * param_unit
-                    new_max = bounds_range.max * param_unit
-                new_range = BoundRange(min=new_min, max=new_max)
-                setattr(bounds, param, new_range)
-
-            else:
-                if isinstance(bounds_range.min, Quantity):
-                    raise TypeError(
-                        f"{param} has units ({bounds_range.min.unit}), but it shouldn't."
-                    )
-
-        return bounds
 
     @field_validator("bounds")
     @classmethod
