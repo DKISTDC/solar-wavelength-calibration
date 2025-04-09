@@ -73,16 +73,6 @@ def test_atlas_repr():
     assert isinstance(eval(repr(atlas)), Atlas)
 
 
-'''def test_atlas_vector_backwards(atlas: Atlas):
-    """Given: A "backwards" atlas object (largest wavelength --> smallest wavelength)
-    When: The object is loaded
-    Then: Each wavelength vector should be monotonically increasing.
-    """
-    atlas = Atlas()
-    reversed_telluric_atlas_wavelength = atlas.telluric_atlas_wavelength[::-1]
-    reversed_solar_atlas_wavelength = atlas.solar_atlas_wavelength[::-1]'''
-
-
 def test_solar_wavelength_non_monotonic():
     """Given: a mock Atlas object with non-monotonicically increasing solar wavelength
     When: accessing solar_atlas_wavelength
