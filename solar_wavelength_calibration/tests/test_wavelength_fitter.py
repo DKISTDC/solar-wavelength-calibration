@@ -169,11 +169,8 @@ def test_fit_is_correct(
         straylight_fraction=0.0,
         unfit_1d_spectrum=observed_spec,
         grating_constant=test_grating_constant,
-        doppler_velocity=0 * u.km / u.s,
+        doppler_velocity=100 * u.km / u.s,
         order=test_order,
-        bounds=BoundsModel(
-            crval1=LengthBoundRange(min=1070 * u.nm, max=1080 * u.nm),
-        ),
     )
 
     fitter = WaveCalFitter(
@@ -183,7 +180,14 @@ def test_fit_is_correct(
         unfit_1d_spectrum=observed_spec,
     )
     assert np.isclose(fitter.fit_result.wcs.crval[0], test_crval1.to_value("m"))
-    # TODO: test other fit parameters
+    assert np.isclose(fitter.fit_result.wcs.cdelt[0], test_dispersion.to_value(u.m / u.pix))
+
+    fit_incident_light_angle = [
+        pvi[2] for pvi in fitter.fit_result.wcs.get_pv() if pvi[0] == 1 and pvi[1] == 2
+    ][0]
+    # Incident light angle is pretty weakly constrained for our test setup so let's say we pass if we get within a
+    # degree.
+    assert abs(fit_incident_light_angle - test_incident_light_angle.to_value(u.deg)) < 1
 
 
 def test_prepare_atlas(
