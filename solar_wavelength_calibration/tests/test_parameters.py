@@ -192,18 +192,18 @@ def test_annotated_types_unit_conversion():
     params = WavelengthCalibrationParameters(
         crval1=999 * u.m,
         dispersion=1 * u.um / u.pix,
-        incident_light_angle=np.pi / 2 * u.rad,
+        incident_light_angle=np.pi * u.rad,
         grating_constant=1 / u.km,
         doppler_velocity=3 * u.m / u.s,
         unfit_1d_spectrum=np.arange(3),
         opacity_factor=0,
-        order=51,
+        order=1,
     )
 
     # Use `.value` here directly because we want to NOT rely on automatic unit conversion provided by `Quantity`
     np.testing.assert_allclose(params.crval1.value, 999e9)
     np.testing.assert_allclose(params.dispersion.value, 1e3)
-    np.testing.assert_allclose(params.incident_light_angle.value, 90.0)
+    np.testing.assert_allclose(params.incident_light_angle.value, 180.0)
     np.testing.assert_allclose(params.grating_constant.value, 1e-3)
     np.testing.assert_allclose(params.doppler_velocity.value, 3e-3)
 
