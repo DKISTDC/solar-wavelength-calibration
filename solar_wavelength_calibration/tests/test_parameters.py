@@ -208,6 +208,32 @@ def test_annotated_types_unit_conversion():
     np.testing.assert_allclose(params.doppler_velocity.value, 3e-3)
 
 
+def test_invalid_grating_equation(test_parameters_dict):
+    """
+    Given: A set of input values such that `abs(crval1 * grating_constant * order - sin(incident_light_angle) > 1`
+    When: Instantiating a `WavelengthCalibrationParameters` object with these parameters
+    Then: The correct ValidationError is raised
+    """
+    # Bad because 1.5 > 1
+    bad_crval1 = (1.5 + np.sin(test_parameters_dict["incident_light_angle"])) / (
+        test_parameters_dict["grating_constant"] * test_parameters_dict["order"]
+    )
+
+    with pytest.raises(
+        ValidationError, match="Input parameter values represent an un-invertible grating equation."
+    ):
+        WavelengthCalibrationParameters(
+            crval1=bad_crval1,
+            dispersion=test_parameters_dict["dispersion"],
+            incident_light_angle=test_parameters_dict["incident_light_angle"],
+            opacity_factor=test_parameters_dict["opacity_factor"],
+            unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+            grating_constant=test_parameters_dict["grating_constant"],
+            doppler_velocity=test_parameters_dict["doppler_velocity"],
+            order=test_parameters_dict["order"],
+        )
+
+
 def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict):
     """
     Given: A dictionary of input parameter values

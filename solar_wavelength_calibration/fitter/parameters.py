@@ -171,15 +171,42 @@ class WavelengthCalibrationParameters(BaseModel):
 
         return bounds
 
+    @model_validator(mode="after")
+    def ensure_invertible_WCS(self) -> WavelengthCalibrationParameters:
+        r"""
+        Make sure the input parameters values represent a physically valid grating.
+
+        Specifically, we need parameters that result in an invertible grating equation. Simplifying Eq. (84) from
+        `Greisen et al (2006) <https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract>`_ for the case of a
+        diffraction grating in air, the refracted angle, :math:`\gamma`, is given by
+
+        .. math::
+            \gamma = \sin^{-1}(\lambda G m - \sin(\alpha)),
+
+        where :math:`\lambda` is `crval1`, :math:`G` is `grating_constant`, :math:`m` is `order`, and :math:`\alpha` is
+        `incident_light_angle`. The Arcsine is only valid for inputs in the range [-1, 1] and so a combination of
+        `crval1`, `grating_constant`, `order`, and `incident_light_angle` that fall outside of this range are considered
+        invalid and will raise an Error.
+        """
+        length_value = (self.crval1 * self.grating_constant).to_value(u.dimensionless_unscaled)
+        expression = length_value * self.order - np.sin(self.incident_light_angle)
+        if abs(expression) > 1:
+            raise ValueError(
+                "Input parameter values represent an un-invertible grating equation. "
+                "We need `crval1 * grating_constant * order - sin(incident_light_angle)` to be in the range "
+                f"[-1, 1] but the values provide result in {expression}"
+            )
+        return self
+
     @property
     def delta(self) -> float:
         r"""
         Compute initial guess for internal lmfit `_delta` parameter.
 
-        To ensure an invertible grating equation we need
+        To ensure an invertible grating equation (see `ensure_invertible_WCS`) we need
 
         .. math::
-            -1 \leq G m \lambda - \sin\alpha \leq 1
+            -1 \leq \lambda G m - \sin\alpha \leq 1
 
         where :math:`G` (grating constant) and :math:`m` (diffraction order) are fixed parameters while
         :math:`\lambda` (CRVAL1) and :math:`\alpha` (incident light angle) are free in the fit.
