@@ -89,7 +89,7 @@ def test_incident_light_angle():
 @pytest.fixture(scope="session")
 def test_grating_constant():
     """Dummy grating constant."""
-    return 31600.0 * u.mm ** (-1)
+    return 31600.0 / u.m
 
 
 @pytest.fixture(scope="session")
