@@ -2,25 +2,22 @@ import astropy
 import astropy.units as u
 import numpy as np
 import pytest
-from astropy.units import Quantity
 from astropy.wcs import WCS
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
-from solar_wavelength_calibration.fitter.parameters import BoundsModel
 from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
-from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.wavelength_fitter import WaveCalFitter
 
 
 def test_wavecal_fitter(
     parameters: WavelengthCalibrationParameters,
-    test_unfit_1d_spectrum,
+    observed_spectrum,
     atlas: AtlasBase,
     test_dispersion,
     test_parameters_dict,
-    test_expected_wavelength_vector,
+    observed_wavelength_vector,
 ):
     """
     Given: The correct WaveCalFitter inputs (data, models, and fit parameters)
@@ -30,8 +27,8 @@ def test_wavecal_fitter(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        expected_wavelength_vector=test_expected_wavelength_vector,
-        unfit_1d_spectrum=test_unfit_1d_spectrum,
+        expected_wavelength_vector=observed_wavelength_vector,
+        unfit_1d_spectrum=observed_spectrum,
     )
 
     print(fitter.fit_result)
@@ -45,8 +42,8 @@ def test_wavecal_fitter(
 
 def test_incorrect_atlas(
     parameters: WavelengthCalibrationParameters,
-    test_unfit_1d_spectrum,
-    test_expected_wavelength_vector,
+    observed_spectrum,
+    observed_wavelength_vector,
 ):
     """
     Given: An incorrect atlas (i.e. a random array of numbers)
@@ -58,14 +55,14 @@ def test_incorrect_atlas(
         fitter = WaveCalFitter(
             input_parameters=parameters,
             atlas=atlas,
-            expected_wavelength_vector=test_expected_wavelength_vector,
-            unfit_1d_spectrum=test_unfit_1d_spectrum,
+            expected_wavelength_vector=observed_wavelength_vector,
+            unfit_1d_spectrum=observed_spectrum,
         )
         fitter.fit_result
 
 
 def test_dispersion_not_fit(
-    test_parameters_dict, test_unfit_1d_spectrum, atlas: AtlasBase, test_expected_wavelength_vector
+    test_parameters_dict, observed_spectrum, atlas: AtlasBase, observed_wavelength_vector
 ):
     """
     Given: Correct input parameters, but we don't want to fit the dispersion
@@ -89,8 +86,8 @@ def test_dispersion_not_fit(
     fitter = WaveCalFitter(
         input_parameters=initialized_parameters,
         atlas=atlas,
-        expected_wavelength_vector=test_expected_wavelength_vector,
-        unfit_1d_spectrum=test_unfit_1d_spectrum,
+        expected_wavelength_vector=observed_wavelength_vector,
+        unfit_1d_spectrum=observed_spectrum,
         full=True,
     )
 
@@ -99,58 +96,14 @@ def test_dispersion_not_fit(
     assert test_parameters_dict["dispersion"].value == fit_result_params["dispersion"]
 
 
-@pytest.fixture
-def num_wave_pix() -> int:
-    return 987
-
-
-@pytest.fixture
-def test_crval1() -> Quantity:
-    return 1072 * u.nm
-
-
-@pytest.fixture
-def test_WCS_header(
-    test_crval1, test_dispersion, test_incident_light_angle, test_grating_constant, test_order
-) -> dict:
-    return {
-        "CTYPE1": "AWAV-GRA",
-        "CUNIT1": "nm",
-        "CRPIX1": 1,
-        "CRVAL1": test_crval1.to_value("nm"),
-        "CDELT1": test_dispersion.to_value("nm / pix"),
-        "PV1_0": test_grating_constant.to_value("1 / mm"),
-        "PV1_1": test_order,
-        "PV1_2": test_incident_light_angle.to_value("deg"),
-    }
-
-
-@pytest.fixture
-def observed_wave(test_WCS_header, num_wave_pix) -> np.ndarray:
-    wcs = WCS(test_WCS_header)
-
-    obs_wave = wcs.spectral.pixel_to_world(np.arange(num_wave_pix)).to_value("nm")
-
-    return obs_wave
-
-
-@pytest.fixture
-def observed_spec(atlas, observed_wave) -> np.ndarray:
-    obs_spec = np.interp(
-        observed_wave, atlas.solar_atlas_wavelength.to_value("nm"), atlas.solar_atlas_transmission
-    )
-
-    return obs_spec
-
-
 def test_fit_is_correct(
     test_crval1,
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
     test_order,
-    observed_spec,
-    observed_wave,
+    observed_spectrum,
+    observed_wavelength_vector,
     atlas: AtlasBase,
     test_parameters_dict,
 ):
@@ -167,7 +120,7 @@ def test_fit_is_correct(
         resolving_power=72500,
         opacity_factor=1,
         straylight_fraction=0.0,
-        unfit_1d_spectrum=observed_spec,
+        unfit_1d_spectrum=observed_spectrum,
         grating_constant=test_grating_constant,
         doppler_velocity=100 * u.km / u.s,
         order=test_order,
@@ -176,8 +129,8 @@ def test_fit_is_correct(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        expected_wavelength_vector=observed_wave * u.nm,
-        unfit_1d_spectrum=observed_spec,
+        expected_wavelength_vector=observed_wavelength_vector,
+        unfit_1d_spectrum=observed_spectrum,
     )
     assert np.isclose(fitter.fit_result.wcs.crval[0], test_crval1.to_value("m"))
     assert np.isclose(fitter.fit_result.wcs.cdelt[0], test_dispersion.to_value(u.m / u.pix))
@@ -192,9 +145,9 @@ def test_fit_is_correct(
 
 def test_prepare_atlas(
     parameters: WavelengthCalibrationParameters,
-    test_unfit_1d_spectrum,
+    observed_spectrum,
     atlas: AtlasBase,
-    test_expected_wavelength_vector,
+    observed_wavelength_vector,
 ):
     """
     Given: The correct WaveCalFitter inputs (data, models, and fit parameters)
@@ -204,8 +157,8 @@ def test_prepare_atlas(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        expected_wavelength_vector=test_expected_wavelength_vector,
-        unfit_1d_spectrum=test_unfit_1d_spectrum,
+        expected_wavelength_vector=observed_wavelength_vector,
+        unfit_1d_spectrum=observed_spectrum,
     )
     fts_solar_wavelength, fts_telluric_wavelength, fts_solar, fts_telluric = fitter.prepare_atlas()
 
@@ -216,22 +169,22 @@ def test_prepare_atlas(
     # test that we took out the correct chunk for each atlas (i.e. mean of expected wavelength vector is contained in fts_[solar/telluric]wavelength)
     assert (
         fts_solar_wavelength[0]
-        < np.mean(test_expected_wavelength_vector).value
+        < np.mean(observed_wavelength_vector).value
         < fts_solar_wavelength[len(fts_solar_wavelength) - 1]
     )
 
     assert (
         fts_telluric_wavelength[0]
-        < np.mean(test_expected_wavelength_vector).value
+        < np.mean(observed_wavelength_vector).value
         < fts_telluric_wavelength[len(fts_telluric_wavelength) - 1]
     )
 
 
 def test_full_flag_true(
     parameters: WavelengthCalibrationParameters,
-    test_unfit_1d_spectrum,
+    observed_spectrum,
     atlas: AtlasBase,
-    test_expected_wavelength_vector,
+    observed_wavelength_vector,
 ):
     """
     Given: WaveCal inputs with the full flag set to true
@@ -241,8 +194,8 @@ def test_full_flag_true(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        expected_wavelength_vector=test_expected_wavelength_vector,
-        unfit_1d_spectrum=test_unfit_1d_spectrum,
+        expected_wavelength_vector=observed_wavelength_vector,
+        unfit_1d_spectrum=observed_spectrum,
         full=True,
     )
 
@@ -257,9 +210,9 @@ def test_full_flag_true(
 
 def test_full_flag_false(
     parameters: WavelengthCalibrationParameters,
-    test_unfit_1d_spectrum,
+    observed_spectrum,
     atlas: AtlasBase,
-    test_expected_wavelength_vector,
+    observed_wavelength_vector,
 ):
     """
     Given: WaveCal inputs with the full flag set to false (default)
@@ -269,8 +222,8 @@ def test_full_flag_false(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        expected_wavelength_vector=test_expected_wavelength_vector,
-        unfit_1d_spectrum=test_unfit_1d_spectrum,
+        expected_wavelength_vector=observed_wavelength_vector,
+        unfit_1d_spectrum=observed_spectrum,
         full=False,
     )
 

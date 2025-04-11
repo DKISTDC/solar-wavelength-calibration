@@ -110,7 +110,7 @@ def test_bounds_model():
         BoundsModel(incident_light_angle=length_bound)
 
 
-def test_incorrect_parameter_types(test_unfit_1d_spectrum):
+def test_incorrect_parameter_types(observed_spectrum):
     """
     Given: Incorrect input parameter value types
     When: Initializing a WavelengthCalibrationParameters object with these incorrect inputs
@@ -124,7 +124,7 @@ def test_incorrect_parameter_types(test_unfit_1d_spectrum):
             resolving_power="shouldbeanint",
             opacity_factor=5,
             straylight_fraction=2,
-            unfit_1d_spectrum=test_unfit_1d_spectrum,
+            unfit_1d_spectrum=observed_spectrum,
             grating_constant=5 / u.m,
             doppler_velocity=12 * u.km / u.s,
             order=1.5,
@@ -138,18 +138,14 @@ def test_incorrect_parameter_types(test_unfit_1d_spectrum):
     assert excinfo.match("order\s+Input should be a valid integer")
 
 
-def test_missing_parameters(
-    atlas: AtlasBase, test_unfit_1d_spectrum, parameters, test_only_required_parameters_dict
-):
+def test_missing_parameters(test_only_required_parameters_dict):
     """
     Given: Only the calculated crval1 input parameter value
     When: Initializing a WavelengthCalibrationParameters object with these inputs
     Then: Raise a ValidationError
     """
     with pytest.raises(ValidationError) as excinfo:
-        WavelengthCalibrationParameters(
-            crval1=atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1]
-        )
+        WavelengthCalibrationParameters(crval1=9 * u.nm)
 
     del test_only_required_parameters_dict["crval1"]  # removing this because we gave it as an input
     # check that all of the required inputs are reported to be missing

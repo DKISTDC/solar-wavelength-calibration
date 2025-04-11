@@ -1,6 +1,7 @@
 import astropy.units as u
 import numpy as np
 import pytest
+from astropy.units import Quantity
 from astropy.wcs import WCS
 from lmfit import Parameters
 from scipy.interpolate import interp1d
@@ -27,51 +28,13 @@ def atlas(config: DownloadConfig | None) -> Atlas:
 
 
 @pytest.fixture(scope="session")
-def test_expected_wavelength_vector(atlas):
-    """Use a chunk of the telluric atlas to simulate an expected wavelength vector."""
-    return atlas.telluric_atlas_wavelength[500:2000]
+def num_wave_pix() -> int:
+    return 987
 
 
 @pytest.fixture(scope="session")
-def test_unfit_1d_spectrum(
-    atlas, test_grating_constant, test_order, test_dispersion, test_incident_light_angle
-):
-    """Use a chunk of the telluric atlas and shift and scale by random numbers and resample onto a known WCS-based wavelength grid to simulate an unfit 1d spectra."""
-    telluric_atlas = atlas.telluric_atlas_transmission
-    telluric_atlas_shifted = telluric_atlas + 30.0  # shift by a random amount
-    telluric_atlas_scaled = telluric_atlas_shifted * 2.3  # scale by a random amount
-
-    # Create a dummy WCS object for the known wavelength grid
-    non_linear_header = {
-        "CTYPE1": "AWAV-GRA",  # Grating dispersion function with air wavelengths
-        "CUNIT1": "nm",  # Dispersion units
-        "CRPIX1": np.size(telluric_atlas) // 2 + 1,  # Reference pixel [pix]
-        "PV1_0": test_grating_constant.value,  # Grating density
-        "PV1_1": test_order,  # Diffraction order
-        "CRVAL1": atlas.telluric_atlas_wavelength[
-            np.size(telluric_atlas) // 2 + 1
-        ].value,  # Reference value [nm] (<<<< TO BE OPTIMIZED <<<<<<)
-        "CDELT1": test_dispersion.value,  # Linear dispersion [nm/pix] (<<<< TO BE OPTIMIZED <<<<<<)
-        "PV1_2": test_incident_light_angle.value,  # Incident angle [deg] (<<<< TO BE OPTIMIZED <<<<<<)
-    }
-
-    non_linear_wcs = WCS(non_linear_header)
-    # Generate the wavelength grid from the WCS object
-    linear_wave = (  # linear_wavelength_vector
-        non_linear_wcs.spectral.pixel_to_world(np.arange(np.size(telluric_atlas)))
-    ).to_value(u.nm)
-    print(linear_wave)
-
-    # Interpolate the unfit spectrum onto the new wavelength grid
-    interpolator = interp1d(
-        atlas.telluric_atlas_wavelength,
-        telluric_atlas_scaled,
-        bounds_error=False,
-        fill_value="extrapolate",
-    )
-    resampled_spectrum = interpolator(linear_wave)
-
-    return resampled_spectrum[500:2000]
+def test_crval1() -> Quantity:
+    return 1072 * u.nm
 
 
 @pytest.fixture(scope="session")
@@ -105,9 +68,45 @@ def test_order():
 
 
 @pytest.fixture(scope="session")
+def test_WCS_header(
+    test_crval1, test_dispersion, test_incident_light_angle, test_grating_constant, test_order
+) -> dict:
+    return {
+        "CTYPE1": "AWAV-GRA",
+        "CUNIT1": "nm",
+        "CRPIX1": 1,
+        "CRVAL1": test_crval1.to_value("nm"),
+        "CDELT1": test_dispersion.to_value("nm / pix"),
+        "PV1_0": test_grating_constant.to_value("1 / mm"),
+        "PV1_1": test_order,
+        "PV1_2": test_incident_light_angle.to_value("deg"),
+    }
+
+
+@pytest.fixture(scope="session")
+def observed_wavelength_vector(test_WCS_header, num_wave_pix) -> Quantity:
+    wcs = WCS(test_WCS_header)
+
+    obs_wave = wcs.spectral.pixel_to_world(np.arange(num_wave_pix)).to("nm")
+
+    return obs_wave
+
+
+@pytest.fixture(scope="session")
+def observed_spectrum(atlas, observed_wavelength_vector) -> np.ndarray:
+    obs_spec = np.interp(
+        observed_wavelength_vector.to_value("nm"),
+        atlas.solar_atlas_wavelength.to_value("nm"),
+        atlas.solar_atlas_transmission,
+    )
+
+    return obs_spec
+
+
+@pytest.fixture(scope="session")
 def test_parameters_dict(
     atlas: AtlasBase,
-    test_unfit_1d_spectrum,
+    observed_spectrum,
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
@@ -115,13 +114,13 @@ def test_parameters_dict(
     test_order,
 ):
     return {
-        "crval1": atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1],
+        "crval1": atlas.telluric_atlas_wavelength[np.size(observed_spectrum) // 2 + 1],
         "dispersion": test_dispersion,
         "incident_light_angle": test_incident_light_angle,
         "resolving_power": 72500,
         "opacity_factor": 5.0,
         "straylight_fraction": 0.25,
-        "unfit_1d_spectrum": test_unfit_1d_spectrum,
+        "unfit_1d_spectrum": observed_spectrum,
         "grating_constant": test_grating_constant,
         "doppler_velocity": test_doppler_velocity,
         "order": test_order,
@@ -131,7 +130,8 @@ def test_parameters_dict(
 @pytest.fixture(scope="session")
 def test_only_required_parameters_dict(
     atlas: AtlasBase,
-    test_unfit_1d_spectrum,
+    observed_spectrum,
+    test_crval1,
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
@@ -139,10 +139,10 @@ def test_only_required_parameters_dict(
     test_order,
 ):
     return {
-        "crval1": atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1],
+        "crval1": test_crval1,
         "dispersion": test_dispersion,
         "incident_light_angle": test_incident_light_angle,
-        "unfit_1d_spectrum": test_unfit_1d_spectrum,
+        "unfit_1d_spectrum": observed_spectrum,
         "grating_constant": test_grating_constant,
         "doppler_velocity": test_doppler_velocity,
         "order": test_order,
@@ -151,7 +151,8 @@ def test_only_required_parameters_dict(
 
 @pytest.fixture(scope="session")
 def parameters(
-    test_unfit_1d_spectrum,
+    observed_spectrum,
+    test_crval1,
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
@@ -160,13 +161,13 @@ def parameters(
     atlas: AtlasBase,
 ) -> Parameters:
     params = WavelengthCalibrationParameters(
-        crval1=atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1],
+        crval1=test_crval1,
         dispersion=test_dispersion,
         incident_light_angle=test_incident_light_angle,
         resolving_power=72500,
         opacity_factor=5.0,
         straylight_fraction=0.25,
-        unfit_1d_spectrum=test_unfit_1d_spectrum,
+        unfit_1d_spectrum=observed_spectrum,
         grating_constant=test_grating_constant,
         doppler_velocity=test_doppler_velocity,
         order=test_order,
