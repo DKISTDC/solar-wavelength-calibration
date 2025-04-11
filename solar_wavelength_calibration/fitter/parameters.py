@@ -122,13 +122,6 @@ class FitFlagsModel(BaseModel):
     continuum_intensity_correction: bool = True
 
 
-class _InternalBoundsModel(BaseModel):
-    """A container of *BoundsRanges that correspond to the modified `incident_light_angle` and `_delta` bounds."""
-
-    incident_light_angle: AngleBoundRange
-    delta: UnitlessBoundRange
-
-
 class WavelengthCalibrationParameters(BaseModel):
     """Object for initializing the fit parameters prior to a fit."""
 
@@ -249,24 +242,28 @@ class WavelengthCalibrationParameters(BaseModel):
         return constrain_crval1
 
     @cached_property
-    def angle_and_delta_bounds_given_crval1_bounds(self) -> _InternalBoundsModel:
+    def delta_bounds_given_crval1_bounds(self) -> UnitlessBoundRange:
         """
-        Adjust the internal bounds on `incident_light_angle` and `_delta` to approximate the desired range on `crval1`.
+        Adjust the internal bounds on `_delta` to approximate the desired range on `crval1`.
 
         Because `crval1` is, internally, a dependent variable that is a function of `incident_light_angle` and `_delta`
         (see `crval1_constraint_function` and `delta`) the user-supplied bounds on `crval1` can't be strictly honored.
-        This method computes modified internal bounds on `incident_light_angle` and `_delta` such that the search space
-        of `crval1` is as close to the input bounds as possible.
+        This method computes modified internal bounds on `_delta` such that the search space of `crval1` is as close to
+        the input bounds as possible.
 
-        Note that, because the bounds on `incident_light_angle` and `_delta` must be defined independently, the true
-        range of `crval1` values considered will likely fall outside the input bounds placed on `crval1`. The amount
-        of "bleed" outside the user-supplied bounds is correlated with the width of the bounds on `incident_light_angle`;
-        as the angle is given tighter bounds the _true_ range of `crval1` values gets closer to the input bounds on
-        `crval1`. When `incident_light_angle` is fixed the true range of `crval1` values is equal to the input bounds.
+        Note that, because the bounds on `_delta` must be defined independent of the bounds on `incident_light_angle`,
+        the true range of `crval1` values considered will likely fall outside the input bounds placed on `crval1`. The
+        amount of "bleed" outside the user-supplied bounds is correlated with the width of the bounds on
+        `incident_light_angle`; as the angle is given tighter bounds the _true_ range of `crval1` values gets closer to
+        the input bounds on `crval1`. When `incident_light_angle` is fixed the true range of `crval1` values is equal to
+        the input bounds on `crval1`.
         """
+        if not (np.isfinite(self.bounds.crval1.min) and np.isfinite(self.bounds.crval1.max)):
+            return UnitlessBoundRange(min=-1, max=1.0)
+
         logger.info(
-            "Updating internal bounds on `incident_light_angle` and `_delta` to approximate the desired bounds "
-            f"on `crval1` ([{self.bounds.crval1.min}, {self.bounds.crval1.max}])"
+            "Updating internal bounds on `_delta` to approximate the desired bounds on `crval1` "
+            f"([{self.bounds.crval1.min}, {self.bounds.crval1.max}])"
         )
         # We need pretty high resolution to get a good range in _delta. 1000 seems to work well enough
         # (this is all an approximation anyway).
@@ -274,51 +271,37 @@ class WavelengthCalibrationParameters(BaseModel):
 
         # If the angle is free then consider the full range given by its input bounds
         if self.fit_flags.incident_light_angle:
-            angles = np.linspace(
-                self.bounds.incident_light_angle.min,
-                self.bounds.incident_light_angle.max,
-                num_points,
+            input_angle_min = self.bounds.incident_light_angle.min
+            input_angle_max = self.bounds.incident_light_angle.max
+
+            # (Or the default bounds, if the input is unbounded)
+            default_angle_bounds = BoundsModel().incident_light_angle
+            input_angle_min = (
+                input_angle_min if np.isfinite(input_angle_min) else default_angle_bounds.min
             )
+            input_angle_max = (
+                input_angle_max if np.isfinite(input_angle_max) else default_angle_bounds.max
+            )
+
+            angles = np.linspace(input_angle_min, input_angle_max, num_points)
         # Otherwise only consider the actual value
         else:
-            angles = np.array([self.incident_light_angle])
+            angles = u.Quantity([self.incident_light_angle])
 
-        # The initial bounds on _delta are always [-1, 1]
-        deltas = np.linspace(-1, 1, num_points)
-
-        # Make a 2D surface of crval1 as a function of angle and _delta
-        crval1_map = (deltas[:, None] + np.sin(angles[None, :])) / (
-            self.grating_constant * self.order
+        delta_at_min_crval1 = self.bounds.crval1.min * self.grating_constant * self.order - np.sin(
+            angles
+        )
+        delta_at_max_crval1 = self.bounds.crval1.max * self.grating_constant * self.order - np.sin(
+            angles
         )
 
-        # Grad the indices of points where the surface is within the desired range of crval1
-        idx = np.where(
-            (crval1_map > self.bounds.crval1.min) & (crval1_map < self.bounds.crval1.max)
-        )
+        min_delta = np.min(np.r_[delta_at_min_crval1, delta_at_max_crval1])
+        max_delta = np.max(np.r_[delta_at_min_crval1, delta_at_max_crval1])
 
-        # Convert those indices into ranges of values for _delta and angle that define that range
-        in_range_deltas = deltas[idx[0]]
-        in_range_angles = angles[idx[1]]
+        new_delta_bounds = UnitlessBoundRange(min=min_delta, max=max_delta)
 
-        if self.fit_flags.incident_light_angle:
-            new_angle_bounds = AngleBoundRange(
-                min=np.nanmin(in_range_angles), max=np.nanmax(in_range_angles)
-            )
-        else:
-            # If the angle was fixed to a single value then the min and max would be identical, which would cause
-            # lmfit to complain. In this case the bounds on angle don't matter (b/c it's fixed), so let's just
-            # use the input bounds.
-            new_angle_bounds = self.bounds.incident_light_angle
-
-        new_delta_bounds = UnitlessBoundRange(
-            min=np.nanmin(in_range_deltas), max=np.nanmax(in_range_deltas)
-        )
-
-        logger.info("New bounds are:")
-        logger.info(f"\t_delta = [{new_delta_bounds.min}, {new_delta_bounds.max}]")
-        logger.info(f"\tincident_light_angle = [{new_angle_bounds.min}, {new_angle_bounds.max}]")
-
-        return _InternalBoundsModel(incident_light_angle=new_angle_bounds, delta=new_delta_bounds)
+        logger.info(f"New bounds on _delta are = [{new_delta_bounds.min}, {new_delta_bounds.max}]")
+        return new_delta_bounds
 
     @property
     def lmfit_parameters(self) -> Parameters:
@@ -341,15 +324,15 @@ class WavelengthCalibrationParameters(BaseModel):
             "_delta",
             vary=self.fit_flags.incident_light_angle,
             value=self.delta,
-            min=self.angle_and_delta_bounds_given_crval1_bounds.delta.min,
-            max=self.angle_and_delta_bounds_given_crval1_bounds.delta.max,
+            min=self.delta_bounds_given_crval1_bounds.min,
+            max=self.delta_bounds_given_crval1_bounds.max,
         )
         param.add(
             "incident_light_angle",
             vary=self.fit_flags.incident_light_angle,
             value=self.incident_light_angle.value,
-            min=self.angle_and_delta_bounds_given_crval1_bounds.incident_light_angle.min.value,
-            max=self.angle_and_delta_bounds_given_crval1_bounds.incident_light_angle.max.value,
+            min=self.bounds.incident_light_angle.min.value,
+            max=self.bounds.incident_light_angle.max.value,
         )
         param.add(
             "crval1",

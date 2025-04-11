@@ -261,6 +261,82 @@ def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict):
     assert initialized_params_dict["straylight_fraction"] == 0
 
 
+# TODO: Should we `hypothesize` these parameters to test a range of values??
+@pytest.mark.parametrize(
+    "input_crval1_bounds",
+    [
+        pytest.param(LengthBoundRange(min=1050 * u.nm, max=1090 * u.nm), id="crval1_defined"),
+        pytest.param(LengthBoundRange(), id="crval1_undef"),
+    ],
+)
+@pytest.mark.parametrize(
+    "input_angle_bounds",
+    [
+        pytest.param(AngleBoundRange(min=50 * u.deg, max=60 * u.deg), id="angle_defined"),
+        pytest.param(AngleBoundRange(max=80 * u.deg), id="angle_undef"),
+    ],
+)
+@pytest.mark.parametrize(
+    "angle_free", [pytest.param(True, id="angle_free"), pytest.param(False, id="angle_fixed")]
+)
+def test_internal_delta_bounds(
+    input_crval1_bounds, input_angle_bounds, angle_free, test_parameters_dict
+):
+    """
+    Given: A `WavelengthCalibrationParameters` object with bounds on `crval1` and/or `incident_light_angle`
+    When: Computing bounds on the internal `_delta` fit parameter to match
+    Then: The input bounds on `crval1` are at two corners of the `crval1(_delta_bounds, angle_bounds)) square
+    """
+    params = WavelengthCalibrationParameters(
+        crval1=1070 * u.nm,
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=test_parameters_dict["incident_light_angle"],
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=test_parameters_dict["grating_constant"],
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
+        order=test_parameters_dict["order"],
+        bounds=BoundsModel(crval1=input_crval1_bounds, incident_light_angle=input_angle_bounds),
+        fit_flags=FitFlagsModel(incident_light_angle=angle_free),
+    )
+
+    delta_bounds = params.delta_bounds_given_crval1_bounds
+
+    min_angle = (
+        params.bounds.incident_light_angle.min
+        if np.isfinite(params.bounds.incident_light_angle.min)
+        else 0 * u.deg
+    )
+    max_angle = (
+        params.bounds.incident_light_angle.max
+        if np.isfinite(params.bounds.incident_light_angle.max)
+        else 180 * u.deg
+    )
+
+    if angle_free:
+        angle_lims = u.Quantity([min_angle, max_angle])
+    else:
+        angle_lims = u.Quantity([params.incident_light_angle])
+    delta_lims = np.array([delta_bounds.min, delta_bounds.max])
+
+    crval1_at_corners = (delta_lims[:, None] + np.sin(angle_lims[None, :])) / (
+        params.grating_constant * params.order
+    )
+
+    if not (np.isfinite(input_crval1_bounds.min) and np.isfinite(input_crval1_bounds.max)):
+        assert params.delta_bounds_given_crval1_bounds.min == -1
+        assert params.delta_bounds_given_crval1_bounds.max == 1
+    else:
+        # This is a weird way to ask `input_crval1_bounds.[min,max] in `crval1_at_corners`
+        # We need to do this because floating point precision is crazy wack with `Quantities`
+        np.testing.assert_allclose(
+            np.min(np.abs(crval1_at_corners - input_crval1_bounds.min)), 0.0, atol=1e-9
+        )
+        np.testing.assert_allclose(
+            np.min(np.abs(crval1_at_corners - input_crval1_bounds.max)), 0.0, atol=1e-9
+        )
+
+
 def test_default_fit_flags(test_parameters_dict):
     """
     Given: No custom input fit flags
