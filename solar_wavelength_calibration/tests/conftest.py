@@ -4,7 +4,6 @@ import pytest
 from astropy.units import Quantity
 from astropy.wcs import WCS
 from lmfit import Parameters
-from scipy.interpolate import interp1d
 
 from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.atlas import DownloadConfig

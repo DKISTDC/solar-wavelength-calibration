@@ -6,7 +6,6 @@ import pytest
 from lmfit import Parameters
 from pydantic import ValidationError
 
-from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import AngleBoundRange
 from solar_wavelength_calibration.fitter.parameters import BoundsModel
 from solar_wavelength_calibration.fitter.parameters import DispersionBoundRange
