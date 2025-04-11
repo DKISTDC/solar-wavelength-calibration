@@ -2,6 +2,7 @@ import astropy
 import astropy.units as u
 import numpy as np
 import pytest
+from astropy.units import Quantity
 from astropy.wcs import WCS
 from pydantic import ValidationError
 
@@ -61,27 +62,45 @@ def test_incorrect_atlas(
         fitter.fit_result
 
 
-def test_dispersion_not_fit(
-    test_parameters_dict, observed_spectrum, atlas: AtlasBase, observed_wavelength_vector
+@pytest.mark.parametrize(
+    "fixed_parameter",
+    [
+        "crval1",
+        "dispersion",
+        "incident_light_angle",
+        "resolving_power",
+        "opacity_factor",
+        "straylight_fraction",
+        "continuum_intensity_correction",
+    ],
+)
+def test_fixing_parameters(
+    fixed_parameter,
+    test_parameters_dict,
+    observed_spectrum,
+    observed_continuum_level,
+    atlas: AtlasBase,
+    observed_wavelength_vector,
 ):
     """
-    Given: Correct input parameters, but we don't want to fit the dispersion
-    When: Initializing a WaveCalFitter object
-    Then: The dispersion value has not changed
+    Given: A `WaveCalFitter` initialized with a `WavelengthCalibrationParameters` with a single fixed parameter
+    When: Running the fit
+    Then: The "fit" value of the fixed parameter is the same as its initial value
     """
-    initialized_parameters = WavelengthCalibrationParameters(
-        crval1=test_parameters_dict["crval1"],
-        dispersion=test_parameters_dict["dispersion"],
-        incident_light_angle=test_parameters_dict["incident_light_angle"],
-        resolving_power=test_parameters_dict["resolving_power"],
-        opacity_factor=test_parameters_dict["opacity_factor"],
-        straylight_fraction=test_parameters_dict["straylight_fraction"],
-        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
-        grating_constant=test_parameters_dict["grating_constant"],
-        doppler_velocity=test_parameters_dict["doppler_velocity"],
-        order=test_parameters_dict["order"],
-        fit_flags=FitFlagsModel(dispersion=False),
-    )
+    fit_flag_args = {fixed_parameter: False}
+    fit_flags = FitFlagsModel(**fit_flag_args)
+
+    # Have starting values that are off of the true values so we can make sure free parameters change
+    init_values = test_parameters_dict | {
+        "crval1": test_parameters_dict["crval1"] + 3 * u.nm,
+        "dispersion": test_parameters_dict["dispersion"] * 1.01,
+        "incident_light_angle": test_parameters_dict["incident_light_angle"] + 4 * u.deg,
+        "resolving_power": test_parameters_dict["resolving_power"] + 10,
+        "opacity_factor": test_parameters_dict["opacity_factor"] + 0.1,
+        "straylight_fraction": test_parameters_dict["straylight_fraction"] + 0.2,
+    }
+
+    initialized_parameters = WavelengthCalibrationParameters(fit_flags=fit_flags, **init_values)
 
     fitter = WaveCalFitter(
         input_parameters=initialized_parameters,
@@ -91,9 +110,20 @@ def test_dispersion_not_fit(
         full=True,
     )
 
-    # make sure that the dispersion was not fit (wasn't changed)
-    wcs_fit_result_header, fit_result_params = fitter.fit_result
-    assert test_parameters_dict["dispersion"].value == fit_result_params["dispersion"]
+    _, fit_result_params = fitter.fit_result
+    for parameter in fit_result_params:
+        if parameter != fixed_parameter:
+            continue
+
+        if parameter == "continuum_intensity_correction":
+            init_value = observed_continuum_level
+        else:
+            init_value = init_values[parameter]
+
+        if isinstance(init_value, Quantity):
+            init_value = init_value.value
+
+        np.testing.assert_allclose(init_value, fit_result_params[parameter])
 
 
 def test_fit_is_correct(

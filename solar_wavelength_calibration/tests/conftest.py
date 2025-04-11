@@ -104,6 +104,11 @@ def observed_spectrum(atlas, observed_wavelength_vector) -> np.ndarray:
 
 
 @pytest.fixture(scope="session")
+def observed_continuum_level(observed_spectrum) -> float:
+    return np.nanpercentile(observed_spectrum, 75)
+
+
+@pytest.fixture(scope="session")
 def test_parameters_dict(
     atlas: AtlasBase,
     observed_spectrum,
