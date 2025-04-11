@@ -88,8 +88,8 @@ class DispersionBoundRange(UnitlessBoundRange):
 
 
 class BoundsModel(BaseModel):
-    """
-    Container for *BoundRanges that match the fit parameters in `WavelengthCalibrationParameters.
+    r"""
+    Container for \*BoundRanges that match the fit parameters in `WavelengthCalibrationParameters`.
 
     This container also defines sensible defaults.
     """
