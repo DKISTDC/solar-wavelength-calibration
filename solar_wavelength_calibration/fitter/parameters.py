@@ -182,7 +182,7 @@ class WavelengthCalibrationParameters(BaseModel):
         diffraction grating in air, the refracted angle, :math:`\gamma`, is given by
 
         .. math::
-            \gamma = \sin^{-1}(\lambda G m - \sin(\alpha)),
+            \gamma = \sin^{-1}(\lambda G m - \sin\alpha),
 
         where :math:`\lambda` is `crval1`, :math:`G` is `grating_constant`, :math:`m` is `order`, and :math:`\alpha` is
         `incident_light_angle`. The Arcsine is only valid for inputs in the range [-1, 1] and so a combination of
@@ -209,16 +209,18 @@ class WavelengthCalibrationParameters(BaseModel):
         .. math::
             -1 \leq \lambda G m - \sin\alpha \leq 1
 
-        where :math:`G` (grating constant) and :math:`m` (diffraction order) are fixed parameters while
-        :math:`\lambda` (CRVAL1) and :math:`\alpha` (incident light angle) are free in the fit.
+        where :math:`G` (`grating_constant`) and :math:`m` (`order`) are fixed parameters while
+        :math:`\lambda` (`crval1`) and :math:`\alpha` (`incident_light_angle`) are free in the fit.
 
         As suggested by `lmfit <https://lmfit.github.io/lmfit-py/constraints.html#using-inequality-constraints>`_ we
         ensure this constraint by forcing CRVAL1 to follow the equation
 
         .. math::
-            \lambda = \frac{\delta + \sin(\alpha)}{G m}
+            \lambda = \frac{\delta + \sin\alpha}{G m}
 
         where :math:`\delta` (`_delta`) is a free parameter whose bounds are [-1, 1].
+
+        This property is the initial guess of :math:`\delta_0 = \lambda_0 G m - \sin\alpha_0`.
 
         NOTE: `_delta` is only used if `crval1` is set to vary during the fit (see `FitFlagsModel`).
         """
@@ -256,7 +258,7 @@ class WavelengthCalibrationParameters(BaseModel):
         Note that, because the bounds on `_delta` must be defined independent of the bounds on `incident_light_angle`,
         the true range of `crval1` values considered will likely fall outside the input bounds placed on `crval1`. The
         amount of "bleed" outside the user-supplied bounds is correlated with the width of the bounds on
-        `incident_light_angle`; as the angle is given tighter bounds the _true_ range of `crval1` values gets closer to
+        `incident_light_angle`; as the angle is given tighter bounds the *true* range of `crval1` values gets closer to
         the input bounds on `crval1`. When `incident_light_angle` is fixed the true range of `crval1` values is equal to
         the input bounds on `crval1`.
         """
