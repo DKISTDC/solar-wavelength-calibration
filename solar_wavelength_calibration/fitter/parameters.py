@@ -219,12 +219,14 @@ class WavelengthCalibrationParameters(BaseModel):
             \lambda = \frac{\delta + \sin(\alpha)}{G m}
 
         where :math:`\delta` (`_delta`) is a free parameter whose bounds are [-1, 1].
+
+        NOTE: `_delta` is only used if `crval1` is set to vary during the fit (see `FitFlagsModel`).
         """
-        unit_value = (self.grating_constant * self.order * self.crval1).to_value(
-            u.dimensionless_unscaled
-        )
-        sin_value = np.sin(self.incident_light_angle.to_value("rad"))
-        return unit_value - sin_value
+        unit_value = self.grating_constant * self.order * self.crval1
+        sin_value = np.sin(self.incident_light_angle)
+
+        # `float` fully simplifies all units to be just a number
+        return float(unit_value - sin_value)
 
     @property
     def crval1_constraint_function(self) -> Callable[[float, float], float]:
@@ -321,23 +323,28 @@ class WavelengthCalibrationParameters(BaseModel):
             max=self.bounds.dispersion.max.value,
         )
         param.add(
-            "_delta",
-            vary=self.fit_flags.incident_light_angle,
-            value=self.delta,
-            min=self.delta_bounds_given_crval1_bounds.min,
-            max=self.delta_bounds_given_crval1_bounds.max,
-        )
-        param.add(
             "incident_light_angle",
             vary=self.fit_flags.incident_light_angle,
             value=self.incident_light_angle.value,
             min=self.bounds.incident_light_angle.min.value,
             max=self.bounds.incident_light_angle.max.value,
         )
-        param.add(
-            "crval1",
-            expr="constrain_crval1(_delta, incident_light_angle)",
-        )
+
+        if self.fit_flags.crval1:
+            param.add(
+                "_delta",
+                vary=self.fit_flags.crval1,
+                value=self.delta,
+                min=self.delta_bounds_given_crval1_bounds.min,
+                max=self.delta_bounds_given_crval1_bounds.max,
+            )
+            param.add(
+                "crval1",
+                expr="constrain_crval1(_delta, incident_light_angle)",
+            )
+        else:
+            param.add("crval1", vary=False, value=self.crval1.value)
+
         param.add(
             "resolving_power",
             vary=self.fit_flags.resolving_power,
