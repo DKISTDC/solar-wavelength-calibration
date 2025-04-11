@@ -230,7 +230,10 @@ def test_invalid_grating_equation(test_parameters_dict):
         )
 
 
-def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict):
+@pytest.mark.parametrize(
+    "fit_crval1", [pytest.param(True, id="crval1_free"), pytest.param(False, id="crval1_fixed")]
+)
+def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict, fit_crval1):
     """
     Given: A dictionary of input parameter values
     When: Initializing a WavelengthCalibrationParameters object
@@ -245,11 +248,12 @@ def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict):
         grating_constant=test_parameters_dict["grating_constant"],
         doppler_velocity=test_parameters_dict["doppler_velocity"],
         order=test_parameters_dict["order"],
+        fit_flags=FitFlagsModel(crval1=fit_crval1),
     )
 
     assert isinstance(input_params.lmfit_parameters, Parameters)
     # make sure than only 7 parameters were added into lmfit_parameters [crval1, dispersion, incident_light_angle, resolving_power, opacity_factor, straylight_fraction, unfit_1d_spectrum]
-    assert len(input_params.lmfit_parameters.valuesdict()) == 7
+    assert len(input_params.lmfit_parameters.valuesdict()) == 8 if fit_crval1 else 7
 
     # Test default parameter values
     initialized_params_dict = input_params.lmfit_parameters.valuesdict()
