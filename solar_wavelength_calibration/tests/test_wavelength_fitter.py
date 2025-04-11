@@ -7,9 +7,9 @@ from astropy.wcs import WCS
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
-from solar_wavelength_calibration.fitter.parameters import BoundRange
 from solar_wavelength_calibration.fitter.parameters import BoundsModel
 from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
+from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.wavelength_fitter import WaveCalFitter
 
@@ -172,7 +172,7 @@ def test_fit_is_correct(
         doppler_velocity=0 * u.km / u.s,
         order=test_order,
         bounds=BoundsModel(
-            crval1=BoundRange(min=1070 * u.nm, max=1080 * u.nm),
+            crval1=LengthBoundRange(min=1070 * u.nm, max=1080 * u.nm),
         ),
     )
 

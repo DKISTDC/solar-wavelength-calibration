@@ -1,10 +1,14 @@
 """Objects for storing fit parameters."""
+from __future__ import annotations
+
 import logging
+from typing import Annotated
 
 import astropy.units as u
 import numpy as np
 from astropy.units import Quantity
 from lmfit import Parameters
+from pydantic import AfterValidator
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import field_validator
@@ -13,40 +17,91 @@ from pydantic_core.core_schema import ValidationInfo
 
 logger = logging.getLogger(__name__)
 
-QUANTITY_OR_NUMBER = Quantity | float | int
+
+def to_nm(value: Quantity) -> Quantity:
+    """Convert a length unit to nm."""
+    return value.to(u.nm)
 
 
-class BoundRange(BaseModel):
+def to_deg(value: Quantity) -> Quantity:
+    """Convert an angle unit to degrees."""
+    return value.to(u.deg)
+
+
+def to_nm_per_px(value: Quantity) -> Quantity:
+    """Convert a dispersion unit to nm / px."""
+    return value.to(u.nm / u.pix)
+
+
+def to_over_m(value: Quantity) -> Quantity:
+    """Convert an inverse length unit to 1 / m."""
+    return value.to(1 / u.m)
+
+
+def to_km_per_s(value: Quantity) -> Quantity:
+    """Convert a speed unit to km / s."""
+    return value.to(u.km / u.s)
+
+
+length_quantity = Annotated[Quantity, AfterValidator(to_nm)]
+angle_quantity = Annotated[Quantity, AfterValidator(to_deg)]
+dispersion_quantity = Annotated[Quantity, AfterValidator(to_nm_per_px)]
+inverse_length_quantity = Annotated[Quantity, AfterValidator(to_over_m)]
+speed_quantity = Annotated[Quantity, AfterValidator(to_km_per_s)]
+
+
+class UnitlessBoundRange(BaseModel):
     """Represents a min and max bound for a parameter."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True)
 
-    min: QUANTITY_OR_NUMBER = -np.inf
-    max: QUANTITY_OR_NUMBER = np.inf
+    min: int | float = -np.inf
+    max: int | float = np.inf
 
     @model_validator(mode="after")
-    def validate_units_match(self) -> "BoundRange":
-        """Ensure that if both min and max are Quantities, they have the same physical units."""
-        if isinstance(self.min, Quantity) or isinstance(self.max, Quantity):
-            if not self.min.unit.is_equivalent(self.max.unit):
-                raise ValueError(
-                    f"Incompatible units: min has unit {self.min.unit}, "
-                    f"but max has unit {self.max.unit}"
-                )
+    def ensure_min_less_than_max(self) -> UnitlessBoundRange:
+        """Ensure that the min and max properties are ordered correctly."""
+        if self.min >= self.max:
+            raise ValueError(f"{self.min = } is greater than or equal to {self.max = }")
         return self
 
 
+class LengthBoundRange(UnitlessBoundRange):
+    """BoundRange subclass that enforces inputs to have 'length' units."""
+
+    min: length_quantity = -np.inf * u.nm
+    max: length_quantity = np.inf * u.nm
+
+
+class AngleBoundRange(UnitlessBoundRange):
+    """BoundRange subclass that enforces inputs to be angles (rad or deg)."""
+
+    min: angle_quantity = -np.inf * u.deg
+    max: angle_quantity = np.inf * u.deg
+
+
+class DispersionBoundRange(UnitlessBoundRange):
+    """BoundRange subclass that enforces inputs to have 'length / pix' units."""
+
+    min: dispersion_quantity = -np.inf * u.nm / u.pix
+    max: dispersion_quantity = np.inf * u.nm / u.pix
+
+
 class BoundsModel(BaseModel):
-    """Base model for bounds with default values set to None."""
+    r"""
+    Container for \*BoundRanges that match the fit parameters in `WavelengthCalibrationParameters`.
+
+    This container also defines sensible defaults.
+    """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    crval1: BoundRange = BoundRange()
-    dispersion: BoundRange = BoundRange(min=0 * u.nm / u.pix, max=np.inf * u.nm / u.pix)
-    incident_light_angle: BoundRange = BoundRange(min=-360 * u.deg, max=360 * u.deg)
-    resolving_power: BoundRange = BoundRange(min=0)
-    opacity_factor: BoundRange = BoundRange(min=0)
-    straylight_fraction: BoundRange = BoundRange(min=0)
+    crval1: LengthBoundRange = LengthBoundRange(min=0 * u.nm)
+    dispersion: DispersionBoundRange = DispersionBoundRange(min=0 * u.nm / u.pix)
+    incident_light_angle: AngleBoundRange = AngleBoundRange(min=0 * u.deg, max=180 * u.deg)
+    resolving_power: UnitlessBoundRange = UnitlessBoundRange(min=0)
+    opacity_factor: UnitlessBoundRange = UnitlessBoundRange(min=0)
+    straylight_fraction: UnitlessBoundRange = UnitlessBoundRange(min=0)
 
 
 class FitFlagsModel(BaseModel):
@@ -70,12 +125,12 @@ class WavelengthCalibrationParameters(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True)
 
-    crval1: Quantity
-    dispersion: Quantity
-    incident_light_angle: Quantity
+    crval1: length_quantity
+    dispersion: dispersion_quantity
+    incident_light_angle: angle_quantity
     unfit_1d_spectrum: np.ndarray
-    grating_constant: Quantity
-    doppler_velocity: Quantity
+    grating_constant: inverse_length_quantity
+    doppler_velocity: speed_quantity
     order: int
     resolving_power: int = 1
     opacity_factor: float = 1
@@ -91,73 +146,6 @@ class WavelengthCalibrationParameters(BaseModel):
         if not (0 <= value <= 100):
             raise ValueError("Quartile value must be between 0 and 100.")
         return value
-
-    @field_validator("crval1")
-    @classmethod
-    def validate_crval1_units(cls, value):
-        """Ensure crval1 has correct length units."""
-        return value.to(u.nm)
-
-    @field_validator("incident_light_angle")
-    @classmethod
-    def validate_incident_light_angle_units(cls, value):
-        """Ensure incident_light_angle has correct length units."""
-        return value.to(u.deg)
-
-    @field_validator("dispersion")
-    @classmethod
-    def validate_dispersion_units(cls, value):
-        """Ensure dispersion has correct length units."""
-        return value.to(u.nm / u.pix)
-
-    @field_validator("grating_constant")
-    @classmethod
-    def validate_grating_constant_units(cls, value):
-        """Ensure grating_constant has correct length units."""
-        return value.to(1 / u.mm)
-
-    @field_validator("doppler_velocity")
-    @classmethod
-    def validate_doppler_velocity_units(cls, value):
-        """Ensure doppler_velocity has correct length units."""
-        return value.to(u.km / u.s)
-
-    @field_validator("bounds")
-    @classmethod
-    def ensure_correct_bounds_units(cls, bounds: BoundsModel, info: ValidationInfo) -> BoundsModel:
-        """
-        Ensure that all bounds in the BoundsModel have units compatible with their corresponding parameter values.
-
-        For parameters that are expected to have units (e.g., crval1, dispersion, incident_light_angle),
-        this method converts the bound values to match the units of the corresponding parameter in the model input.
-
-        For unitless parameters, it raises an error if bounds are incorrectly specified with units.
-        """
-        params_with_units = ["crval1", "dispersion", "incident_light_angle"]
-        for param in bounds.model_fields.keys():
-            try:
-                param_value = info.data[param]
-            except KeyError:
-                continue
-            bounds_range = getattr(bounds, param)
-            if param in params_with_units:
-                param_unit = param_value.unit
-                if isinstance(bounds_range.min, Quantity):
-                    new_min = bounds_range.min.to(param_unit)
-                    new_max = bounds_range.max.to(param_unit)
-                else:
-                    new_min = bounds_range.min * param_unit
-                    new_max = bounds_range.max * param_unit
-                new_range = BoundRange(min=new_min, max=new_max)
-                setattr(bounds, param, new_range)
-
-            else:
-                if isinstance(bounds_range.min, Quantity):
-                    raise TypeError(
-                        f"{param} has units ({bounds_range.min.unit}), but it shouldn't."
-                    )
-
-        return bounds
 
     @field_validator("bounds")
     @classmethod
@@ -176,7 +164,7 @@ class WavelengthCalibrationParameters(BaseModel):
                 continue
             bounds_range = getattr(bounds, param)
             if not (bounds_range.min <= param_value <= bounds_range.max):
-                raise TypeError(
+                raise ValueError(
                     f"{param} with value {param_value} is outside the bounds range of ({bounds_range.min}, {bounds_range.max})"
                 )
 
