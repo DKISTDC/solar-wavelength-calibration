@@ -107,6 +107,7 @@ def observed_spectrum(atlas, observed_wavelength_vector) -> np.ndarray:
 def test_parameters_dict(
     atlas: AtlasBase,
     observed_spectrum,
+    test_crval1,
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
@@ -114,7 +115,7 @@ def test_parameters_dict(
     test_order,
 ):
     return {
-        "crval1": atlas.telluric_atlas_wavelength[np.size(observed_spectrum) // 2 + 1],
+        "crval1": test_crval1,
         "dispersion": test_dispersion,
         "incident_light_angle": test_incident_light_angle,
         "resolving_power": 72500,
