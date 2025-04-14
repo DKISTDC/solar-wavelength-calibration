@@ -185,7 +185,7 @@ class WavelengthCalibrationParameters(BaseModel):
             \gamma = \sin^{-1}(\lambda G m - \sin\alpha),
 
         where :math:`\lambda` is `crval1`, :math:`G` is `grating_constant`, :math:`m` is `order`, and :math:`\alpha` is
-        `incident_light_angle`. The Arcsine is only valid for inputs in the range [-1, 1] and so a combination of
+        `incident_light_angle`. The arcsine is only valid for inputs in the range [-1, 1] and so a combination of
         `crval1`, `grating_constant`, `order`, and `incident_light_angle` that fall outside of this range are considered
         invalid and will raise an Error.
         """
