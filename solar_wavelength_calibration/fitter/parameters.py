@@ -226,11 +226,10 @@ class WavelengthCalibrationParameters(BaseModel):
 
         NOTE: `_delta` is only used if `crval1` is set to vary during the fit (see `FitFlagsModel`).
         """
-        unit_value = self.grating_constant * self.order * self.crval1
-        sin_value = np.sin(self.incident_light_angle)
+        delta = self.crval1 * self.grating_constant * self.order - np.sin(self.incident_light_angle)
 
         # `float` fully simplifies all units to be just a number
-        return float(unit_value - sin_value)
+        return float(delta)
 
     @property
     def crval1_constraint_function(self) -> Callable[[float, float], float]:
