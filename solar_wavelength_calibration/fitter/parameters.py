@@ -238,7 +238,9 @@ class WavelengthCalibrationParameters(BaseModel):
 
         See `delta` for more information.
         """
-
+        # Note that inside the minimization call all parameters do NOT have units; they are just bare `floats`
+        # That's why we need to use `np.deg2rad` in the call to `np.sin` and use `to_value` in the hardcoded denominator
+        # (u.nm) as the unit for `crval1` derives from `length_quantity`
         def constrain_crval1(_delta: float, incident_light_angle_deg: float) -> float:
             numerator = _delta + np.sin(np.deg2rad(incident_light_angle_deg))
             denominator = (self.grating_constant * self.order).to_value(1 / u.nm)
