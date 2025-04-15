@@ -59,12 +59,12 @@ def fitness(
     dispersion = param_vals["dispersion"]
     incident_light_angle = param_vals["incident_light_angle"]
     resolving_power = param_vals["resolving_power"]
-    opacity = param_vals["opacity_factor"]
-    stray_light_fraction = param_vals["straylight_fraction"]
+    opacity_factor = param_vals["opacity_factor"]
+    straylight_fraction = param_vals["straylight_fraction"]
     continuum_intensity_correction = param_vals["continuum_intensity_correction"]
 
     # calculate the spectral axis
-    # Representations of spectral coordinates in FITS
+    # References about representing spectral coordinate in FITS:
     # https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract (section 5)
     # https://specreduce.readthedocs.io/en/latest/api/specreduce.utils.synth_data.make_2d_arc_image.html
 
@@ -88,7 +88,7 @@ def fitness(
     linear_fts_telluric_transmission = np.interp(linear_wave, fts_telluric_wave, fts_telluric)
     opacity_scaled_fts_telluric_transmission = (
         linear_fts_telluric_transmission
-        ** opacity  # relative scaling of each wavelength based on the atmosphere during the observations
+        ** opacity_factor  # relative scaling of each wavelength based on the atmosphere during the observations
     )  # in parameters
 
     # interpolate the solar spectral atlas onto the new wavelength axis and apply a shift according to the Doppler shift due to orbital motions (doppler velocity)
@@ -102,7 +102,7 @@ def fitness(
     # apply telluric absorption spectrum to solar spectrum
     fts_solar_atmos_corr = opacity_scaled_fts_telluric_transmission * linear_fts_solar_transmission
     # add flat value of straylight contamination
-    fts_solar_with_straylight = fts_solar_atmos_corr + stray_light_fraction
+    fts_solar_with_straylight = fts_solar_atmos_corr + straylight_fraction
 
     # scale for total intensity of the continuum
     fts_solar_normalized = fts_solar_with_straylight * continuum_intensity_correction

@@ -160,7 +160,7 @@ class WavelengthCalibrationParameters(BaseModel):
             try:
                 param_value = info.data[param]
             except KeyError:
-                # if param not in info.data, it is probably an invalid type and Pydantic will handle this soon.
+                # if param not in info.data, it is probably an invalid type and Pydantic will handle this later in the code.
                 continue
             bounds_range = getattr(bounds, param)
             if not (bounds_range.min <= param_value <= bounds_range.max):

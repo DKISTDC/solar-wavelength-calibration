@@ -126,6 +126,7 @@ class WaveCalFitter(BaseModel):
         }
 
         if self.full:
-            return WCS(fit_result_header), fit_result_params
+            full_fit_result = fit_result_header.update(fit_result_params)
+            return full_fit_result
 
-        return WCS(fit_result_header)
+        return fit_result_header
