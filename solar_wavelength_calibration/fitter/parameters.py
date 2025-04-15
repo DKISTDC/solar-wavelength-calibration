@@ -277,14 +277,19 @@ class WavelengthCalibrationParameters(BaseModel):
             input_angle_min = self.bounds.incident_light_angle.min
             input_angle_max = self.bounds.incident_light_angle.max
 
-            # (Or the default bounds, if the input is unbounded)
+            # (Or the default bounds, if the input bounds are ±`np.inf`)
             default_angle_bounds = BoundsModel().incident_light_angle
-            input_angle_min = (
-                input_angle_min if np.isfinite(input_angle_min) else default_angle_bounds.min
-            )
-            input_angle_max = (
-                input_angle_max if np.isfinite(input_angle_max) else default_angle_bounds.max
-            )
+            if not np.isfinite(input_angle_min):
+                input_angle_min = default_angle_bounds.min
+                logger.info(
+                    f"WARNING: Given `incident_light_angle` minimum bound is not finite. Using default min of {input_angle_min} instead (only to compute bounds on `_delta`."
+                )
+
+            if not np.isfinite(input_angle_max):
+                input_angle_max = default_angle_bounds.max
+                logger.info(
+                    f"WARNING: Given `incident_light_angle` maximum bound is not finite. Using default max of {input_angle_max} instead (only to compute bounds on `_delta`."
+                )
 
             angles = np.linspace(input_angle_min, input_angle_max, num_points)
         # Otherwise only consider the actual value

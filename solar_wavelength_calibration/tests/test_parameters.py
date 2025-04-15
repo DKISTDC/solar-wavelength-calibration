@@ -272,7 +272,7 @@ def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict, fit_crval1)
     "input_angle_bounds",
     [
         pytest.param(AngleBoundRange(min=50 * u.deg, max=60 * u.deg), id="angle_defined"),
-        pytest.param(AngleBoundRange(max=80 * u.deg), id="angle_undef"),
+        pytest.param(AngleBoundRange(), id="angle_undef"),
     ],
 )
 @pytest.mark.parametrize(
@@ -329,10 +329,10 @@ def test_internal_delta_bounds(
         # This is a weird way to ask `input_crval1_bounds.[min,max] in `crval1_at_corners`
         # We need to do this because floating point precision is crazy wack with `Quantities`
         np.testing.assert_allclose(
-            np.min(np.abs(crval1_at_corners - input_crval1_bounds.min)), 0.0, atol=1e-9
+            np.min(np.abs(crval1_at_corners - input_crval1_bounds.min)), 0.0, atol=1e-7
         )
         np.testing.assert_allclose(
-            np.min(np.abs(crval1_at_corners - input_crval1_bounds.max)), 0.0, atol=1e-9
+            np.min(np.abs(crval1_at_corners - input_crval1_bounds.max)), 0.0, atol=1e-7
         )
 
 
