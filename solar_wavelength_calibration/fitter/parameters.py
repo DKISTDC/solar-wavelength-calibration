@@ -262,7 +262,7 @@ class WavelengthCalibrationParameters(BaseModel):
         the input bounds on `crval1`.
         """
         if not (np.isfinite(self.bounds.crval1.min) and np.isfinite(self.bounds.crval1.max)):
-            return UnitlessBoundRange(min=-1, max=1.0)
+            return UnitlessBoundRange(min=-1.0, max=1.0)
 
         logger.info(
             "Updating internal bounds on `_delta` to approximate the desired bounds on `crval1` "
