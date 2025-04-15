@@ -189,15 +189,11 @@ class WavelengthCalibrationParameters(BaseModel):
         `crval1`, `grating_constant`, `order`, and `incident_light_angle` that fall outside of this range are considered
         invalid and will raise an Error.
         """
-        expression = self.crval1 * self.grating_constant * self.order - np.sin(
-            self.incident_light_angle
-        )
-        # Use to `float` to force full simplification of this unitless expression
-        if abs(float(expression)) > 1:
+        if abs(self.delta) > 1:
             raise ValueError(
                 "Input parameter values represent an un-invertible grating equation. "
                 "We need `crval1 * grating_constant * order - sin(incident_light_angle)` to be in the range "
-                f"[-1, 1] but the values provide result in {expression}"
+                f"[-1, 1] but the values provide result in {self.delta}"
             )
         return self
 
