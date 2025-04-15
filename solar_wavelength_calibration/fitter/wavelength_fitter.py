@@ -5,6 +5,7 @@ from functools import cached_property
 import astropy.units as u
 import lmfit
 import numpy as np
+from astropy.units import Quantity
 from astropy.wcs import WCS
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -44,13 +45,8 @@ class WaveCalFitter(BaseModel):
         )
         return fit_result_params
 
-    def prepare_atlas(self):
-        """Prepare the atlas by roughly matching the atlas to the raw spectrum.
-
-        This is done by resampling both atlases to be on the same, linear wavelength grid and select the portion of atlas that
-        pertains to bandpass used in the data.
-        """
-        # Resample atlases
+    def prepare_atlas(self) -> tuple[Quantity, Quantity, np.ndarray, np.ndarray]:
+        """Prepare the atlas by roughly matching the atlas to the raw spectrum."""
         solar_atlas_wavelength = self.atlas.solar_atlas_wavelength
         telluric_atlas_wavelength = self.atlas.telluric_atlas_wavelength
 
@@ -60,11 +56,8 @@ class WaveCalFitter(BaseModel):
         min_wavelength = self.expected_wavelength_vector.min() - 0.25 * expected_wavelength_range
         max_wavelength = self.expected_wavelength_vector.max() + 0.25 * expected_wavelength_range
 
-        cropped_telluric_mask = np.where(
-            (telluric_atlas_wavelength > min_wavelength)
-            & (telluric_atlas_wavelength < max_wavelength),
-            True,
-            False,
+        cropped_telluric_mask = (telluric_atlas_wavelength > min_wavelength) & (
+            telluric_atlas_wavelength < max_wavelength
         )
 
         cropped_telluric_atlas_wavelength = telluric_atlas_wavelength[cropped_telluric_mask]
@@ -85,7 +78,13 @@ class WaveCalFitter(BaseModel):
             cropped_telluric_atlas_transmission,
         )
 
-    def run_fit(self, fts_solar_wave, fts_telluric_wave, fts_solar, fts_telluric) -> dict:
+    def run_fit(
+        self,
+        fts_solar_wave: Quantity,
+        fts_telluric_wave: Quantity,
+        fts_solar: np.ndarray,
+        fts_telluric: np.ndarray,
+    ) -> dict:
         """Send the fitter on its way."""
         params_to_fit = self.input_parameters.lmfit_parameters
         constant_parameters = self.input_parameters.constant_parameters
@@ -104,7 +103,6 @@ class WaveCalFitter(BaseModel):
                 number_of_wave_pix,
             ),
             fcn_kws=constant_parameters,
-            # nan_policy="propagate",
         )
         fit_result = minimizer.minimize(method="leastsq", params=params_to_fit)
         logger.info("Finished fit.")
