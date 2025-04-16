@@ -39,7 +39,8 @@ def wcs_validity_params(draw, valid: bool):
 
     If `valid is True` the parameters are guaranteed to represent a valid WCS. The converse is true is `valid is False`.
     """
-    grating_constant = draw(st.integers().filter(lambda n: n != 0)) / u.m
+    # Cast this as nm for now to avoid potential overflows in unit conversion on `crval1`
+    grating_constant = draw(st.integers().filter(lambda n: n != 0)) / u.nm
     incident_light_angle = draw(st.floats(allow_nan=False, allow_infinity=False)) * u.deg
     order = draw(st.integers().filter(lambda n: n != 0))
     if valid:
@@ -51,7 +52,7 @@ def wcs_validity_params(draw, valid: bool):
     return WCSValidityParams(
         crval1=crval1,
         incident_light_angle=incident_light_angle,
-        grating_constant=grating_constant,
+        grating_constant=grating_constant.to(1 / u.m),
         order=order,
         delta=delta,
     )
@@ -177,6 +178,37 @@ def test_incorrect_parameter_types(observed_spectrum):
         "incident_light_angle\s+Value error, 'nm' \(length\) and 'deg' \(angle\) are not convertible"
     )
     assert excinfo.match("order\s+Input should be a valid integer")
+
+
+def test_non_finite_inputs():
+    """
+    Given: A set of `WavelengthCalibrationParameters` inputs that are not finite
+    When: Instantiating a `WavelengthCalibrationParameters` object with those parameters
+    Then: The correct errors are raised
+    """
+    with pytest.raises(ValidationError) as excinfo:
+        WavelengthCalibrationParameters(
+            crval1=np.inf * u.m,  # Note that some units are the right type, but incorrect units.
+            dispersion=np.nan * u.nm / u.pix,
+            incident_light_angle=-np.inf * u.deg,
+            resolving_power=3,
+            opacity_factor=np.inf,
+            straylight_fraction=np.nan,
+            unfit_1d_spectrum=np.arange(10),
+            grating_constant=-np.inf / u.nm,
+            doppler_velocity=np.nan * u.km / u.s,
+            order=np.nan,
+        )
+
+    assert excinfo.match("8 validation errors")
+    assert excinfo.match("crval1\s+Value error, parameters must be finite")
+    assert excinfo.match("dispersion\s+Value error, parameters must be finite")
+    assert excinfo.match("incident_light_angle\s+Value error, parameters must be finite")
+    assert excinfo.match("opacity_factor\s+Value error, parameters must be finite")
+    assert excinfo.match("straylight_fraction\s+Value error, parameters must be finite")
+    assert excinfo.match("grating_constant\s+Value error, parameters must be finite")
+    assert excinfo.match("doppler_velocity\s+Value error, parameters must be finite")
+    assert excinfo.match("order\s+Input should be a finite number")
 
 
 def test_missing_parameters(test_only_required_parameters_dict):
