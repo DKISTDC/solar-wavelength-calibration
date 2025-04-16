@@ -47,8 +47,8 @@ def wcs_validity_params(draw, valid: bool) -> WCSValidityParams:
     incident_light_angle = draw(st.floats(allow_nan=False, allow_infinity=False)) * u.deg
     order = draw(st.integers().filter(lambda n: n != 0))
     if valid:
-        # Need to subtract eps from the limits or else `Quantity` floating point stuff will result in borked inputs.
-        machine_precision = np.finfo(float).eps
+        # Need to subtract eps-ish from the limits or else `Quantity` floating point stuff will result in borked inputs.
+        machine_precision = np.finfo(float).eps * 10
         delta = draw(
             st.floats(min_value=-1.0 + machine_precision, max_value=1.0 - machine_precision)
         )
@@ -85,9 +85,8 @@ def sane_wcs_params_and_bounds(draw) -> SaneBoundsAndWCSParams:
     values well short of ±inf. So "sane" is still relative here.
     """
     sanity = 1e10
-    bound_sanity = (
-        sanity * 100
-    )  # Grow the limits on bounds so we don't end up in a case where min=max=value
+    # Grow the limits on bounds so we don't end up in a case where min=max=value
+    bound_sanity = sanity * 100
 
     grating_constant = (
         draw(st.integers(min_value=int(-sanity), max_value=int(sanity)).filter(lambda n: n != 0))
@@ -101,8 +100,8 @@ def sane_wcs_params_and_bounds(draw) -> SaneBoundsAndWCSParams:
         st.integers(min_value=int(-sanity), max_value=int(sanity)).filter(lambda n: n != 0)
     )
 
-    # Need to subtract eps from the limits or else `Quantity` floating point stuff will result in borked inputs.
-    machine_precision = np.finfo(float).eps
+    # Need to subtract eps-ish from the limits or else `Quantity` floating point stuff will result in borked inputs.
+    machine_precision = np.finfo(float).eps * 10
     delta = draw(st.floats(min_value=-1.0 + machine_precision, max_value=1.0 - machine_precision))
     crval1 = ((delta + np.sin(incident_light_angle)) / (grating_constant * order)).to(u.nm)
 
