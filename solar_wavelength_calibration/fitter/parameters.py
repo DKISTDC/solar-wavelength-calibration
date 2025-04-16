@@ -102,6 +102,7 @@ class BoundsModel(BaseModel):
     resolving_power: UnitlessBoundRange = UnitlessBoundRange(min=0)
     opacity_factor: UnitlessBoundRange = UnitlessBoundRange(min=0)
     straylight_fraction: UnitlessBoundRange = UnitlessBoundRange(min=0)
+    continuum_level: UnitlessBoundRange = UnitlessBoundRange(min=0)
 
 
 class FitFlagsModel(BaseModel):
@@ -128,24 +129,15 @@ class WavelengthCalibrationParameters(BaseModel):
     crval1: length_quantity
     dispersion: dispersion_quantity
     incident_light_angle: angle_quantity
-    unfit_1d_spectrum: np.ndarray
     grating_constant: inverse_length_quantity
     doppler_velocity: speed_quantity
     order: int
+    continuum_level: float = 1.0
     resolving_power: int = 1
     opacity_factor: float = 1
     straylight_fraction: float = 0
-    quartile: int = 75
     fit_flags: FitFlagsModel = FitFlagsModel()
     bounds: BoundsModel = BoundsModel()
-
-    @field_validator("quartile", mode="after")
-    @classmethod
-    def validate_quartile(cls, value):
-        """Ensure the quartile value is between 0 and 100."""
-        if not (0 <= value <= 100):
-            raise ValueError("Quartile value must be between 0 and 100.")
-        return value
 
     @field_validator("bounds")
     @classmethod
@@ -218,13 +210,12 @@ class WavelengthCalibrationParameters(BaseModel):
             max=self.bounds.straylight_fraction.max,
         )
 
-        spectrum_percentile = np.nanpercentile(self.unfit_1d_spectrum, self.quartile)
         param.add(
             "continuum_intensity_correction",
             vary=self.fit_flags.continuum_intensity_correction,
-            value=spectrum_percentile,
-            min=-np.inf,
-            max=np.inf,
+            value=self.continuum_level,
+            min=self.bounds.continuum_level.min,
+            max=self.bounds.continuum_level.max,
         )
         return param
 

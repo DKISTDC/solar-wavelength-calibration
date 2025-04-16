@@ -142,7 +142,6 @@ def test_only_required_parameters_dict(
         "crval1": atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1],
         "dispersion": test_dispersion,
         "incident_light_angle": test_incident_light_angle,
-        "unfit_1d_spectrum": test_unfit_1d_spectrum,
         "grating_constant": test_grating_constant,
         "doppler_velocity": test_doppler_velocity,
         "order": test_order,
