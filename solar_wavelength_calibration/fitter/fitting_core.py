@@ -31,7 +31,7 @@ def fitness(
         An array with the input (unfit) 1D spectrum.
 
     fts_solar_wave
-        FTS Solar Atlas wavelength array cropped around the input data.
+        Fourier Transform Spectrometer (FTS) Solar Atlas wavelength array cropped around the input data.
 
     fts_telluric_wave
         FTS Telluric Atlas wavelength array cropped around the input data.
