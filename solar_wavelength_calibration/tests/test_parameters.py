@@ -3,16 +3,58 @@ import re
 import astropy.units as u
 import numpy as np
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 from lmfit import Parameters
+from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import ValidationError
 
+from solar_wavelength_calibration.fitter.parameters import angle_quantity
 from solar_wavelength_calibration.fitter.parameters import AngleBoundRange
 from solar_wavelength_calibration.fitter.parameters import BoundsModel
 from solar_wavelength_calibration.fitter.parameters import DispersionBoundRange
 from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
+from solar_wavelength_calibration.fitter.parameters import inverse_length_quantity
+from solar_wavelength_calibration.fitter.parameters import length_quantity
 from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
 from solar_wavelength_calibration.fitter.parameters import UnitlessBoundRange
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
+
+
+class WCSValidityParams(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    crval1: length_quantity
+    incident_light_angle: angle_quantity
+    grating_constant: inverse_length_quantity
+    order: int
+    delta: float
+
+
+@st.composite
+def wcs_validity_params(draw, valid: bool):
+    """
+    Use hypothesis to generate a set of parameters that affect WCS validity.
+
+    If `valid is True` the parameters are guaranteed to represent a valid WCS. The converse is true is `valid is False`.
+    """
+    grating_constant = draw(st.integers().filter(lambda n: n != 0)) / u.m
+    incident_light_angle = draw(st.floats(allow_nan=False, allow_infinity=False)) * u.deg
+    order = draw(st.integers().filter(lambda n: n != 0))
+    if valid:
+        delta = draw(st.floats(min_value=-1, max_value=1))
+    else:
+        delta = draw(st.floats(allow_nan=False, allow_infinity=False).filter(lambda f: abs(f) > 1))
+    crval1 = ((delta + np.sin(incident_light_angle)) / (grating_constant * order)).to(u.nm)
+
+    return WCSValidityParams(
+        crval1=crval1,
+        incident_light_angle=incident_light_angle,
+        grating_constant=grating_constant,
+        order=order,
+        delta=delta,
+    )
 
 
 def test_unitless_bound_range():
@@ -203,29 +245,30 @@ def test_annotated_types_unit_conversion():
     np.testing.assert_allclose(params.doppler_velocity.value, 3e-3)
 
 
-def test_invalid_grating_equation(test_parameters_dict):
+@given(wcs_params=wcs_validity_params(valid=False))
+def test_invalid_grating_equation(wcs_params: WCSValidityParams, test_parameters_dict):
     """
     Given: A set of input values such that `abs(crval1 * grating_constant * order - sin(incident_light_angle) > 1`
     When: Instantiating a `WavelengthCalibrationParameters` object with these parameters
     Then: The correct ValidationError is raised
     """
-    # Bad because 1.5 > 1
-    bad_crval1 = (1.5 + np.sin(test_parameters_dict["incident_light_angle"])) / (
-        test_parameters_dict["grating_constant"] * test_parameters_dict["order"]
-    )
-
     with pytest.raises(
         ValidationError, match="Input parameter values represent an un-invertible grating equation."
     ):
         WavelengthCalibrationParameters(
-            crval1=bad_crval1,
+            crval1=wcs_params.crval1,
             dispersion=test_parameters_dict["dispersion"],
-            incident_light_angle=test_parameters_dict["incident_light_angle"],
+            incident_light_angle=wcs_params.incident_light_angle,
             opacity_factor=test_parameters_dict["opacity_factor"],
             unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
-            grating_constant=test_parameters_dict["grating_constant"],
+            grating_constant=wcs_params.grating_constant,
             doppler_velocity=test_parameters_dict["doppler_velocity"],
-            order=test_parameters_dict["order"],
+            order=wcs_params.order,
+            # Make bounds [-inf, inf] so we can test WCS validity on full range of wacko inputs
+            bounds=BoundsModel(
+                crval1=LengthBoundRange(),
+                incident_light_angle=AngleBoundRange(),
+            ),
         )
 
 
