@@ -297,12 +297,12 @@ def test_incorrect_parameter_types(observed_spectrum):
             order=1.5,
         )
 
-    assert excinfo.match("crval1\s+Input should be an instance of Quantity")
-    assert excinfo.match("dispersion\s+Input should be an instance of Quantity")
+    assert excinfo.match(r"crval1\s+Input should be an instance of Quantity")
+    assert excinfo.match(r"dispersion\s+Input should be an instance of Quantity")
     assert excinfo.match(
-        "incident_light_angle\s+Value error, 'nm' \(length\) and 'deg' \(angle\) are not convertible"
+        r"incident_light_angle\s+Value error, 'nm' \(length\) and 'deg' \(angle\) are not convertible"
     )
-    assert excinfo.match("order\s+Input should be a valid integer")
+    assert excinfo.match(r"order\s+Input should be a valid integer")
 
 
 def test_non_finite_inputs():
@@ -326,14 +326,14 @@ def test_non_finite_inputs():
         )
 
     assert excinfo.match("8 validation errors")
-    assert excinfo.match("crval1\s+Value error, parameters must be finite")
-    assert excinfo.match("dispersion\s+Value error, parameters must be finite")
-    assert excinfo.match("incident_light_angle\s+Value error, parameters must be finite")
-    assert excinfo.match("opacity_factor\s+Value error, parameters must be finite")
-    assert excinfo.match("straylight_fraction\s+Value error, parameters must be finite")
-    assert excinfo.match("grating_constant\s+Value error, parameters must be finite")
-    assert excinfo.match("doppler_velocity\s+Value error, parameters must be finite")
-    assert excinfo.match("order\s+Input should be a finite number")
+    assert excinfo.match(r"crval1\s+Value error, parameters must be finite")
+    assert excinfo.match(r"dispersion\s+Value error, parameters must be finite")
+    assert excinfo.match(r"incident_light_angle\s+Value error, parameters must be finite")
+    assert excinfo.match(r"opacity_factor\s+Value error, parameters must be finite")
+    assert excinfo.match(r"straylight_fraction\s+Value error, parameters must be finite")
+    assert excinfo.match(r"grating_constant\s+Value error, parameters must be finite")
+    assert excinfo.match(r"doppler_velocity\s+Value error, parameters must be finite")
+    assert excinfo.match(r"order\s+Input should be a finite number")
 
 
 def test_missing_parameters(test_only_required_parameters_dict):
@@ -361,7 +361,7 @@ def test_parameter_outside_bounds_range():
 
     with pytest.raises(
         ValidationError,
-        match="crval1 with value 999.0 nm is outside the bounds range of \(1000.0 nm, 1001.0 nm\)",
+        match=r"crval1 with value 999.0 nm is outside the bounds range of \(1000.0 nm, 1001.0 nm\)",
     ):
         WavelengthCalibrationParameters(
             crval1=999 * u.nm,
