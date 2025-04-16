@@ -52,7 +52,7 @@ def fitness(
         Instrument specific optical order.
 
     doppler_velocity
-        Calculated doppler velocity of DKIST at time of observation.
+        Calculated speed at which instrument is moving relative to the Sun's center at time of observation. Positive values refer to when instrument is moving away from the sun.
     """
     param_vals = params.valuesdict()
     crval1 = param_vals["crval1"]
