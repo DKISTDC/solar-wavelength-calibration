@@ -4,6 +4,7 @@ import astropy.units as u
 import numpy as np
 import pytest
 from hypothesis import given
+from hypothesis import settings
 from hypothesis import strategies as st
 from lmfit import Parameters
 from pydantic import BaseModel
@@ -44,7 +45,11 @@ def wcs_validity_params(draw, valid: bool):
     incident_light_angle = draw(st.floats(allow_nan=False, allow_infinity=False)) * u.deg
     order = draw(st.integers().filter(lambda n: n != 0))
     if valid:
-        delta = draw(st.floats(min_value=-1, max_value=1))
+        # Need to subtract eps from the limits or else `Quantity` floating point stuff will result in borked inputs.
+        machine_precision = np.finfo(float).eps
+        delta = draw(
+            st.floats(min_value=-1.0 + machine_precision, max_value=1.0 - machine_precision)
+        )
     else:
         delta = draw(st.floats(allow_nan=False, allow_infinity=False).filter(lambda f: abs(f) > 1))
     crval1 = ((delta + np.sin(incident_light_angle)) / (grating_constant * order)).to(u.nm)
@@ -275,6 +280,31 @@ def test_annotated_types_unit_conversion():
     np.testing.assert_allclose(params.incident_light_angle.value, 180.0)
     np.testing.assert_allclose(params.grating_constant.value, 1e-3)
     np.testing.assert_allclose(params.doppler_velocity.value, 3e-3)
+
+
+@given(wcs_params=wcs_validity_params(valid=True))
+@settings(max_examples=10000)  # L E T ' S  G O O O O O O O O
+def test_valid_grating_equation(wcs_params: WCSValidityParams, test_parameters_dict):
+    """
+    Given: A set of inputs values that should represent a valid WCS
+    When: Instantiating a `WavelengthCalibrationParameters` object with these parameters
+    Then: No error is raised
+    """
+    WavelengthCalibrationParameters(
+        crval1=wcs_params.crval1,
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=wcs_params.incident_light_angle,
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=wcs_params.grating_constant,
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
+        order=wcs_params.order,
+        # Make bounds [-inf, inf] so we can test WCS validity on full range of wacko inputs
+        bounds=BoundsModel(
+            crval1=LengthBoundRange(),
+            incident_light_angle=AngleBoundRange(),
+        ),
+    )
 
 
 @given(wcs_params=wcs_validity_params(valid=False))
