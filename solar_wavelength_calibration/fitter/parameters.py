@@ -5,6 +5,7 @@ import logging
 from functools import cached_property
 from typing import Annotated
 from typing import Callable
+from typing import Literal
 
 import astropy.units as u
 import numpy as np
@@ -43,6 +44,17 @@ def to_over_m(value: Quantity) -> Quantity:
 def to_km_per_s(value: Quantity) -> Quantity:
     """Convert a speed unit to km / s."""
     return value.to(u.km / u.s)
+
+
+def angle_mod360(angle: angle_quantity) -> angle_quantity:
+    """
+    Return the input angle coerced to the range [0, 360].
+
+    Slightly fancier than `angle % 360` because an input of 360 will be returned as 360.
+    """
+    if angle == 360 * u.deg:
+        return angle
+    return angle % (360 * u.deg)
 
 
 length_quantity = Annotated[Quantity, AfterValidator(to_nm)]
@@ -311,8 +323,8 @@ class WavelengthCalibrationParameters(BaseModel):
         logger.info(f"New bounds on _delta are = [{new_delta_bounds.min}, {new_delta_bounds.max}]")
         return new_delta_bounds
 
-    @cached_property
-    def incident_light_angle_bounds(self) -> AngleBoundRange:
+    @model_validator(mode="after")
+    def update_incident_light_angle_if_crval1_fixed(self) -> WavelengthCalibrationParameters:
         """
         Potentially update the bounds on `incident_light_angle` to ensure we stay in a valid region of the fit.
 
@@ -324,37 +336,49 @@ class WavelengthCalibrationParameters(BaseModel):
         unchanged. In other words, this method will only ever shrink bounds, not expand them.
         """
         if self.fit_flags.crval1:
-            return self.bounds.incident_light_angle
+            return self
 
-        # Float reduces and cancels out all units
-        length_expression = float(self.crval1 * self.grating_constant * self.order)
-
-        theoretical_min = np.rad2deg(np.arcsin(max(length_expression - 1, -1))) * u.deg
-        theoretical_max = np.rad2deg(np.arcsin(min(length_expression + 1, 1))) * u.deg
+        logger.info(
+            "Updating bounds on `incident_light_angle` to maintain valid WCS (this is needed because `crval` is fixed"
+        )
 
         given_min = self.bounds.incident_light_angle.min
         given_max = self.bounds.incident_light_angle.max
 
-        correct_quadrant_min = self.adjust_angle_quadrant(theoretical_min, given_min)
-        correct_quadrant_max = self.adjust_angle_quadrant(theoretical_max, given_max)
+        if not (np.isfinite(given_min) and np.isfinite(given_max)):
+            logger.info(
+                "Some/all of the bounds on `incident_light_angle` are ±inf. "
+                "The value and bounds will be constrained to the range [0, 360] deg."
+            )
+            self.incident_light_angle = angle_mod360(self.incident_light_angle)
+            given_min = angle_mod360(given_min)
+            given_max = angle_mod360(given_max)
 
-        new_min = max(given_min, correct_quadrant_min)
-        new_max = min(given_max, correct_quadrant_max)
+            given_min = given_min if np.isfinite(given_min) else 0 * u.deg
+            given_max = given_max if np.isfinite(given_max) else 360 * u.deg
 
-        return AngleBoundRange(min=new_min, max=new_max)
+        # Float reduces and cancels out all units
+        length_expression = float(self.crval1 * self.grating_constant * self.order)
 
-    @staticmethod
-    def adjust_angle_quadrant(
-        angle: angle_quantity, reference_angle: angle_quantity
-    ) -> angle_quantity:
-        """Adjust an angle to be in the same quadrant as a reference angle, while keeping `np.sin(angle)` constant."""
-        sign = np.sign(angle)
+        num_points = 1000
+        # Make two separate vectors to ensure we get the actual value included in the array of angles we're considering
+        # Thus, if the min/max valid angle is the actual input value then we'll see that here
+        min_to_value_vector = np.linspace(given_min, self.incident_light_angle, num_points // 2)
+        value_to_max_vector = np.linspace(self.incident_light_angle, given_max, num_points // 2)
+        angle_vector = np.r_[min_to_value_vector, value_to_max_vector]
 
-        ninety_deg = sign * 90 * u.deg
-        if np.sign(ninety_deg - angle) != np.sign(ninety_deg - reference_angle):
-            return sign * 180 * u.deg - angle
+        delta = length_expression - np.sin(angle_vector)
+        valid_idx = (delta >= -1.0) & (delta <= 1.0)
 
-        return angle
+        valid_angles = angle_vector[valid_idx]
+        min_angle = np.min(valid_angles)
+        max_angle = np.max(valid_angles)
+
+        new_bounds = AngleBoundRange(min=min_angle, max=max_angle)
+        logger.info(f"New bounds on `incident_light_angle` are [{min_angle}, {max_angle}]")
+        self.bounds.incident_light_angle = new_bounds
+
+        return self
 
     @property
     def lmfit_parameters(self) -> Parameters:
@@ -377,8 +401,8 @@ class WavelengthCalibrationParameters(BaseModel):
             "incident_light_angle",
             vary=self.fit_flags.incident_light_angle,
             value=self.incident_light_angle.value,
-            min=self.incident_light_angle_bounds.min.value,
-            max=self.incident_light_angle_bounds.max.value,
+            min=self.bounds.incident_light_angle.min.value,
+            max=self.bounds.incident_light_angle.max.value,
         )
 
         if self.fit_flags.crval1:
