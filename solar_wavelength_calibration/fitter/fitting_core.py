@@ -61,7 +61,7 @@ def fitness(
     resolving_power = param_vals["resolving_power"]
     opacity_factor = param_vals["opacity_factor"]
     straylight_fraction = param_vals["straylight_fraction"]
-    continuum_intensity_correction = param_vals["continuum_intensity_correction"]
+    continuum_level = param_vals["continuum_level"]
 
     # calculate the spectral axis
     # References about representing spectral coordinate in FITS:
@@ -105,7 +105,7 @@ def fitness(
     fts_solar_with_straylight = fts_solar_atmos_corr + straylight_fraction
 
     # scale for total intensity of the continuum
-    fts_solar_normalized = fts_solar_with_straylight * continuum_intensity_correction
+    fts_solar_normalized = fts_solar_with_straylight * continuum_level
 
     # convolution for spectrograph line spread function
     sigma_wavelength = (crval1 / resolving_power) * gaussian_fwhm_to_sigma

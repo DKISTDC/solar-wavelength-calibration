@@ -46,7 +46,13 @@ class WaveCalFitter(BaseModel):
         return fit_result_params
 
     def prepare_atlas(self) -> tuple[Quantity, Quantity, np.ndarray, np.ndarray]:
-        """Prepare the atlas by roughly matching the atlas to the raw spectrum."""
+        """
+        Crop and align the solar and telluric atlases to match the expected wavelength range.
+
+        This is done by cropping the solar and telluric atlas data to a range
+        slightly larger than the expected wavelength vector. The resulting cropped data
+        is returned for use in fitting procedures.
+        """
         solar_atlas_wavelength = self.atlas.solar_atlas_wavelength
         telluric_atlas_wavelength = self.atlas.telluric_atlas_wavelength
 
@@ -65,7 +71,7 @@ class WaveCalFitter(BaseModel):
             cropped_telluric_mask
         ]
 
-        cropped_solar_mask = (solar_atlas_wavelength > min_wavelength) * (
+        cropped_solar_mask = (solar_atlas_wavelength > min_wavelength) & (
             solar_atlas_wavelength < max_wavelength
         )
         cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask]
@@ -124,7 +130,6 @@ class WaveCalFitter(BaseModel):
         }
 
         if self.full:
-            full_fit_result = fit_result_header.update(fit_result_params)
-            return full_fit_result
+            return fit_result_header, fit_result_params
 
         return fit_result_header

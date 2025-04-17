@@ -118,7 +118,7 @@ class FitFlagsModel(BaseModel):
     resolving_power: bool = True
     opacity_factor: bool = True
     straylight_fraction: bool = True
-    continuum_intensity_correction: bool = True
+    continuum_level: bool = True
 
 
 class WavelengthCalibrationParameters(BaseModel):
@@ -211,8 +211,8 @@ class WavelengthCalibrationParameters(BaseModel):
         )
 
         param.add(
-            "continuum_intensity_correction",
-            vary=self.fit_flags.continuum_intensity_correction,
+            "continuum_level",
+            vary=self.fit_flags.continuum_level,
             value=self.continuum_level,
             min=self.bounds.continuum_level.min,
             max=self.bounds.continuum_level.max,
