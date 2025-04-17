@@ -311,6 +311,51 @@ class WavelengthCalibrationParameters(BaseModel):
         logger.info(f"New bounds on _delta are = [{new_delta_bounds.min}, {new_delta_bounds.max}]")
         return new_delta_bounds
 
+    @cached_property
+    def incident_light_angle_bounds(self) -> AngleBoundRange:
+        """
+        Potentially update the bounds on `incident_light_angle` to ensure we stay in a valid region of the fit.
+
+        We only need to update the `incident_light_angle` bounds if `crval1` is fixed in the fit (see `fit_flags`). In
+        this case, the validity assurance provided by `delta` does not apply, and so we need to ensure validity by
+        constraining `incident_light_angle` to only span a valid parameter space.
+
+        If either of the given `bounds` on `incident_light_angle` is already within the valid region it will be
+        unchanged. In other words, this method will only ever shrink bounds, not expand them.
+        """
+        if self.fit_flags.crval1:
+            return self.bounds.incident_light_angle
+
+        # Float reduces and cancels out all units
+        length_expression = float(self.crval1 * self.grating_constant * self.order)
+
+        theoretical_min = np.rad2deg(np.arcsin(max(length_expression - 1, -1))) * u.deg
+        theoretical_max = np.rad2deg(np.arcsin(min(length_expression + 1, 1))) * u.deg
+
+        given_min = self.bounds.incident_light_angle.min
+        given_max = self.bounds.incident_light_angle.max
+
+        correct_quadrant_min = self.adjust_angle_quadrant(theoretical_min, given_min)
+        correct_quadrant_max = self.adjust_angle_quadrant(theoretical_max, given_max)
+
+        new_min = max(given_min, correct_quadrant_min)
+        new_max = min(given_max, correct_quadrant_max)
+
+        return AngleBoundRange(min=new_min, max=new_max)
+
+    @staticmethod
+    def adjust_angle_quadrant(
+        angle: angle_quantity, reference_angle: angle_quantity
+    ) -> angle_quantity:
+        """Adjust an angle to be in the same quadrant as a reference angle, while keeping `np.sin(angle)` constant."""
+        sign = np.sign(angle)
+
+        ninety_deg = sign * 90 * u.deg
+        if np.sign(ninety_deg - angle) != np.sign(ninety_deg - reference_angle):
+            return sign * 180 * u.deg - angle
+
+        return angle
+
     @property
     def lmfit_parameters(self) -> Parameters:
         """Create a single lmfit `Parameters` object with custom bounds and free/fixed status."""
@@ -332,8 +377,8 @@ class WavelengthCalibrationParameters(BaseModel):
             "incident_light_angle",
             vary=self.fit_flags.incident_light_angle,
             value=self.incident_light_angle.value,
-            min=self.bounds.incident_light_angle.min.value,
-            max=self.bounds.incident_light_angle.max.value,
+            min=self.incident_light_angle_bounds.min.value,
+            max=self.incident_light_angle_bounds.max.value,
         )
 
         if self.fit_flags.crval1:

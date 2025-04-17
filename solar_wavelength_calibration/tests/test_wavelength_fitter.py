@@ -7,6 +7,8 @@ from astropy.wcs import WCS
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
+from solar_wavelength_calibration.fitter.parameters import AngleBoundRange
+from solar_wavelength_calibration.fitter.parameters import BoundsModel
 from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.wavelength_fitter import WaveCalFitter
@@ -124,6 +126,59 @@ def test_fixing_parameters(
             init_value = init_value.value
 
         np.testing.assert_allclose(init_value, fit_result_params[parameter])
+
+
+def test_fit_stays_valid_with_fixed_crval1(
+    test_parameters_dict, observed_wavelength_vector, observed_spectrum, atlas: AtlasBase
+):
+    """
+    Given: A set of input parameters that is on the edge of WCS validity and bounds on `incident_light_angle` that
+      would take the fit to invalid WCS values
+    When: Running the fit with `crval1` fixed
+    Then: The fit stays within valid ranges
+    """
+
+    input_crval1 = test_parameters_dict["crval1"] + 10 * u.nm
+    edge_angle = (
+        np.rad2deg(
+            np.arcsin(
+                float(
+                    input_crval1
+                    * test_parameters_dict["grating_constant"]
+                    * test_parameters_dict["order"]
+                )
+                - 0.999999999
+            )
+        )
+        * u.deg
+    )
+
+    # Heavily bias limits towards invalidity
+    angle_min = edge_angle - 40.0 * u.deg
+    angle_max = edge_angle + 0.01 * u.deg
+
+    init_values = test_parameters_dict | {
+        "crval1": input_crval1,
+        "dispersion": test_parameters_dict["dispersion"] * 1.01,
+        "incident_light_angle": edge_angle,
+        "resolving_power": test_parameters_dict["resolving_power"] + 10,
+        "opacity_factor": test_parameters_dict["opacity_factor"] + 0.1,
+        "straylight_fraction": test_parameters_dict["straylight_fraction"] + 0.2,
+    }
+
+    parameters = WavelengthCalibrationParameters(
+        fit_flags=FitFlagsModel(crval1=False),
+        bounds=BoundsModel(incident_light_angle=AngleBoundRange(min=angle_min, max=angle_max)),
+        **init_values
+    )
+
+    fitter = WaveCalFitter(
+        input_parameters=parameters,
+        atlas=atlas,
+        expected_wavelength_vector=observed_wavelength_vector,
+        unfit_1d_spectrum=observed_spectrum,
+    )
+    _ = fitter.fit_result
 
 
 def test_fit_is_correct(
