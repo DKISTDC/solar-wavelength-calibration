@@ -14,6 +14,7 @@ from pydantic import AfterValidator
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import field_validator
+from pydantic import FiniteFloat
 from pydantic import model_validator
 from pydantic_core.core_schema import ValidationInfo
 
@@ -64,7 +65,6 @@ finite_angle_quantity = Annotated[angle_quantity, finite_validator]
 finite_dispersion_quantity = Annotated[dispersion_quantity, finite_validator]
 finite_inverse_length_quantity = Annotated[inverse_length_quantity, finite_validator]
 finite_speed_quantity = Annotated[speed_quantity, finite_validator]
-finite_float = Annotated[float, finite_validator]
 
 
 class UnitlessBoundRange(BaseModel):
@@ -150,8 +150,8 @@ class WavelengthCalibrationParameters(BaseModel):
     doppler_velocity: finite_speed_quantity
     order: int
     resolving_power: int = 1
-    opacity_factor: finite_float = 1.0
-    straylight_fraction: finite_float = 0.0
+    opacity_factor: FiniteFloat = 1.0
+    straylight_fraction: FiniteFloat = 0.0
     quartile: int = 75
     fit_flags: FitFlagsModel = FitFlagsModel()
     bounds: BoundsModel = BoundsModel()
