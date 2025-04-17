@@ -7,6 +7,7 @@ from astropy.wcs import WCS
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
+from solar_wavelength_calibration.atlas.base import CroppedAtlasBase
 from solar_wavelength_calibration.fitter.parameters import BoundsModel
 from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
@@ -203,23 +204,23 @@ def test_prepare_atlas(
         expected_wavelength_vector=test_expected_wavelength_vector,
         unfit_1d_spectrum=test_unfit_1d_spectrum,
     )
-    fts_solar_wavelength, fts_telluric_wavelength, fts_solar, fts_telluric = fitter.prepare_atlas()
+    cropped_atlas = fitter.prepare_atlas()
 
     # test that we took out a chunk of the atlas
-    assert len(fts_solar) < len(atlas.solar_atlas_transmission)
-    assert len(fts_telluric) < len(atlas.telluric_atlas_transmission)
+    assert len(cropped_atlas.solar_atlas_transmission) < len(atlas.solar_atlas_transmission)
+    assert len(cropped_atlas.telluric_atlas_transmission) < len(atlas.telluric_atlas_transmission)
 
     # test that we took out the correct chunk for each atlas (i.e. mean of expected wavelength vector is contained in fts_[solar/telluric]wavelength)
     assert (
-        fts_solar_wavelength[0]
+        cropped_atlas.solar_atlas_wavelength[0]
         < np.mean(test_expected_wavelength_vector).value
-        < fts_solar_wavelength[len(fts_solar_wavelength) - 1]
+        < cropped_atlas.solar_atlas_wavelength[len(cropped_atlas.solar_atlas_wavelength) - 1]
     )
 
     assert (
-        fts_telluric_wavelength[0]
+        cropped_atlas.telluric_atlas_wavelength[0]
         < np.mean(test_expected_wavelength_vector).value
-        < fts_telluric_wavelength[len(fts_telluric_wavelength) - 1]
+        < cropped_atlas.telluric_atlas_wavelength[len(cropped_atlas.telluric_atlas_wavelength) - 1]
     )
 
 

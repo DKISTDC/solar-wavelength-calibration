@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
+from solar_wavelength_calibration.atlas.base import CroppedAtlasBase
 from solar_wavelength_calibration.fitter.fitting_core import fitness
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
@@ -31,18 +32,8 @@ class WaveCalFitter(BaseModel):
     @cached_property
     def fit_result(self) -> dict:
         """Run data preparation and fitting."""
-        (
-            cropped_solar_atlas_wavelength,
-            cropped_telluric_atlas_wavelength,
-            cropped_solar_atlas_transmission,
-            cropped_telluric_atlas_transmission,
-        ) = self.prepare_atlas()
-        fit_result_params = self.run_fit(
-            cropped_solar_atlas_wavelength,
-            cropped_telluric_atlas_wavelength,
-            cropped_solar_atlas_transmission,
-            cropped_telluric_atlas_transmission,
-        )
+        cropped_atlas = self.prepare_atlas()
+        fit_result_params = self.run_fit(cropped_atlas)
         return fit_result_params
 
     def prepare_atlas(self) -> tuple[Quantity, Quantity, np.ndarray, np.ndarray]:
@@ -77,19 +68,20 @@ class WaveCalFitter(BaseModel):
         cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask]
         cropped_solar_atlas_transmission = self.atlas.solar_atlas_transmission[cropped_solar_mask]
 
-        return (
+        cropped_atlas = CroppedAtlasBase(
             cropped_solar_atlas_wavelength.to_value(u.nm),
             cropped_telluric_atlas_wavelength.to_value(u.nm),
             cropped_solar_atlas_transmission,
             cropped_telluric_atlas_transmission,
         )
 
+        return cropped_atlas
+
     def run_fit(
         self,
-        fts_solar_wave: Quantity,
-        fts_telluric_wave: Quantity,
-        fts_solar: np.ndarray,
-        fts_telluric: np.ndarray,
+        cropped_atlas: CroppedAtlasBase,
+        method: str = "leastsq",
+        **minimize_kwargs,
     ) -> dict:
         """Send the fitter on its way."""
         params_to_fit = self.input_parameters.lmfit_parameters
@@ -102,15 +94,12 @@ class WaveCalFitter(BaseModel):
             params_to_fit,
             fcn_args=(
                 self.unfit_1d_spectrum,
-                fts_solar_wave,
-                fts_telluric_wave,
-                fts_telluric,
-                fts_solar,
+                cropped_atlas,
                 number_of_wave_pix,
             ),
             fcn_kws=constant_parameters,
         )
-        fit_result = minimizer.minimize(method="leastsq", params=params_to_fit)
+        fit_result = minimizer.minimize(params=params_to_fit, method=method, **minimize_kwargs)
         logger.info("Finished fit.")
         fit_result_params = fit_result.params.valuesdict()
 

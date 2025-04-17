@@ -7,14 +7,13 @@ from astropy.wcs import WCS
 from lmfit import Parameters
 from scipy.ndimage import gaussian_filter1d
 
+from solar_wavelength_calibration.atlas.base import CroppedAtlasBase
+
 
 def fitness(
     params: Parameters,
     unfit_1d_spectrum: np.ndarray,
-    fts_solar_wave: np.ndarray,
-    fts_telluric_wave: np.ndarray,
-    fts_telluric: np.ndarray,
-    fts_solar: np.ndarray,
+    cropped_atlas: CroppedAtlasBase,
     number_of_wave_pix: int,
     grating_constant: float,
     order: int,
@@ -30,17 +29,9 @@ def fitness(
     unfit_1d_spectrum
         An array with the input (unfit) 1D spectrum.
 
-    fts_solar_wave
-        Fourier Transform Spectrometer (FTS) Solar Atlas wavelength array cropped around the input data.
-
-    fts_telluric_wave
-        FTS Telluric Atlas wavelength array cropped around the input data.
-
-    fts_telluric
-        Telluric FTS atlas transmission array corresponding to fts_telluric_wave object.
-
-    fts_solar
-        Solar FTS atlas spectrum corresponding to fts_solar_wave object.
+    cropped_atlas
+        The Fourier Transform Spectrometer (FTS) atlas cropped to a range slightly larger than the expected wavelength vector. Cropped_atlas contains the solar wavelength cropped around the
+        input data, the telluric wavelength cropped around the input data, and their corresponding transmission arrays.
 
     number_of_wave_pix
         The number of wavelength pixels in the unfit_1d_spectrum.
@@ -85,18 +76,24 @@ def fitness(
     ).to_value(u.nm)
 
     # interpolate the telluric spectral atlas onto the new wavelength axis and scale by the opacity value that is being optimized
-    linear_fts_telluric_transmission = np.interp(linear_wave, fts_telluric_wave, fts_telluric)
+    linear_fts_telluric_transmission = np.interp(
+        linear_wave,
+        cropped_atlas.telluric_atlas_wavelength,
+        cropped_atlas.telluric_atlas_transmission,
+    )
     opacity_scaled_fts_telluric_transmission = (
         linear_fts_telluric_transmission
         ** opacity_factor  # relative scaling of each wavelength based on the atmosphere during the observations
     )  # in parameters
 
     # interpolate the solar spectral atlas onto the new wavelength axis and apply a shift according to the Doppler shift due to orbital motions (doppler velocity)
-    fts_wave_doppler_corrected = fts_solar_wave + doppler_velocity / (const.c.to("km/s")) * crval1
+    fts_wave_doppler_corrected = (
+        cropped_atlas.solar_atlas_wavelength + doppler_velocity / (const.c.to("km/s")) * crval1
+    )
     linear_fts_solar_transmission = np.interp(
         linear_wave,
         fts_wave_doppler_corrected,
-        fts_solar,
+        cropped_atlas.solar_atlas_transmission,
     )
 
     # apply telluric absorption spectrum to solar spectrum
