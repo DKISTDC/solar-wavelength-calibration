@@ -324,6 +324,37 @@ class WavelengthCalibrationParameters(BaseModel):
         return new_delta_bounds
 
     @model_validator(mode="after")
+    def ensure_sane_ligth_angle_values_if_crval1_fixed(self) -> WavelengthCalibrationParameters:
+        """
+        Check that the `input_light_angle` and its bounds are in the range [0, 360] iff `crval1` is fixed in the fit.
+
+        We do this to make sure the inputs to `update_incident_light_angle_if_crval1_fixed` are sane, which removes
+        the need to check lots of edge cases in that method.
+        """
+        if self.fit_flags.crval1:
+            return self
+
+        if not np.isfinite(self.bounds.incident_light_angle.min):
+            self.bounds.incident_light_angle.min = 0 * u.deg
+        if not np.isfinite(self.bounds.incident_light_angle.max):
+            self.bounds.incident_light_angle.max = 360 * u.deg
+
+        values_to_check = Quantity(
+            [
+                self.bounds.incident_light_angle.min,
+                self.incident_light_angle,
+                self.bounds.incident_light_angle.max,
+            ]
+        )
+        if any(values_to_check > 360.0 * u.deg) or any(values_to_check < 0.0 * u.deg):
+            raise ValueError(
+                "With `crval1` fixed in the fit the `incident_light_angle` and its bounds must be in the "
+                "range [0, 360]."
+            )
+
+        return self
+
+    @model_validator(mode="after")
     def update_incident_light_angle_if_crval1_fixed(self) -> WavelengthCalibrationParameters:
         """
         Potentially update the bounds on `incident_light_angle` to ensure we stay in a valid region of the fit.

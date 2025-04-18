@@ -336,6 +336,38 @@ def test_internal_delta_bounds(
         )
 
 
+@pytest.mark.parametrize(
+    "angle_bounds",
+    [
+        pytest.param(AngleBoundRange(min=-10 * u.deg, max=360 * u.deg), id="negative"),
+        pytest.param(AngleBoundRange(min=-12141 * u.deg, max=246243 * u.deg), id="outside_range"),
+    ],
+)
+def test_insane_angle_values_when_crval1_fixed(test_parameters_dict, angle_bounds):
+    """
+    Given: A set of parameters where the `incident_light_angle` or its bounds are outside the range [0, 360]
+    When: Instantiatin a `WavelengthCalibrationParameters` object with `crval1` fixed in the fit
+    Then: The correct error is raised
+    """
+    err_str = "With `crval1` fixed in the fit the `incident_light_angle"
+    with pytest.raises(ValidationError, match=err_str):
+        _ = WavelengthCalibrationParameters(
+            bounds=BoundsModel(incident_light_angle=angle_bounds),
+            fit_flags=FitFlagsModel(crval1=False),
+            **test_parameters_dict
+        )
+
+    params_with_out_of_range_angle = test_parameters_dict | {
+        "incident_light_angle": 360 * u.deg + test_parameters_dict["incident_light_angle"]
+    }
+    with pytest.raises(ValidationError, match=err_str):
+        _ = WavelengthCalibrationParameters(
+            bounds=BoundsModel(incident_light_angle=AngleBoundRange()),
+            fit_flags=FitFlagsModel(crval1=False),
+            **params_with_out_of_range_angle
+        )
+
+
 def test_default_fit_flags(test_parameters_dict):
     """
     Given: No custom input fit flags
