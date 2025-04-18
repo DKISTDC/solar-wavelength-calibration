@@ -180,10 +180,11 @@ def test_fit_stays_valid_with_fixed_crval1(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
+    )
+    _ = fitter.run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
     )
-    _ = fitter.fit_result
 
 
 def test_fit_is_correct(
@@ -224,12 +225,10 @@ def test_fit_is_correct(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
     )
-    assert np.isclose(fit_result.wcs.crval[0], test_crval1.to_value("m"))
-    assert np.isclose(fit_result.wcs.cdelt[0], test_dispersion.to_value(u.m / u.pix))
+    assert np.isclose(fit_result["CRVAL1"], test_crval1.to_value("nm"))
+    assert np.isclose(fit_result["CDELT1"], test_dispersion.to_value(u.nm / u.pix))
 
-    fit_incident_light_angle = [
-        pvi[2] for pvi in fitter.fit_result.wcs.get_pv() if pvi[0] == 1 and pvi[1] == 2
-    ][0]
+    fit_incident_light_angle = fit_result["PV1_2"]
     # Incident light angle is pretty weakly constrained for our test setup so let's say we pass if we get within a
     # degree.
     assert abs(fit_incident_light_angle - test_incident_light_angle.to_value(u.deg)) < 1
