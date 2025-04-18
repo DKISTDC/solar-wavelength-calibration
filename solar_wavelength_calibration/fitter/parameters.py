@@ -313,6 +313,10 @@ class WavelengthCalibrationParameters(BaseModel):
         min_delta = np.min(np.r_[delta_at_min_crval1, delta_at_max_crval1])
         max_delta = np.max(np.r_[delta_at_min_crval1, delta_at_max_crval1])
 
+        # Have to make sure we're still in the range of valid WCS
+        min_delta = max(min_delta, -1.0)
+        max_delta = min(max_delta, 1.0)
+
         new_delta_bounds = UnitlessBoundRange(min=min_delta, max=max_delta)
 
         logger.info(f"New bounds on _delta are = [{new_delta_bounds.min}, {new_delta_bounds.max}]")

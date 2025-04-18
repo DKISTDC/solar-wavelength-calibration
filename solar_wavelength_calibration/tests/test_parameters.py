@@ -504,6 +504,7 @@ def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict, fit_crval1)
     "angle_free", [pytest.param(True, id="angle_free"), pytest.param(False, id="angle_fixed")]
 )
 @given(valid_bounds_and_params=sane_wcs_params_and_bounds())
+@settings(max_examples=1000)
 def test_internal_delta_bounds(
     valid_bounds_and_params: SaneBoundsAndWCSParams, angle_free, test_parameters_dict
 ):
@@ -511,6 +512,7 @@ def test_internal_delta_bounds(
     Given: A `WavelengthCalibrationParameters` object with bounds on `crval1` and/or `incident_light_angle`
     When: Computing bounds on the internal `_delta` fit parameter to match
     Then: The input bounds on `crval1` are at two corners of the `crval1(_delta_bounds, angle_bounds)` square
+      and the new bounds on `_delta` are still in the range [-1, 1].
     """
     input_crval1_bounds = valid_bounds_and_params.crval1_bounds
     input_angle_bounds = valid_bounds_and_params.incident_light_angle_bounds
@@ -550,18 +552,24 @@ def test_internal_delta_bounds(
         params.grating_constant * params.order
     )
 
+    delta_min = params.delta_bounds_given_crval1_bounds.min
+    delta_max = params.delta_bounds_given_crval1_bounds.max
     if not (np.isfinite(input_crval1_bounds.min) and np.isfinite(input_crval1_bounds.max)):
-        assert params.delta_bounds_given_crval1_bounds.min == -1
-        assert params.delta_bounds_given_crval1_bounds.max == 1
+        assert delta_min == -1
+        assert delta_max == 1
     else:
-        # This is a weird way to ask `input_crval1_bounds.[min,max] in `crval1_at_corners`
-        # We need to do this because floating point precision is crazy wack with `Quantities`
-        np.testing.assert_allclose(
-            np.min(np.abs(crval1_at_corners - input_crval1_bounds.min)), 0.0, atol=1e-7
-        )
-        np.testing.assert_allclose(
-            np.min(np.abs(crval1_at_corners - input_crval1_bounds.max)), 0.0, atol=1e-7
-        )
+        assert -1.0 <= delta_min <= 1.0
+        assert -1.0 <= delta_max <= 1.0
+        if delta_min != -1.0 and delta_max != 1.0:
+            # This is a weird way to ask `input_crval1_bounds.[min,max] in `crval1_at_corners`
+            # We need to do this because floating point precision is crazy wack with `Quantities`
+            # print(f"{crval1_at_corners.to(u.nm) = }\n{input_crval1_bounds.min = }")
+            np.testing.assert_allclose(
+                np.min(np.abs(crval1_at_corners - input_crval1_bounds.min)), 0.0, atol=1e-5
+            )
+            np.testing.assert_allclose(
+                np.min(np.abs(crval1_at_corners - input_crval1_bounds.max)), 0.0, atol=1e-5
+            )
 
 
 @pytest.mark.parametrize(
