@@ -7,13 +7,13 @@ from astropy.wcs import WCS
 from lmfit import Parameters
 from scipy.ndimage import gaussian_filter1d
 
-from solar_wavelength_calibration.atlas.base import CroppedAtlasBase
+from solar_wavelength_calibration.atlas.atlas import CroppedAtlas
 
 
 def fitness(
     params: Parameters,
     unfit_1d_spectrum: np.ndarray,
-    cropped_atlas: CroppedAtlasBase,
+    cropped_atlas: CroppedAtlas,
     number_of_wave_pix: int,
     grating_constant: float,
     order: int,

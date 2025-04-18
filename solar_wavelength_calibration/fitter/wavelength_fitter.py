@@ -10,8 +10,8 @@ from astropy.wcs import WCS
 from pydantic import BaseModel
 from pydantic import ConfigDict
 
+from solar_wavelength_calibration.atlas.atlas import CroppedAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
-from solar_wavelength_calibration.atlas.base import CroppedAtlasBase
 from solar_wavelength_calibration.fitter.fitting_core import fitness
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
@@ -25,18 +25,19 @@ class WaveCalFitter(BaseModel):
 
     input_parameters: WavelengthCalibrationParameters
     atlas: AtlasBase
-    expected_wavelength_vector: u.Quantity
-    unfit_1d_spectrum: np.ndarray
     full: bool = False
 
-    @cached_property
-    def fit_result(self) -> dict:
+    def run_fit(
+        self, expected_wavelength_vector: u.Quantity, unfit_1d_spectrum: np.ndarray
+    ) -> dict:
         """Run data preparation and fitting."""
-        cropped_atlas = self.prepare_atlas()
-        fit_result_params = self.run_fit(cropped_atlas)
+        cropped_atlas = self.prepare_atlas(expected_wavelength_vector)
+        fit_result_params = self.fit_spectrum(cropped_atlas, unfit_1d_spectrum)
         return fit_result_params
 
-    def prepare_atlas(self) -> tuple[Quantity, Quantity, np.ndarray, np.ndarray]:
+    def prepare_atlas(
+        self, expected_wavelength_vector: u.Quantity
+    ) -> tuple[Quantity, Quantity, np.ndarray, np.ndarray]:
         """
         Crop and align the solar and telluric atlases to match the expected wavelength range.
 
@@ -48,10 +49,10 @@ class WaveCalFitter(BaseModel):
         telluric_atlas_wavelength = self.atlas.telluric_atlas_wavelength
 
         expected_wavelength_range = (
-            self.expected_wavelength_vector.max() - self.expected_wavelength_vector.min()
+            expected_wavelength_vector.max() - expected_wavelength_vector.min()
         )
-        min_wavelength = self.expected_wavelength_vector.min() - 0.25 * expected_wavelength_range
-        max_wavelength = self.expected_wavelength_vector.max() + 0.25 * expected_wavelength_range
+        min_wavelength = expected_wavelength_vector.min() - 0.25 * expected_wavelength_range
+        max_wavelength = expected_wavelength_vector.max() + 0.25 * expected_wavelength_range
 
         cropped_telluric_mask = (telluric_atlas_wavelength > min_wavelength) & (
             telluric_atlas_wavelength < max_wavelength
@@ -68,32 +69,33 @@ class WaveCalFitter(BaseModel):
         cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask]
         cropped_solar_atlas_transmission = self.atlas.solar_atlas_transmission[cropped_solar_mask]
 
-        cropped_atlas = CroppedAtlasBase(
-            cropped_solar_atlas_wavelength.to_value(u.nm),
-            cropped_telluric_atlas_wavelength.to_value(u.nm),
-            cropped_solar_atlas_transmission,
-            cropped_telluric_atlas_transmission,
+        cropped_atlas = CroppedAtlas(
+            cropped_solar_atlas_wavelength=cropped_solar_atlas_wavelength.to_value(u.nm),
+            cropped_telluric_atlas_wavelength=cropped_telluric_atlas_wavelength.to_value(u.nm),
+            cropped_solar_atlas_transmission=cropped_solar_atlas_transmission,
+            cropped_telluric_atlas_transmission=cropped_telluric_atlas_transmission,
         )
 
         return cropped_atlas
 
-    def run_fit(
+    def fit_spectrum(
         self,
-        cropped_atlas: CroppedAtlasBase,
+        cropped_atlas: CroppedAtlas,
+        unfit_1d_spectrum: np.ndarray,
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> dict:
         """Send the fitter on its way."""
         params_to_fit = self.input_parameters.lmfit_parameters
         constant_parameters = self.input_parameters.constant_parameters
-        number_of_wave_pix = np.size(self.unfit_1d_spectrum)
+        number_of_wave_pix = np.size(unfit_1d_spectrum)
 
         logger.info("Beginning fit.")
         minimizer = lmfit.Minimizer(
             fitness,
             params_to_fit,
             fcn_args=(
-                self.unfit_1d_spectrum,
+                unfit_1d_spectrum,
                 cropped_atlas,
                 number_of_wave_pix,
             ),
