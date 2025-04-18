@@ -327,7 +327,7 @@ class WavelengthCalibrationParameters(BaseModel):
         return new_delta_bounds
 
     @model_validator(mode="after")
-    def ensure_sane_ligth_angle_values_if_crval1_fixed(self) -> WavelengthCalibrationParameters:
+    def ensure_sane_light_angle_values_if_crval1_fixed(self) -> WavelengthCalibrationParameters:
         """
         Check that the `input_light_angle` and its bounds are in the range [0, 360] iff `crval1` is fixed in the fit.
 
