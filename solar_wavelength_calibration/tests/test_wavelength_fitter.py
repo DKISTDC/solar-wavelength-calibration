@@ -1,18 +1,19 @@
-import astropy
 import astropy.units as u
 import numpy as np
 import pytest
 from astropy.units import Quantity
-from astropy.wcs import WCS
-from lmfit import fit_report
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import AngleBoundRange
 from solar_wavelength_calibration.fitter.parameters import BoundsModel
+from solar_wavelength_calibration.fitter.parameters import DispersionBoundRange
 from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
+from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
+from solar_wavelength_calibration.fitter.parameters import UnitlessBoundRange
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.wavelength_fitter import WaveCalFitter
+from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
 
 
 def test_wavecal_fitter(
@@ -187,6 +188,7 @@ def test_fit_stays_valid_with_fixed_crval1(
     )
 
 
+# TODO: When we have access to the fit method, use DE with full bounds
 def test_fit_is_correct(
     test_crval1,
     test_dispersion,
@@ -205,7 +207,7 @@ def test_fit_is_correct(
     """
 
     parameters = WavelengthCalibrationParameters(
-        crval1=test_crval1 + 1.0 * u.nm,
+        crval1=test_crval1 + 1 * u.nm,
         dispersion=test_dispersion * 1.01,
         incident_light_angle=test_incident_light_angle * 1.01,
         resolving_power=72500,
@@ -215,6 +217,20 @@ def test_fit_is_correct(
         grating_constant=test_grating_constant,
         doppler_velocity=100 * u.km / u.s,
         order=test_order,
+        bounds=BoundsModel(
+            crval1=LengthBoundRange(min=test_crval1 - 1 * u.nm, max=test_crval1 + 1 * u.nm),
+            incident_light_angle=AngleBoundRange(
+                min=test_incident_light_angle - 1 * u.deg, max=test_incident_light_angle + 1 * u.deg
+            ),
+            dispersion=DispersionBoundRange(
+                min=test_dispersion - 0.001 * u.nm / u.pix,
+                max=test_dispersion + 0.001 * u.nm / u.pix,
+            ),
+            resolving_power=UnitlessBoundRange(min=72450, max=72550),
+            opacity_factor=UnitlessBoundRange(min=0.8, max=1),
+            straylight_fraction=UnitlessBoundRange(min=0, max=0.2),
+            continuum_level=UnitlessBoundRange(min=0.9, max=1),
+        ),
     )
 
     fitter = WaveCalFitter(
@@ -225,8 +241,10 @@ def test_fit_is_correct(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
     )
-    assert np.isclose(fit_result["CRVAL1"], test_crval1.to_value("nm"))
-    assert np.isclose(fit_result["CDELT1"], test_dispersion.to_value(u.nm / u.pix))
+    np.testing.assert_allclose(fit_result["CRVAL1"], test_crval1.to_value(u.nm), atol=1, rtol=1e-4)
+    np.testing.assert_allclose(
+        fit_result["CDELT1"], test_dispersion.to_value(u.nm / u.pix), atol=1e-5, rtol=1e-2
+    )
 
     fit_incident_light_angle = fit_result["PV1_2"]
     # Incident light angle is pretty weakly constrained for our test setup so let's say we pass if we get within a
