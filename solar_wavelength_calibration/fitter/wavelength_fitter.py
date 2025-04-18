@@ -5,10 +5,12 @@ from functools import cached_property
 import astropy.units as u
 import lmfit
 import numpy as np
+from astropy.units import Quantity
 from astropy.wcs import WCS
 from pydantic import BaseModel
 from pydantic import ConfigDict
 
+from solar_wavelength_calibration.atlas.atlas import CroppedAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.fitting_core import fitness
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
@@ -23,48 +25,37 @@ class WaveCalFitter(BaseModel):
 
     input_parameters: WavelengthCalibrationParameters
     atlas: AtlasBase
-    expected_wavelength_vector: u.Quantity
-    unfit_1d_spectrum: np.ndarray
     full: bool = False
 
-    @cached_property
-    def fit_result(self) -> dict:
+    def run_fit(
+        self, expected_wavelength_vector: u.Quantity, unfit_1d_spectrum: np.ndarray
+    ) -> dict:
         """Run data preparation and fitting."""
-        (
-            cropped_solar_atlas_wavelength,
-            cropped_telluric_atlas_wavelength,
-            cropped_solar_atlas_transmission,
-            cropped_telluric_atlas_transmission,
-        ) = self.prepare_atlas()
-        fit_result_params = self.run_fit(
-            cropped_solar_atlas_wavelength,
-            cropped_telluric_atlas_wavelength,
-            cropped_solar_atlas_transmission,
-            cropped_telluric_atlas_transmission,
-        )
+        cropped_atlas = self.prepare_atlas(expected_wavelength_vector)
+        fit_result_params = self.fit_spectrum(cropped_atlas, unfit_1d_spectrum)
         return fit_result_params
 
-    def prepare_atlas(self):
-        """Prepare the atlas by roughly matching the atlas to the raw spectrum.
-
-        This is done by resampling both atlases to be on the same, linear wavelength grid and select the portion of atlas that
-        pertains to bandpass used in the data.
+    def prepare_atlas(
+        self, expected_wavelength_vector: u.Quantity
+    ) -> tuple[Quantity, Quantity, np.ndarray, np.ndarray]:
         """
-        # Resample atlases
+        Crop and align the solar and telluric atlases to match the expected wavelength range.
+
+        This is done by cropping the solar and telluric atlas data to a range
+        slightly larger than the expected wavelength vector. The resulting cropped data
+        is returned for use in fitting procedures.
+        """
         solar_atlas_wavelength = self.atlas.solar_atlas_wavelength
         telluric_atlas_wavelength = self.atlas.telluric_atlas_wavelength
 
         expected_wavelength_range = (
-            self.expected_wavelength_vector.max() - self.expected_wavelength_vector.min()
+            expected_wavelength_vector.max() - expected_wavelength_vector.min()
         )
-        min_wavelength = self.expected_wavelength_vector.min() - 0.25 * expected_wavelength_range
-        max_wavelength = self.expected_wavelength_vector.max() + 0.25 * expected_wavelength_range
+        min_wavelength = expected_wavelength_vector.min() - 0.25 * expected_wavelength_range
+        max_wavelength = expected_wavelength_vector.max() + 0.25 * expected_wavelength_range
 
-        cropped_telluric_mask = np.where(
-            (telluric_atlas_wavelength > min_wavelength)
-            & (telluric_atlas_wavelength < max_wavelength),
-            True,
-            False,
+        cropped_telluric_mask = (telluric_atlas_wavelength > min_wavelength) & (
+            telluric_atlas_wavelength < max_wavelength
         )
 
         cropped_telluric_atlas_wavelength = telluric_atlas_wavelength[cropped_telluric_mask]
@@ -72,41 +63,45 @@ class WaveCalFitter(BaseModel):
             cropped_telluric_mask
         ]
 
-        cropped_solar_mask = (solar_atlas_wavelength > min_wavelength) * (
+        cropped_solar_mask = (solar_atlas_wavelength > min_wavelength) & (
             solar_atlas_wavelength < max_wavelength
         )
         cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask]
         cropped_solar_atlas_transmission = self.atlas.solar_atlas_transmission[cropped_solar_mask]
 
-        return (
-            cropped_solar_atlas_wavelength.to_value(u.nm),
-            cropped_telluric_atlas_wavelength.to_value(u.nm),
-            cropped_solar_atlas_transmission,
-            cropped_telluric_atlas_transmission,
+        cropped_atlas = CroppedAtlas(
+            cropped_solar_atlas_wavelength=cropped_solar_atlas_wavelength.to_value(u.nm),
+            cropped_telluric_atlas_wavelength=cropped_telluric_atlas_wavelength.to_value(u.nm),
+            cropped_solar_atlas_transmission=cropped_solar_atlas_transmission,
+            cropped_telluric_atlas_transmission=cropped_telluric_atlas_transmission,
         )
 
-    def run_fit(self, fts_solar_wave, fts_telluric_wave, fts_solar, fts_telluric) -> dict:
+        return cropped_atlas
+
+    def fit_spectrum(
+        self,
+        cropped_atlas: CroppedAtlas,
+        unfit_1d_spectrum: np.ndarray,
+        method: str = "leastsq",
+        **minimize_kwargs,
+    ) -> dict:
         """Send the fitter on its way."""
         params_to_fit = self.input_parameters.lmfit_parameters
         constant_parameters = self.input_parameters.constant_parameters
-        number_of_wave_pix = np.size(self.unfit_1d_spectrum)
+        number_of_wave_pix = np.size(unfit_1d_spectrum)
 
         logger.info("Beginning fit.")
         minimizer = lmfit.Minimizer(
             fitness,
             params_to_fit,
             fcn_args=(
-                self.unfit_1d_spectrum,
-                fts_solar_wave,
-                fts_telluric_wave,
-                fts_telluric,
-                fts_solar,
+                unfit_1d_spectrum,
+                cropped_atlas,
                 number_of_wave_pix,
             ),
             fcn_kws=constant_parameters,
-            # nan_policy="propagate",
         )
-        fit_result = minimizer.minimize(method="leastsq", params=params_to_fit)
+        fit_result = minimizer.minimize(params=params_to_fit, method=method, **minimize_kwargs)
         logger.info("Finished fit.")
         fit_result_params = fit_result.params.valuesdict()
 
@@ -126,6 +121,6 @@ class WaveCalFitter(BaseModel):
         }
 
         if self.full:
-            return WCS(fit_result_header), fit_result_params
+            return fit_result_header, fit_result_params
 
-        return WCS(fit_result_header)
+        return fit_result_header

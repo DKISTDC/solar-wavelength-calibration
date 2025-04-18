@@ -119,6 +119,7 @@ class BoundsModel(BaseModel):
     resolving_power: UnitlessBoundRange = UnitlessBoundRange(min=0)
     opacity_factor: UnitlessBoundRange = UnitlessBoundRange(min=0)
     straylight_fraction: UnitlessBoundRange = UnitlessBoundRange(min=0)
+    continuum_level: UnitlessBoundRange = UnitlessBoundRange(min=0)
 
 
 class FitFlagsModel(BaseModel):
@@ -134,7 +135,7 @@ class FitFlagsModel(BaseModel):
     resolving_power: bool = True
     opacity_factor: bool = True
     straylight_fraction: bool = True
-    continuum_intensity_correction: bool = True
+    continuum_level: bool = True
 
 
 class WavelengthCalibrationParameters(BaseModel):
@@ -145,24 +146,15 @@ class WavelengthCalibrationParameters(BaseModel):
     crval1: finite_length_quantity
     dispersion: finite_dispersion_quantity
     incident_light_angle: finite_angle_quantity
-    unfit_1d_spectrum: np.ndarray
     grating_constant: finite_inverse_length_quantity
     doppler_velocity: finite_speed_quantity
     order: int
+    continuum_level: float = 1.0
     resolving_power: int = 1
     opacity_factor: FiniteFloat = 1.0
     straylight_fraction: FiniteFloat = 0.0
-    quartile: int = 75
     fit_flags: FitFlagsModel = FitFlagsModel()
     bounds: BoundsModel = BoundsModel()
-
-    @field_validator("quartile", mode="after")
-    @classmethod
-    def validate_quartile(cls, value):
-        """Ensure the quartile value is between 0 and 100."""
-        if not (0 <= value <= 100):
-            raise ValueError("Quartile value must be between 0 and 100.")
-        return value
 
     @field_validator("bounds")
     @classmethod
@@ -177,7 +169,7 @@ class WavelengthCalibrationParameters(BaseModel):
             try:
                 param_value = info.data[param]
             except KeyError:
-                # if param not in info.data, it is probably an invalid type and Pydantic will handle this soon.
+                # if param not in info.data, it is probably an invalid type and Pydantic will handle this later in the code.
                 continue
             bounds_range = getattr(bounds, param)
             if not (bounds_range.min <= param_value <= bounds_range.max):
@@ -505,13 +497,12 @@ class WavelengthCalibrationParameters(BaseModel):
             max=self.bounds.straylight_fraction.max,
         )
 
-        spectrum_percentile = np.nanpercentile(self.unfit_1d_spectrum, self.quartile)
         param.add(
-            "continuum_intensity_correction",
-            vary=self.fit_flags.continuum_intensity_correction,
-            value=spectrum_percentile,
-            min=-np.inf,
-            max=np.inf,
+            "continuum_level",
+            vary=self.fit_flags.continuum_level,
+            value=self.continuum_level,
+            min=self.bounds.continuum_level.min,
+            max=self.bounds.continuum_level.max,
         )
         return param
 

@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from astropy.units import Quantity
 from astropy.wcs import WCS
+from lmfit import fit_report
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
@@ -30,16 +31,19 @@ def test_wavecal_fitter(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        expected_wavelength_vector=observed_wavelength_vector,
-        unfit_1d_spectrum=observed_spectrum,
     )
 
-    print(fitter.fit_result)
+    print(
+        fitter.run_fit(
+            expected_wavelength_vector=observed_wavelength_vector,
+            unfit_1d_spectrum=observed_spectrum,
+        )
+    )
     # test that values have been fit (i.e. changed)
-    """assert fitter.fit_result.wcs.cdelt[0] != test_dispersion
+    """assert fitter.run_fit.wcs.cdelt[0] != test_dispersion
     assert (
-        fitter.fit_result.wcs.crval[0]
-        != atlas.telluric_atlas_wavelength[np.size(test_unfit_1d_spectrum) // 2 + 1]
+        fitter.run_fit.wcs.crval[0]
+        != atlas.telluric_atlas_wavelength[np.size(observed_spectrum) // 2 + 1]
     )"""
 
 
@@ -58,10 +62,11 @@ def test_incorrect_atlas(
         fitter = WaveCalFitter(
             input_parameters=parameters,
             atlas=atlas,
+        )
+        fitter.run_fit(
             expected_wavelength_vector=observed_wavelength_vector,
             unfit_1d_spectrum=observed_spectrum,
         )
-        fitter.fit_result
 
 
 @pytest.mark.parametrize(
@@ -107,12 +112,12 @@ def test_fixing_parameters(
     fitter = WaveCalFitter(
         input_parameters=initialized_parameters,
         atlas=atlas,
-        expected_wavelength_vector=observed_wavelength_vector,
-        unfit_1d_spectrum=observed_spectrum,
         full=True,
     )
 
-    _, fit_result_params = fitter.fit_result
+    _, fit_result_params = fitter.run_fit(
+        expected_wavelength_vector=observed_wavelength_vector, unfit_1d_spectrum=observed_spectrum
+    )
     for parameter in fit_result_params:
         if parameter != fixed_parameter:
             continue
@@ -214,11 +219,13 @@ def test_fit_is_correct(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
+    )
+    fit_result = fitter.run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
     )
-    assert np.isclose(fitter.fit_result.wcs.crval[0], test_crval1.to_value("m"))
-    assert np.isclose(fitter.fit_result.wcs.cdelt[0], test_dispersion.to_value(u.m / u.pix))
+    assert np.isclose(fit_result.wcs.crval[0], test_crval1.to_value("m"))
+    assert np.isclose(fit_result.wcs.cdelt[0], test_dispersion.to_value(u.m / u.pix))
 
     fit_incident_light_angle = [
         pvi[2] for pvi in fitter.fit_result.wcs.get_pv() if pvi[0] == 1 and pvi[1] == 2
@@ -242,26 +249,24 @@ def test_prepare_atlas(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        expected_wavelength_vector=observed_wavelength_vector,
-        unfit_1d_spectrum=observed_spectrum,
     )
-    fts_solar_wavelength, fts_telluric_wavelength, fts_solar, fts_telluric = fitter.prepare_atlas()
+    cropped_atlas = fitter.prepare_atlas(expected_wavelength_vector=observed_wavelength_vector)
 
     # test that we took out a chunk of the atlas
-    assert len(fts_solar) < len(atlas.solar_atlas_transmission)
-    assert len(fts_telluric) < len(atlas.telluric_atlas_transmission)
+    assert len(cropped_atlas.solar_atlas_transmission) < len(atlas.solar_atlas_transmission)
+    assert len(cropped_atlas.telluric_atlas_transmission) < len(atlas.telluric_atlas_transmission)
 
     # test that we took out the correct chunk for each atlas (i.e. mean of expected wavelength vector is contained in fts_[solar/telluric]wavelength)
     assert (
-        fts_solar_wavelength[0]
+        cropped_atlas.solar_atlas_wavelength[0]
         < np.mean(observed_wavelength_vector).value
-        < fts_solar_wavelength[len(fts_solar_wavelength) - 1]
+        < cropped_atlas.solar_atlas_wavelength[len(cropped_atlas.solar_atlas_wavelength) - 1]
     )
 
     assert (
-        fts_telluric_wavelength[0]
+        cropped_atlas.telluric_atlas_wavelength[0]
         < np.mean(observed_wavelength_vector).value
-        < fts_telluric_wavelength[len(fts_telluric_wavelength) - 1]
+        < cropped_atlas.telluric_atlas_wavelength[len(cropped_atlas.telluric_atlas_wavelength) - 1]
     )
 
 
@@ -279,16 +284,17 @@ def test_full_flag_true(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        expected_wavelength_vector=observed_wavelength_vector,
-        unfit_1d_spectrum=observed_spectrum,
         full=True,
     )
-
+    fit_result = fitter.run_fit(
+        expected_wavelength_vector=observed_wavelength_vector,
+        unfit_1d_spectrum=observed_spectrum,
+    )
     # make sure we get 2 outputs
-    assert len(fitter.fit_result) == 2
-    wcs_fit_result_header, fit_result_params = fitter.fit_result
+    assert len(fit_result) == 2
+    fit_result_header, fit_result_params = fit_result
     # and make sure that the first output is the WCS object...
-    assert isinstance(wcs_fit_result_header, astropy.wcs.wcs.WCS)
+    assert isinstance(fit_result_header, dict)
     # and the second is a dictionary containing the rest of the fitted parameters
     assert isinstance(fit_result_params, dict)
 
@@ -302,15 +308,18 @@ def test_full_flag_false(
     """
     Given: WaveCal inputs with the full flag set to false (default)
     When: Initializing a WaveCalFitter object
-    Then: We get one fit result back, and it is a WCS object
+    Then: We get one fit result back, and it is a dictionary
     """
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        expected_wavelength_vector=observed_wavelength_vector,
-        unfit_1d_spectrum=observed_spectrum,
         full=False,
     )
 
-    # make sure we get one fit result back, and it is a WCS object
-    assert isinstance(fitter.fit_result, astropy.wcs.wcs.WCS)
+    fit_result = fitter.run_fit(
+        expected_wavelength_vector=observed_wavelength_vector,
+        unfit_1d_spectrum=observed_spectrum,
+    )
+
+    # make sure we get one fit result back, and it is a dict
+    assert isinstance(fit_result, dict)
