@@ -173,6 +173,18 @@ def sane_wcs_params_and_bounds(
             )
         )
 
+    # Because we had "sane" limits on the bounds we couldn't get ±inf, which is a useful case of "unbounded"
+    # Let's add that case here by flipping a coin for each limit
+    # (st.integers() % 2 preferable to st.boolean() because the latter shrinks towards False)
+    if draw(st.integers()) % 2:
+        crval_min = -np.inf
+    if draw(st.integers()) % 2:
+        crval_max = np.inf
+    if draw(st.integers()) % 2:
+        angle_min = -np.inf
+    if draw(st.integers()) % 2:
+        angle_max = np.inf
+
     crval1_bounds = LengthBoundRange(min=crval_min * u.nm, max=crval_max * u.nm)
     angle_bounds = AngleBoundRange(min=angle_min * u.deg, max=angle_max * u.deg)
 
@@ -184,32 +196,6 @@ def sane_wcs_params_and_bounds(
         crval1_bounds=crval1_bounds,
         incident_light_angle_bounds=angle_bounds,
     )
-
-
-sane_params_angle_bounds_undef = SaneBoundsAndWCSParams(
-    crval1=1070 * u.nm,
-    incident_light_angle=50 * u.deg,
-    grating_constant=1 / u.m,
-    order=1,
-    crval1_bounds=LengthBoundRange(min=1050 * u.nm, max=1090 * u.nm),
-    incident_light_angle_bounds=AngleBoundRange(),
-)
-sane_params_crval1_bounds_undef = SaneBoundsAndWCSParams(
-    crval1=1070 * u.nm,
-    incident_light_angle=50 * u.deg,
-    grating_constant=1 / u.m,
-    order=1,
-    crval1_bounds=LengthBoundRange(),
-    incident_light_angle_bounds=AngleBoundRange(min=30 * u.deg, max=60 * u.deg),
-)
-sane_params_both_bounds_undef = SaneBoundsAndWCSParams(
-    crval1=1070 * u.nm,
-    incident_light_angle=50 * u.deg,
-    grating_constant=1 / u.m,
-    order=1,
-    crval1_bounds=LengthBoundRange(),
-    incident_light_angle_bounds=AngleBoundRange(),
-)
 
 
 def test_unitless_bound_range():
@@ -518,9 +504,6 @@ def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict, fit_crval1)
     "angle_free", [pytest.param(True, id="angle_free"), pytest.param(False, id="angle_fixed")]
 )
 @given(valid_bounds_and_params=sane_wcs_params_and_bounds())
-@example(valid_bounds_and_params=sane_params_angle_bounds_undef)
-@example(valid_bounds_and_params=sane_params_crval1_bounds_undef)
-@example(valid_bounds_and_params=sane_params_both_bounds_undef)
 def test_internal_delta_bounds(
     valid_bounds_and_params: SaneBoundsAndWCSParams, angle_free, test_parameters_dict
 ):
