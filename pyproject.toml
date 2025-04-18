@@ -42,6 +42,7 @@ test = [
     "pytest-xdist",
     "towncrier",
     "tox>=4",
+    "hypothesis",
 ]
 docs = [
   "sphinx",

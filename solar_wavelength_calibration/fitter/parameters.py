@@ -15,6 +15,7 @@ from pydantic import AfterValidator
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import field_validator
+from pydantic import FiniteFloat
 from pydantic import model_validator
 from pydantic_core.core_schema import ValidationInfo
 
@@ -57,11 +58,25 @@ def angle_mod360(angle: angle_quantity) -> angle_quantity:
     return angle % (360 * u.deg)
 
 
+def is_finite(value: Quantity) -> Quantity:
+    """Raise a `ValueError` if the input is not finite."""
+    if not np.isfinite(value):
+        raise ValueError("parameters must be finite")
+    return value
+
+
 length_quantity = Annotated[Quantity, AfterValidator(to_nm)]
 angle_quantity = Annotated[Quantity, AfterValidator(to_deg)]
 dispersion_quantity = Annotated[Quantity, AfterValidator(to_nm_per_px)]
 inverse_length_quantity = Annotated[Quantity, AfterValidator(to_over_m)]
 speed_quantity = Annotated[Quantity, AfterValidator(to_km_per_s)]
+
+finite_validator = AfterValidator(is_finite)
+finite_length_quantity = Annotated[length_quantity, finite_validator]
+finite_angle_quantity = Annotated[angle_quantity, finite_validator]
+finite_dispersion_quantity = Annotated[dispersion_quantity, finite_validator]
+finite_inverse_length_quantity = Annotated[inverse_length_quantity, finite_validator]
+finite_speed_quantity = Annotated[speed_quantity, finite_validator]
 
 
 class UnitlessBoundRange(BaseModel):
@@ -139,16 +154,16 @@ class WavelengthCalibrationParameters(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True)
 
-    crval1: length_quantity
-    dispersion: dispersion_quantity
-    incident_light_angle: angle_quantity
+    crval1: finite_length_quantity
+    dispersion: finite_dispersion_quantity
+    incident_light_angle: finite_angle_quantity
     unfit_1d_spectrum: np.ndarray
-    grating_constant: inverse_length_quantity
-    doppler_velocity: speed_quantity
+    grating_constant: finite_inverse_length_quantity
+    doppler_velocity: finite_speed_quantity
     order: int
     resolving_power: int = 1
-    opacity_factor: float = 1
-    straylight_fraction: float = 0
+    opacity_factor: FiniteFloat = 1.0
+    straylight_fraction: FiniteFloat = 0.0
     quartile: int = 75
     fit_flags: FitFlagsModel = FitFlagsModel()
     bounds: BoundsModel = BoundsModel()
