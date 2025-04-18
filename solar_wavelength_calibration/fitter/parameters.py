@@ -5,7 +5,6 @@ import logging
 from functools import cached_property
 from typing import Annotated
 from typing import Callable
-from typing import Literal
 
 import astropy.units as u
 import numpy as np
@@ -45,17 +44,6 @@ def to_over_m(value: Quantity) -> Quantity:
 def to_km_per_s(value: Quantity) -> Quantity:
     """Convert a speed unit to km / s."""
     return value.to(u.km / u.s)
-
-
-def angle_mod360(angle: angle_quantity) -> angle_quantity:
-    """
-    Return the input angle coerced to the range [0, 360].
-
-    Slightly fancier than `angle % 360` because an input of 360 will be returned as 360.
-    """
-    if angle == 360 * u.deg:
-        return angle
-    return angle % (360 * u.deg)
 
 
 def is_finite(value: Quantity) -> Quantity:
@@ -345,6 +333,9 @@ class WavelengthCalibrationParameters(BaseModel):
 
         We do this to make sure the inputs to `update_incident_light_angle_if_crval1_fixed` are sane, which removes
         the need to check lots of edge cases in that method.
+
+        If the value for `incident_light_angle` is 360 deg and the minimum bound is 0 deg then the value of
+        `incident_light_angle` is changed to 0 deg.
         """
         if self.fit_flags.crval1:
             return self
@@ -353,6 +344,11 @@ class WavelengthCalibrationParameters(BaseModel):
             self.bounds.incident_light_angle.min = 0 * u.deg
         if not np.isfinite(self.bounds.incident_light_angle.max):
             self.bounds.incident_light_angle.max = 360 * u.deg
+        if (
+            self.incident_light_angle == 360 * u.deg
+            and self.bounds.incident_light_angle.min == 0 * u.deg
+        ):
+            self.incident_light_angle = 0 * u.deg
 
         values_to_check = Quantity(
             [
@@ -388,40 +384,61 @@ class WavelengthCalibrationParameters(BaseModel):
             "Updating bounds on `incident_light_angle` to maintain valid WCS (this is needed because `crval` is fixed"
         )
 
-        given_min = self.bounds.incident_light_angle.min
-        given_max = self.bounds.incident_light_angle.max
+        input_min = self.bounds.incident_light_angle.min
+        input_max = self.bounds.incident_light_angle.max
 
-        if not (np.isfinite(given_min) and np.isfinite(given_max)):
+        if np.allclose(
+            [input_min, self.incident_light_angle, input_max], self.incident_light_angle
+        ):
             logger.info(
-                "Some/all of the bounds on `incident_light_angle` are ±inf. "
-                "The value and bounds will be constrained to the range [0, 360] deg."
+                "`incident_light_angle` and its bounds are np.allclose to each other. "
+                "Is this really what you want?"
             )
-            self.incident_light_angle = angle_mod360(self.incident_light_angle)
-            given_min = angle_mod360(given_min)
-            given_max = angle_mod360(given_max)
+            return self
 
-            given_min = given_min if np.isfinite(given_min) else 0 * u.deg
-            given_max = given_max if np.isfinite(given_max) else 360 * u.deg
+        num_points = 100000
+        # Make two separate vectors to ensure we get the actual value included in the array of angles we're considering
+        # Thus, if the min/max valid angle is the actual input value then we'll see that here
+        min_to_value_vector = np.linspace(input_min, self.incident_light_angle, num_points // 2)
+        value_to_max_vector = np.linspace(self.incident_light_angle, input_max, num_points // 2)
+        angle_vector = np.r_[min_to_value_vector, value_to_max_vector]
 
         # Float reduces and cancels out all units
         length_expression = float(self.crval1 * self.grating_constant * self.order)
 
-        num_points = 1000
-        # Make two separate vectors to ensure we get the actual value included in the array of angles we're considering
-        # Thus, if the min/max valid angle is the actual input value then we'll see that here
-        min_to_value_vector = np.linspace(given_min, self.incident_light_angle, num_points // 2)
-        value_to_max_vector = np.linspace(self.incident_light_angle, given_max, num_points // 2)
-        angle_vector = np.r_[min_to_value_vector, value_to_max_vector]
-
         delta = length_expression - np.sin(angle_vector)
         valid_idx = (delta >= -1.0) & (delta <= 1.0)
 
-        valid_angles = angle_vector[valid_idx]
+        # Find contiguous regions of validity
+        edges = np.diff(valid_idx.astype(int))
+        starts = np.where(edges == 1)[0] + 1
+        ends = np.where(edges == -1)[0]
+        if valid_idx[0]:
+            starts = np.r_[0, starts]
+        if valid_idx[-1]:
+            ends = np.r_[ends, valid_idx.size - 1]
+
+        # The `filter` here ignores any regions that only have a single value in them
+        valid_border_idx = list(filter(lambda b: b[0] != b[1], zip(starts, ends)))
+
+        # Use the region of validity that contains the input value
+        valid_ranges = [angle_vector[b[0] : b[1] + 1] for b in valid_border_idx]
+        valid_angles = [
+            r for r in valid_ranges if np.min(r) <= self.incident_light_angle <= np.max(r)
+        ][0]
+
         min_angle = np.min(valid_angles)
         max_angle = np.max(valid_angles)
 
-        new_bounds = AngleBoundRange(min=min_angle, max=max_angle)
+        if np.allclose(Quantity([min_angle, max_angle]), self.incident_light_angle):
+            raise ValueError(
+                "Input values are np.allclose to an invalid WCS and therefore no valid range of "
+                "`incident_light_angle` exists. You should either fix `incident_light_angle` in the fit "
+                "or examine your input parameters."
+            )
+
         logger.info(f"New bounds on `incident_light_angle` are [{min_angle}, {max_angle}]")
+        new_bounds = AngleBoundRange(min=min_angle, max=max_angle)
         self.bounds.incident_light_angle = new_bounds
 
         return self
