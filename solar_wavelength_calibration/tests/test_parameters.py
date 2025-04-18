@@ -77,23 +77,43 @@ class SaneBoundsAndWCSParams(BaseModel):
 
 
 @st.composite
-def sane_wcs_params_and_bounds(draw) -> SaneBoundsAndWCSParams:
+def sane_wcs_params_and_bounds(
+    draw, completely_sane_angles: bool = False
+) -> SaneBoundsAndWCSParams:
     """
     Use hypothesis to generate a set of parameters and then make bounds on `crval1` and `incident_light_angle.
 
     Very similar to `wcs_validity_params`, but here we're limiting the outer edges of numbers we're considering to be
     values well short of ±inf. So "sane" is still relative here.
+
+    If `completely_sane_angles` is True then only generate angles in the range [0, 360]. This is to mimic inputs after
+    they have passed through `WavelengthCalibrationParameters.ensure_sane_ligth_angle_values_if_crval1_fixed`.
     """
     sanity = 1e10
     # Grow the limits on bounds so we don't end up in a case where min=max=value
     bound_sanity = sanity * 100
+
+    if completely_sane_angles:
+        min_angle = 0
+        max_angle = 360
+        min_angle_bound = 0
+        max_angle_bound = 360
+    else:
+        min_angle = -sanity
+        max_angle = sanity
+        min_angle_bound = -bound_sanity
+        max_angle_bound = bound_sanity
 
     grating_constant = (
         draw(st.integers(min_value=int(-sanity), max_value=int(sanity)).filter(lambda n: n != 0))
         / u.m
     )
     incident_light_angle = (
-        draw(st.floats(allow_nan=False, allow_infinity=False, min_value=-sanity, max_value=sanity))
+        draw(
+            st.floats(
+                allow_nan=False, allow_infinity=False, min_value=min_angle, max_value=max_angle
+            )
+        )
         * u.deg
     )
     order = draw(
@@ -101,7 +121,10 @@ def sane_wcs_params_and_bounds(draw) -> SaneBoundsAndWCSParams:
     )
 
     # Need to subtract eps-ish from the limits or else `Quantity` floating point stuff will result in borked inputs.
-    machine_precision = np.finfo(float).eps * 10
+    if completely_sane_angles:
+        machine_precision = 0.01
+    else:
+        machine_precision = np.finfo(float).eps * 10
     delta = draw(st.floats(min_value=-1.0 + machine_precision, max_value=1.0 - machine_precision))
     crval1 = ((delta + np.sin(incident_light_angle)) / (grating_constant * order)).to(u.nm)
 
@@ -124,24 +147,31 @@ def sane_wcs_params_and_bounds(draw) -> SaneBoundsAndWCSParams:
         )
     )
 
-    angle_min = draw(
-        st.floats(
-            allow_nan=False,
-            allow_infinity=False,
-            min_value=-bound_sanity,
-            max_value=incident_light_angle.value,
-            exclude_max=True,
+    if completely_sane_angles and incident_light_angle.value == 0:
+        angle_min = 0
+    else:
+        angle_min = draw(
+            st.floats(
+                allow_nan=False,
+                allow_infinity=False,
+                min_value=min_angle_bound,
+                max_value=incident_light_angle.value,
+                exclude_max=True,
+            )
         )
-    )
-    angle_max = draw(
-        st.floats(
-            allow_nan=False,
-            allow_infinity=False,
-            min_value=incident_light_angle.value,
-            max_value=bound_sanity,
-            exclude_min=True,
+
+    if completely_sane_angles and incident_light_angle.value == 360:
+        angle_max = 360
+    else:
+        angle_max = draw(
+            st.floats(
+                allow_nan=False,
+                allow_infinity=False,
+                min_value=incident_light_angle.value,
+                max_value=max_angle_bound,
+                exclude_min=True,
+            )
         )
-    )
 
     crval1_bounds = LengthBoundRange(min=crval_min * u.nm, max=crval_max * u.nm)
     angle_bounds = AngleBoundRange(min=angle_min * u.deg, max=angle_max * u.deg)
@@ -549,6 +579,54 @@ def test_internal_delta_bounds(
         np.testing.assert_allclose(
             np.min(np.abs(crval1_at_corners - input_crval1_bounds.max)), 0.0, atol=1e-7
         )
+
+
+@pytest.mark.parametrize(
+    "crval1_free", [pytest.param(True, id="crval1_free"), pytest.param(False, id="crval1_fixed")]
+)
+@given(valid_bounds_and_params=sane_wcs_params_and_bounds(completely_sane_angles=True))
+@settings(max_examples=1000)
+def test_angle_bounds(
+    valid_bounds_and_params: SaneBoundsAndWCSParams, crval1_free, test_parameters_dict
+):
+    """
+    Given: A `WavelengthCalibrationParameters` object
+    When: Updating the bounds on `incident_light_angle` if `crval` is fixed in the fit
+    Then: The updated bounds are only within the original bounds, and contain no invalid WCS values
+    """
+    input_angle_bounds = valid_bounds_and_params.incident_light_angle_bounds
+
+    params = WavelengthCalibrationParameters(
+        crval1=valid_bounds_and_params.crval1,
+        dispersion=test_parameters_dict["dispersion"],
+        incident_light_angle=valid_bounds_and_params.incident_light_angle,
+        opacity_factor=test_parameters_dict["opacity_factor"],
+        unfit_1d_spectrum=test_parameters_dict["unfit_1d_spectrum"],
+        grating_constant=valid_bounds_and_params.grating_constant,
+        doppler_velocity=test_parameters_dict["doppler_velocity"],
+        order=valid_bounds_and_params.order,
+        bounds=BoundsModel(crval1=LengthBoundRange(), incident_light_angle=input_angle_bounds),
+        fit_flags=FitFlagsModel(crval1=crval1_free),
+    )
+
+    new_angle_bounds = params.bounds.incident_light_angle
+    if crval1_free:
+        assert new_angle_bounds == input_angle_bounds
+    else:
+        # Make sure we didn't grow the range
+        old_range = input_angle_bounds.max - input_angle_bounds.min
+        new_range = new_angle_bounds.max - new_angle_bounds.min
+        assert new_range <= old_range or np.allclose(new_range, old_range)
+
+        # Make sure the value is still in the range
+        assert new_angle_bounds.min <= params.incident_light_angle <= new_angle_bounds.max
+
+        # Make sure the range doesn't include any values that generate an invalid WCS
+        delta = float(params.crval1 * params.grating_constant * params.order)
+        angle_vector = np.linspace(new_angle_bounds.min, new_angle_bounds.max, 1000)
+        delta_range = delta - np.sin(angle_vector)
+        invalid_idx = (delta_range > 1.0) | (delta_range < -1.0)
+        assert np.sum(invalid_idx) == 0
 
 
 @pytest.mark.parametrize(
