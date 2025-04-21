@@ -1,18 +1,17 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 import logging
-from functools import cached_property
+from typing import Union
 
 import astropy.units as u
 import lmfit
 import numpy as np
 from astropy.units import Quantity
-from astropy.wcs import WCS
 from pydantic import BaseModel
 from pydantic import ConfigDict
 
 from solar_wavelength_calibration.atlas.atlas import CroppedAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
-from solar_wavelength_calibration.fitter.fitting_core import fitness
+from solar_wavelength_calibration.fitter.fitting_core import _fitness
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
 logger = logging.getLogger(__name__)
@@ -33,15 +32,38 @@ class WaveCalFitter(BaseModel):
         full: bool = False,
         method: str = "leastsq",
         **minimize_kwargs,
-    ) -> dict:
-        """Run data preparation and fitting."""
-        cropped_atlas = self.prepare_atlas(expected_wavelength_vector)
-        fit_result_params = self.fit_spectrum(
+    ) -> Union[dict, tuple[dict, dict]]:
+        """Run data preparation and fitting.
+
+        Parameters
+        ----------
+        expected_wavelength_vector (u.Quantity)
+            The expected wavelength vector for the fit.
+
+        unfit_1d_spectrum (np.ndarray)
+            The unfit 1D spectrum to be fitted.
+
+        full (bool, optional)
+            If True, returns both the WCS header and fit parameters. Defaults to False.
+
+        method (str, optional)
+            The optimization method to use. Defaults to "leastsq".
+
+        **minimize_kwargs
+            Additional keyword arguments for the minimizer.
+
+        Returns
+        -------
+            Union[dict, tuple[dict, dict]]
+                The fit result headers as a dictionary, or a tuple containing the fit result headers and fit parameters if `full` is True.
+        """
+        cropped_atlas = self._prepare_atlas(expected_wavelength_vector)
+        fit_result_params = self._fit_spectrum(
             cropped_atlas, unfit_1d_spectrum, full, method, **minimize_kwargs
         )
         return fit_result_params
 
-    def prepare_atlas(
+    def _prepare_atlas(
         self, expected_wavelength_vector: u.Quantity
     ) -> tuple[Quantity, Quantity, np.ndarray, np.ndarray]:
         """
@@ -84,7 +106,7 @@ class WaveCalFitter(BaseModel):
 
         return cropped_atlas
 
-    def fit_spectrum(
+    def _fit_spectrum(
         self,
         cropped_atlas: CroppedAtlas,
         unfit_1d_spectrum: np.ndarray,
@@ -99,7 +121,7 @@ class WaveCalFitter(BaseModel):
 
         logger.info("Beginning fit.")
         minimizer = lmfit.Minimizer(
-            fitness,
+            _fitness,
             params_to_fit,
             fcn_args=(
                 unfit_1d_spectrum,

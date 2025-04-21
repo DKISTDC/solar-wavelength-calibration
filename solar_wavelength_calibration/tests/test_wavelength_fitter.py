@@ -207,7 +207,9 @@ def test_prepare_atlas(
         input_parameters=parameters,
         atlas=atlas,
     )
-    cropped_atlas = fitter.prepare_atlas(expected_wavelength_vector=test_expected_wavelength_vector)
+    cropped_atlas = fitter._prepare_atlas(
+        expected_wavelength_vector=test_expected_wavelength_vector
+    )
 
     # test that we took out a chunk of the atlas
     assert len(cropped_atlas.solar_atlas_transmission) < len(atlas.solar_atlas_transmission)
