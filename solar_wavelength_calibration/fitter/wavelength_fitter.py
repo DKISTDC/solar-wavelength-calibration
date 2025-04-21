@@ -25,14 +25,20 @@ class WaveCalFitter(BaseModel):
 
     input_parameters: WavelengthCalibrationParameters
     atlas: AtlasBase
-    full: bool = False
 
     def run_fit(
-        self, expected_wavelength_vector: u.Quantity, unfit_1d_spectrum: np.ndarray
+        self,
+        expected_wavelength_vector: u.Quantity,
+        unfit_1d_spectrum: np.ndarray,
+        full: bool = False,
+        method: str = "leastsq",
+        **minimize_kwargs,
     ) -> dict:
         """Run data preparation and fitting."""
         cropped_atlas = self.prepare_atlas(expected_wavelength_vector)
-        fit_result_params = self.fit_spectrum(cropped_atlas, unfit_1d_spectrum)
+        fit_result_params = self.fit_spectrum(
+            cropped_atlas, unfit_1d_spectrum, full, method, **minimize_kwargs
+        )
         return fit_result_params
 
     def prepare_atlas(
@@ -82,7 +88,8 @@ class WaveCalFitter(BaseModel):
         self,
         cropped_atlas: CroppedAtlas,
         unfit_1d_spectrum: np.ndarray,
-        method: str = "leastsq",
+        full: bool,
+        method: str,
         **minimize_kwargs,
     ) -> dict:
         """Send the fitter on its way."""
@@ -120,7 +127,7 @@ class WaveCalFitter(BaseModel):
             "PV1_2": fit_result_params["incident_light_angle"],  # Incident angle [deg]
         }
 
-        if self.full:
+        if full:
             return fit_result_header, fit_result_params
 
         return fit_result_header

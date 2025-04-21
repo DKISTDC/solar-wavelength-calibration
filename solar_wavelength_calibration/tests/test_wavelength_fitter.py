@@ -94,13 +94,13 @@ def test_dispersion_not_fit(
     fitter = WaveCalFitter(
         input_parameters=initialized_parameters,
         atlas=atlas,
-        full=True,
     )
 
     # make sure that the dispersion was not fit (wasn't changed)
     fit_result_header, fit_result_params = fitter.run_fit(
         expected_wavelength_vector=test_expected_wavelength_vector,
         unfit_1d_spectrum=test_unfit_1d_spectrum,
+        full=True,
     )
     assert test_parameters_dict["dispersion"].value == fit_result_params["dispersion"]
 
@@ -241,11 +241,11 @@ def test_full_flag_true(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        full=True,
     )
     fit_result = fitter.run_fit(
         expected_wavelength_vector=test_expected_wavelength_vector,
         unfit_1d_spectrum=test_unfit_1d_spectrum,
+        full=True,
     )
     # make sure we get 2 outputs
     assert len(fit_result) == 2
@@ -270,12 +270,12 @@ def test_full_flag_false(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        full=False,
     )
 
     fit_result = fitter.run_fit(
         expected_wavelength_vector=test_expected_wavelength_vector,
         unfit_1d_spectrum=test_unfit_1d_spectrum,
+        full=False,
     )
 
     # make sure we get one fit result back, and it is a dict
