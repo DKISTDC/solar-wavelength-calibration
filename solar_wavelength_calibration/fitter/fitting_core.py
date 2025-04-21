@@ -10,7 +10,7 @@ from scipy.ndimage import gaussian_filter1d
 from solar_wavelength_calibration.atlas.atlas import CroppedAtlas
 
 
-def fitness(
+def _fitness(
     params: Parameters,
     unfit_1d_spectrum: np.ndarray,
     cropped_atlas: CroppedAtlas,
@@ -19,7 +19,7 @@ def fitness(
     order: int,
     doppler_velocity: float,
 ) -> np.ndarray:
-    """Compute fitness function for fitting wavecal parameters.
+    """Compute _fitness function for fitting wavecal parameters.
 
     Parameters
     ----------

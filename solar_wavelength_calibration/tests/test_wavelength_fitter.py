@@ -113,11 +113,12 @@ def test_fixing_parameters(
     fitter = WaveCalFitter(
         input_parameters=initialized_parameters,
         atlas=atlas,
-        full=True,
     )
 
     _, fit_result_params = fitter.run_fit(
-        expected_wavelength_vector=observed_wavelength_vector, unfit_1d_spectrum=observed_spectrum
+        expected_wavelength_vector=observed_wavelength_vector,
+        unfit_1d_spectrum=observed_spectrum,
+        full=True,
     )
     for parameter in fit_result_params:
         if parameter != fixed_parameter:
@@ -266,7 +267,7 @@ def test_prepare_atlas(
         input_parameters=parameters,
         atlas=atlas,
     )
-    cropped_atlas = fitter.prepare_atlas(expected_wavelength_vector=observed_wavelength_vector)
+    cropped_atlas = fitter._prepare_atlas(expected_wavelength_vector=observed_wavelength_vector)
 
     # test that we took out a chunk of the atlas
     assert len(cropped_atlas.solar_atlas_transmission) < len(atlas.solar_atlas_transmission)
@@ -300,11 +301,11 @@ def test_full_flag_true(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        full=True,
     )
     fit_result = fitter.run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
+        full=True,
     )
     # make sure we get 2 outputs
     assert len(fit_result) == 2
@@ -329,12 +330,12 @@ def test_full_flag_false(
     fitter = WaveCalFitter(
         input_parameters=parameters,
         atlas=atlas,
-        full=False,
     )
 
     fit_result = fitter.run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
+        full=False,
     )
 
     # make sure we get one fit result back, and it is a dict
