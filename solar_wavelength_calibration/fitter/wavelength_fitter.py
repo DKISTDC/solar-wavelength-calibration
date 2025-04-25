@@ -1,6 +1,5 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 import logging
-from typing import Union
 
 import astropy.units as u
 import lmfit
@@ -32,7 +31,7 @@ class WaveCalFitter(BaseModel):
         full: bool = False,
         method: str = "leastsq",
         **minimize_kwargs,
-    ) -> Union[dict, tuple[dict, dict]]:
+    ) -> dict | tuple[dict, dict]:
         """Run data preparation and fitting.
 
         Parameters
@@ -54,7 +53,7 @@ class WaveCalFitter(BaseModel):
 
         Returns
         -------
-            Union[dict, tuple[dict, dict]]
+            dict | tuple[dict, dict]
                 The fit result headers as a dictionary, or a tuple containing the fit result headers and fit parameters if `full` is True.
         """
         cropped_atlas = self._prepare_atlas(expected_wavelength_vector)
@@ -63,9 +62,7 @@ class WaveCalFitter(BaseModel):
         )
         return fit_result_params
 
-    def _prepare_atlas(
-        self, expected_wavelength_vector: u.Quantity
-    ) -> tuple[Quantity, Quantity, np.ndarray, np.ndarray]:
+    def _prepare_atlas(self, expected_wavelength_vector: u.Quantity) -> CroppedAtlas:
         """
         Crop and align the solar and telluric atlases to match the expected wavelength range.
 

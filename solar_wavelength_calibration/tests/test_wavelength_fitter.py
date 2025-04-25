@@ -34,18 +34,17 @@ def test_wavecal_fitter(
         atlas=atlas,
     )
 
-    print(
-        fitter.run_fit(
-            expected_wavelength_vector=observed_wavelength_vector,
-            unfit_1d_spectrum=observed_spectrum,
-        )
+    fit_result = fitter.run_fit(
+        expected_wavelength_vector=observed_wavelength_vector,
+        unfit_1d_spectrum=observed_spectrum,
     )
+
     # test that values have been fit (i.e. changed)
-    """assert fitter.run_fit.wcs.cdelt[0] != test_dispersion
+    assert fit_result.get("CDELT1") != test_dispersion
     assert (
-        fitter.run_fit.wcs.crval[0]
+        fit_result.get("CRVAL1")
         != atlas.telluric_atlas_wavelength[np.size(observed_spectrum) // 2 + 1]
-    )"""
+    )
 
 
 def test_incorrect_atlas(

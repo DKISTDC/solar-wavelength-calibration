@@ -5,6 +5,7 @@ from functools import cached_property
 import astropy.units as u
 import numpy as np
 import pooch
+from astropy.units import Quantity
 from pydantic import BaseModel
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
@@ -69,7 +70,7 @@ class Atlas(AtlasBase):
         path = self.pooch.fetch(self.config.solar_reference_atlas_file_name)
         return np.load(path)
 
-    def _validate_monotonic(self, array: np.ndarray, name: str) -> np.ndarray:
+    def _validate_monotonic(self, array: Quantity, name: str) -> Quantity:
         """Check that the wavelength array is strictly increasing."""
         if not np.all(np.diff(array) > 0):  # Strictly increasing check
             raise ValueError(
@@ -78,7 +79,7 @@ class Atlas(AtlasBase):
         return array
 
     @property
-    def telluric_atlas_wavelength(self) -> np.ndarray:
+    def telluric_atlas_wavelength(self) -> Quantity:
         """
         Return the wavelength array of the telluric atlas.
 
@@ -101,7 +102,7 @@ class Atlas(AtlasBase):
         return self._telluric_atlas[1]
 
     @property
-    def solar_atlas_wavelength(self) -> np.ndarray:
+    def solar_atlas_wavelength(self) -> Quantity:
         """
         Return the wavelength array of the high-resolution solar atlas.
 

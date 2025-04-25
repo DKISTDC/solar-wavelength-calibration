@@ -3,6 +3,7 @@ from abc import ABC
 from abc import abstractmethod
 
 import numpy as np
+from astropy.units import Quantity
 
 
 class AtlasBase(ABC):
@@ -10,7 +11,7 @@ class AtlasBase(ABC):
 
     @property
     @abstractmethod
-    def telluric_atlas_wavelength(self) -> np.ndarray:
+    def telluric_atlas_wavelength(self) -> Quantity:
         """Return the wavelength array of the telluric atlas."""
 
     @property
@@ -20,7 +21,7 @@ class AtlasBase(ABC):
 
     @property
     @abstractmethod
-    def solar_atlas_wavelength(self) -> np.ndarray:
+    def solar_atlas_wavelength(self) -> Quantity:
         """Return the wavelength array of the solar atlas."""
 
     @property

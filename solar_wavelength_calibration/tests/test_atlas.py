@@ -74,40 +74,32 @@ def test_atlas_repr():
 
 
 def test_solar_wavelength_non_monotonic():
-    """Given: a mock Atlas object with non-monotonicically increasing solar wavelength
+    """Given: an Atlas object with non-monotonically increasing solar wavelength
     When: accessing solar_atlas_wavelength
     Then: a ValueError should be raised."""
-    with mock.patch.object(
-        Atlas, "_solar_atlas", new_callable=mock.PropertyMock
-    ) as mock_solar_atlas:
-        # Mock invalid solar wavelength data (not strictly increasing)
-        mock_solar_atlas.return_value = (
-            np.array([400, 500, 480, 700]),
-            np.array([1.0, 0.9, 0.8, 0.7]),
-        )
+    atlas = Atlas()
+    # Inject non-monotonic solar wavelength data into the Atlas object
+    atlas._solar_atlas = (
+        np.array([400, 500, 480, 700]),  # Non-monotonic wavelength
+        np.array([1.0, 0.9, 0.8, 0.7]),  # Corresponding transmission
+    )
 
-        atlas = Atlas()
-        with pytest.raises(
-            ValueError, match="solar_atlas_wavelength must be monotonically increasing"
-        ):
-            atlas.solar_atlas_wavelength
+    with pytest.raises(ValueError, match="solar_atlas_wavelength must be monotonically increasing"):
+        atlas.solar_atlas_wavelength
 
 
 def test_telluric_wavelength_non_monotonic():
-    """Given: a mock Atlas object with non-monotonically increasing telluric wavelength
+    """Given: an Atlas object with non-monotonically increasing telluric wavelength
     When: accessing telluric_atlas_wavelength
     Then: a ValueError should be raised."""
-    with mock.patch.object(
-        Atlas, "_telluric_atlas", new_callable=mock.PropertyMock
-    ) as mock_telluric_atlas:
-        # Mock invalid telluric wavelength data (not strictly increasing)
-        mock_telluric_atlas.return_value = (
-            np.array([400, 500, 480, 700]),
-            np.array([0.95, 0.85, 0.75, 0.65]),
-        )
+    atlas = Atlas()
+    # Inject non-monotonic telluric wavelength data into the Atlas object
+    atlas._telluric_atlas = (
+        np.array([400, 500, 480, 700]),  # Non-monotonic wavelength
+        np.array([1.0, 0.9, 0.8, 0.7]),  # Corresponding transmission
+    )
 
-        atlas = Atlas()
-        with pytest.raises(
-            ValueError, match="telluric_atlas_wavelength must be monotonically increasing"
-        ):
-            atlas.telluric_atlas_wavelength
+    with pytest.raises(
+        ValueError, match="telluric_atlas_wavelength must be monotonically increasing"
+    ):
+        atlas.telluric_atlas_wavelength
