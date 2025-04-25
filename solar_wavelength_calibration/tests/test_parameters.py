@@ -552,15 +552,19 @@ def test_internal_delta_bounds(
     else:
         assert -1.0 <= delta_min <= 1.0
         assert -1.0 <= delta_max <= 1.0
-        if delta_min != -1.0 and delta_max != 1.0:
+        if not (np.allclose(delta_min, -1.0) or np.allclose(delta_max, 1.0)):
             # This is a weird way to ask `input_crval1_bounds.[min,max] in `crval1_at_corners`
             # We need to do this because floating point precision is crazy wack with `Quantities`
             # print(f"{crval1_at_corners.to(u.nm) = }\n{input_crval1_bounds.min = }")
             np.testing.assert_allclose(
-                np.min(np.abs(crval1_at_corners - input_crval1_bounds.min)), 0.0, atol=1e-5
+                np.min(np.abs(crval1_at_corners - input_crval1_bounds.min)).to_value("nm"),
+                0.0,
+                atol=1e-5,
             )
             np.testing.assert_allclose(
-                np.min(np.abs(crval1_at_corners - input_crval1_bounds.max)), 0.0, atol=1e-5
+                np.min(np.abs(crval1_at_corners - input_crval1_bounds.max)).to_value("nm"),
+                0.0,
+                atol=1e-5,
             )
 
 
