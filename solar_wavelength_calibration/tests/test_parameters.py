@@ -198,6 +198,16 @@ def sane_wcs_params_and_bounds(
     )
 
 
+sane_bounds_with_360angle_and_0_min = SaneBoundsAndWCSParams(
+    crval1=1070 * u.nm,
+    incident_light_angle=360 * u.deg,
+    grating_constant=31600 / u.m,
+    order=1,
+    crval1_bounds=LengthBoundRange(min=1060 * u.nm, max=1080 * u.nm),
+    incident_light_angle_bounds=AngleBoundRange(min=0 * u.deg, max=360 * u.deg),
+)
+
+
 def test_unitless_bound_range():
     """
     Given: The `UnitlessBoundRange` class
@@ -572,6 +582,7 @@ def test_internal_delta_bounds(
     "crval1_free", [pytest.param(True, id="crval1_free"), pytest.param(False, id="crval1_fixed")]
 )
 @given(valid_bounds_and_params=sane_wcs_params_and_bounds(completely_sane_angles=True))
+@example(valid_bounds_and_params=sane_bounds_with_360angle_and_0_min)
 @settings(max_examples=1000)
 def test_angle_bounds(
     valid_bounds_and_params: SaneBoundsAndWCSParams, crval1_free, test_parameters_dict
