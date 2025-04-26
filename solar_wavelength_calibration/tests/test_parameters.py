@@ -658,6 +658,23 @@ def test_insane_angle_values_when_crval1_fixed(test_parameters_dict, angle_bound
         )
 
 
+def test_too_close_valid_WCS(test_parameters_dict):
+    """
+    Given: A set of parameters that represents a valid WCS, but is so close to invalidity that there is no room
+      to adjust the range on `incident_light_angle`
+    When: Instantiating `WavelengthCalibrationParameters` with these parameters and fixing crval1
+    Then: The correct error is raised
+    """
+    close_delta = 1 - np.finfo(float).eps
+    close_angle = (90 - np.finfo(float).eps) * u.deg
+    crval1 = (close_delta + np.sin(close_angle)) / (
+        test_parameters_dict["grating_constant"] * test_parameters_dict["order"]
+    )
+    input_params = test_parameters_dict | {"crval1": crval1, "incident_light_angle": close_angle}
+    with pytest.raises(ValidationError, match="Input values are np.allclose to an invalid WCS"):
+        _ = WavelengthCalibrationParameters(fit_flags=FitFlagsModel(crval1=False), **input_params)
+
+
 def test_default_fit_flags(test_parameters_dict):
     """
     Given: No custom input fit flags
