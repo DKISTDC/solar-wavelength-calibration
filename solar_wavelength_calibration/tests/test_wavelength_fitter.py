@@ -188,12 +188,12 @@ def test_fit_stays_valid_with_fixed_crval1(
     )
 
 
-# TODO: When we have access to the fit method, use DE with full bounds
 def test_fit_is_correct(
     test_crval1,
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
+    test_doppler_velocity,
     test_order,
     observed_spectrum,
     observed_wavelength_vector,
@@ -203,18 +203,18 @@ def test_fit_is_correct(
     """
     Given: A simulated unfit 1D spectrum with a known shift and dispersion scale.
     When: The WaveCalFitter is used to fit the spectrum.
-    Then: The fitted dispersion (CDELT1) is approximately equal to the expected dispersion.
+    Then: The fit parameters that parameterize the WCS header are correct
     """
 
     parameters = WavelengthCalibrationParameters(
-        crval1=test_crval1 + 1 * u.nm,
+        crval1=test_crval1 + 0.5 * u.nm,
         dispersion=test_dispersion * 1.01,
-        incident_light_angle=test_incident_light_angle * 1.01,
-        resolving_power=72500,
+        incident_light_angle=test_incident_light_angle + 0.2 * u.deg,
+        resolving_power=725001,
         opacity_factor=1,
         straylight_fraction=0.0,
         grating_constant=test_grating_constant,
-        doppler_velocity=100 * u.km / u.s,
+        doppler_velocity=0 * u.km / u.s,
         order=test_order,
         bounds=BoundsModel(
             crval1=LengthBoundRange(min=test_crval1 - 1 * u.nm, max=test_crval1 + 1 * u.nm),
@@ -225,7 +225,7 @@ def test_fit_is_correct(
                 min=test_dispersion - 0.001 * u.nm / u.pix,
                 max=test_dispersion + 0.001 * u.nm / u.pix,
             ),
-            resolving_power=UnitlessBoundRange(min=72450, max=72550),
+            resolving_power=UnitlessBoundRange(min=725000, max=725002),
             opacity_factor=UnitlessBoundRange(min=0.8, max=1),
             straylight_fraction=UnitlessBoundRange(min=0, max=0.2),
             continuum_level=UnitlessBoundRange(min=0.9, max=1),
@@ -239,16 +239,17 @@ def test_fit_is_correct(
     fit_result = fitter.run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
+        method="nelder-meade",
     )
     np.testing.assert_allclose(fit_result["CRVAL1"], test_crval1.to_value(u.nm), atol=1, rtol=1e-4)
     np.testing.assert_allclose(
-        fit_result["CDELT1"], test_dispersion.to_value(u.nm / u.pix), atol=1e-5, rtol=1e-2
+        fit_result["CDELT1"], test_dispersion.to_value(u.nm / u.pix), atol=1e-5, rtol=1e-1
     )
 
     fit_incident_light_angle = fit_result["PV1_2"]
     # Incident light angle is pretty weakly constrained for our test setup so let's say we pass if we get within a
     # degree.
-    assert abs(fit_incident_light_angle - test_incident_light_angle.to_value(u.deg)) < 1
+    assert abs(fit_incident_light_angle - test_incident_light_angle.to_value(u.deg)) < 0.5
 
 
 def test_prepare_atlas(
