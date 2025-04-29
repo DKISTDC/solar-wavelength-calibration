@@ -10,7 +10,7 @@ from pydantic import ConfigDict
 
 from solar_wavelength_calibration.atlas.atlas import CroppedAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
-from solar_wavelength_calibration.fitter.fitting_core import _fitness
+from solar_wavelength_calibration.fitter.fitting_core import fitting_model
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
 logger = logging.getLogger(__name__)
@@ -118,7 +118,7 @@ class WaveCalFitter(BaseModel):
 
         logger.info("Beginning fit.")
         minimizer = lmfit.Minimizer(
-            _fitness,
+            fitting_model,
             params_to_fit,
             fcn_args=(
                 unfit_1d_spectrum,
