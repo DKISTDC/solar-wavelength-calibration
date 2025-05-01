@@ -10,8 +10,25 @@ from scipy.ndimage import gaussian_filter1d
 from solar_wavelength_calibration.atlas.atlas import AtlasSlice
 
 
-def calculate_linear_wave(params, number_of_wave_pix, grating_constant, order):
-    """Calculate the linear wavelength vector."""
+def calculate_linear_wave(params, number_of_wave_pix, grating_constant, order) -> np.ndarray:
+    """Calculate the linear wavelength vector.
+
+    Parameters
+    ----------
+    params:
+        Parameters object containing the fitting parameters.
+    number_of_wave_pix:
+        Number of wavelength pixels.
+    grating_constant:
+        Grating constant of the spectrograph.
+    order:
+        Diffraction order.
+
+    Returns
+    -------
+    linear_wave: np.ndarray
+        Linear wavelength vector in nanometers.
+    """
     param_vals = params.valuesdict()
     crval1 = param_vals["crval1"]
     dispersion = param_vals["dispersion"]
@@ -36,8 +53,24 @@ def calculate_linear_wave(params, number_of_wave_pix, grating_constant, order):
     return linear_wave
 
 
-def apply_telluric_absorption(linear_wave, cropped_atlas, opacity_factor):
-    """Apply telluric absorption to the spectrum."""
+def apply_telluric_absorption(linear_wave, cropped_atlas, opacity_factor) -> np.ndarray:
+    """
+    Apply telluric absorption to the spectrum.
+
+    Parameters
+    ----------
+    linear_wave : np.ndarray
+        Linear wavelength vector in nanometers.
+    cropped_atlas : AtlasSlice
+        Cropped atlas containing telluric and solar atlas data.
+    opacity_factor : float
+        Factor to scale the telluric absorption.
+
+    Returns
+    -------
+    np.ndarray
+        Telluric transmission spectrum after applying absorption.
+    """
     linear_fts_telluric_transmission = np.interp(
         linear_wave,
         cropped_atlas.telluric_atlas_wavelength,
@@ -46,8 +79,26 @@ def apply_telluric_absorption(linear_wave, cropped_atlas, opacity_factor):
     return linear_fts_telluric_transmission**opacity_factor
 
 
-def apply_doppler_shift(linear_wave, cropped_atlas, doppler_velocity, crval1):
-    """Apply Doppler shift to the solar spectrum."""
+def apply_doppler_shift(linear_wave, cropped_atlas, doppler_velocity, crval1) -> np.ndarray:
+    """
+    Apply Doppler shift to the solar spectrum.
+
+    Parameters
+    ----------
+    linear_wave : np.ndarray
+        Linear wavelength vector in nanometers.
+    cropped_atlas : AtlasSlice
+        Cropped atlas containing telluric and solar atlas data.
+    doppler_velocity : float
+        Doppler velocity in km/s.
+    crval1 : float
+        Reference wavelength in nanometers.
+
+    Returns
+    -------
+    np.ndarray
+        Solar transmission spectrum after applying the Doppler shift.
+    """
     fts_wave_doppler_corrected = (
         cropped_atlas.solar_atlas_wavelength + doppler_velocity / (const.c.to("km/s")) * crval1
     )
@@ -58,14 +109,52 @@ def apply_doppler_shift(linear_wave, cropped_atlas, doppler_velocity, crval1):
     )
 
 
-def combine_spectra(telluric_transmission, solar_transmission, straylight_fraction):
-    """Combine the telluric and solar spectra with straylight contamination."""
+def combine_spectra(telluric_transmission, solar_transmission, straylight_fraction) -> np.ndarray:
+    """
+    Combine the telluric and solar spectra with straylight contamination.
+
+    Parameters
+    ----------
+    telluric_transmission : np.ndarray
+        Telluric transmission spectrum.
+    solar_transmission : np.ndarray
+        Solar transmission spectrum.
+    straylight_fraction : float
+        Fraction of straylight contamination.
+
+    Returns
+    -------
+    np.ndarray
+        Combined spectrum with straylight contamination.
+    """
     fts_solar_atmos_corr = telluric_transmission * solar_transmission
     return fts_solar_atmos_corr + straylight_fraction
 
 
-def normalize_and_convolve(spectrum, continuum_level, crval1, resolving_power, dispersion):
-    """Normalize the spectrum and apply convolution for the spectrograph line spread function."""
+def normalize_and_convolve(
+    spectrum, continuum_level, crval1, resolving_power, dispersion
+) -> np.ndarray:
+    """
+    Normalize the spectrum and apply convolution for the spectrograph line spread function.
+
+    Parameters
+    ----------
+    spectrum : np.ndarray
+        The input spectrum to be normalized and convolved.
+    continuum_level : float
+        The continuum level to scale the spectrum.
+    crval1 : float
+        Reference wavelength in nanometers.
+    resolving_power : float
+        Resolving power of the spectrograph.
+    dispersion : float
+        Dispersion in nanometers per pixel.
+
+    Returns
+    -------
+    np.ndarray
+        The normalized and convolved spectrum.
+    """
     fts_solar_normalized = spectrum * continuum_level
     sigma_wavelength = (crval1 / resolving_power) * gaussian_fwhm_to_sigma
     sigma_pix = sigma_wavelength / np.abs(dispersion)
@@ -81,7 +170,31 @@ def fitting_model(
     order: int,
     doppler_velocity: float,
 ) -> np.ndarray:
-    """Compute fitting_model function for fitting wavecal parameters."""
+    """
+    Compute the fitting model function for fitting wavelength calibration parameters.
+
+    Parameters
+    ----------
+    params : Parameters
+        Parameters object containing the fitting parameters.
+    unfit_1d_spectrum : np.ndarray
+        The observed 1D spectrum to be fitted.
+    cropped_atlas : AtlasSlice
+        Cropped atlas containing telluric and solar atlas data.
+    number_of_wave_pix : int
+        Number of wavelength pixels.
+    grating_constant : float
+        Grating constant of the spectrograph.
+    order : int
+        Diffraction order.
+    doppler_velocity : float
+        Doppler velocity in km/s.
+
+    Returns
+    -------
+    np.ndarray
+        Residual amplitude between the observed spectrum and the fitted model.
+    """
     param_vals = params.valuesdict()
     crval1 = param_vals["crval1"]
     dispersion = param_vals["dispersion"]
