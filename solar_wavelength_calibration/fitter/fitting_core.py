@@ -7,7 +7,7 @@ from astropy.wcs import WCS
 from lmfit import Parameters
 from scipy.ndimage import gaussian_filter1d
 
-from solar_wavelength_calibration.atlas.atlas import CroppedAtlas
+from solar_wavelength_calibration.atlas.atlas import AtlasSlice
 
 
 def calculate_linear_wave(params, number_of_wave_pix, grating_constant, order):
@@ -75,7 +75,7 @@ def normalize_and_convolve(spectrum, continuum_level, crval1, resolving_power, d
 def fitting_model(
     params: Parameters,
     unfit_1d_spectrum: np.ndarray,
-    cropped_atlas: CroppedAtlas,
+    cropped_atlas: AtlasSlice,
     number_of_wave_pix: int,
     grating_constant: float,
     order: int,

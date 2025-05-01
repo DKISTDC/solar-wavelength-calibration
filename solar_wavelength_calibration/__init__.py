@@ -2,6 +2,10 @@
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version
 
+from .atlas.atlas import Atlas
+from .atlas.atlas import DownloadConfig
+from .fitter.wavelength_fitter import WavelengthCalibrationFitter
+
 try:
     __version__ = version(distribution_name=__name__)
 except PackageNotFoundError:  # pragma: no cover

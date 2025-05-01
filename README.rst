@@ -28,45 +28,17 @@ Usage
 -----
 .. code:: python
 
-    >>> from solar_wavelength_calibration.atlas.atlas import Atlas, DownloadConfig
-    >>> from solar_wavelength_calibration.fitter.parameters import AngleBoundRange, BoundsModel, DispersionBoundRange, LengthBoundRange, UnitlessBoundRange, WavelengthCalibrationParameters
-    >>> from solar_wavelength_calibration.fitter.wavelength_fitter import WaveCalFitter
+    >>> from solar_wavelength_calibration import Atlas, WavelengthCalibrationFitter
 
-Load in the Telluric FTS Atlas and the Disk Center (Solar) FTS Atlas:
+    Create an
 
-.. code:: python
-
-    >>> atlas_config = DownloadConfig(
-            base_url="doi:10.5281/zenodo.14646788/",
-            telluric_reference_atlas_file_name="telluric_reference_atlas.npy",
-            telluric_reference_atlas_hash_id="md5:8db5e12508b293bca3495d81a0747447",
-            solar_reference_atlas_file_name="solar_reference_atlas.npy",
-            solar_reference_atlas_hash_id="md5:84ab4c50689ef235fe5ed4f7ee905ca0",
-        )
-
-    >>> atlas = Atlas(atlas_config)
-
-If desired Setup fitting bounds. If no bounds are specified, default values will be used:
+Create an `Atlas` object to load DKIST's Telluric FTS Atlas and Disk Center (Solar) FTS Atlas (hosted on `zenodo <https://zenodo.org/records/14674504>`_):
 
 .. code:: python
 
-    >>> bounds = BoundsModel(
-            crval1=LengthBoundRange(min=349.858 * u.nm, max=350.458 * u.nm),
-            dispersion=DispersionBoundRange(
-                min=dispersion - (0.05 * u.nm / u.pix), max=dispersion + (0.05 * u.nm / u.pix)
-            ),
-            incident_light_angle=AngleBoundRange(
-                min=incident_light_angle - (180 * u.deg), max=incident_light_angle + (180 * u.deg)
-            ),
-            resolving_power=UnitlessBoundRange(
-                min=resolving_power + resolving_power_bounds[0],
-                max=resolving_power + resolving_power_bounds[1],
-            ),
-            opacity_factor=UnitlessBoundRange(min=0.0, max=10.0),
-            straylight_fraction=UnitlessBoundRange(min=0.0, max=0.4),
-        )
+    >>> atlas = Atlas()
 
-Initialize model parameters:
+Set up the model parameters using values specific to your instrument:
 
 .. code:: python
 
@@ -77,38 +49,27 @@ Initialize model parameters:
             resolving_power=resolving_power,
             opacity_factor=5.0,
             straylight_fraction=0.2,
-            grating_constant=self.constants.grating_constant,
+            grating_constant=grating_constant,
             doppler_velocity=doppler_velocity,
             order=order,
-            bounds=bounds,
         )
 
-Calibrate the wavelength axis
+Initialize the wavelength calibration fitter:
 
 .. code:: python
 
-    >>> fitter = WaveCalFitter(
+    >>> fitter = WavelengthCalibrationFitter(
             input_parameters=input_parameters,
             atlas=atlas,
         )
 
-Run the fit. If full flag is set to True, the fitter will return
+Perform the wavelength calibration fit:
 
 .. code:: python
 
     >>> fit_result = fitter.run_fit(
             expected_wavelength_vector=expected_wavelength_vector,
             unfit_1d_spectrum=unfit_1d_spectrum,
-        )
-
-The full flag can also be set to True in order to return the fit result, as well as all other fit result parameters returned by the fitting algorithm.
-
-.. code:: python
-
-    >>> fit_result, fit_result_params = fitter.run_fit(
-            expected_wavelength_vector=expected_wavelength_vector,
-            unfit_1d_spectrum=unfit_1d_spectrum,
-            full = True,
         )
 
 Changelog

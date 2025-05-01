@@ -7,8 +7,9 @@ import numpy as np
 from astropy.units import Quantity
 from pydantic import BaseModel
 from pydantic import ConfigDict
+from pydantic import model_validator
 
-from solar_wavelength_calibration.atlas.atlas import CroppedAtlas
+from solar_wavelength_calibration.atlas.atlas import AtlasSlice
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.fitting_core import fitting_model
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
@@ -16,13 +17,41 @@ from solar_wavelength_calibration.fitter.parameters import WavelengthCalibration
 logger = logging.getLogger(__name__)
 
 
-class WaveCalFitter(BaseModel):
+class FitResult(BaseModel):
+    """Represents the output of the fitting process, including the WCS header information and optional fit parameters."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    header: dict
+    parameters: dict | None
+
+    def as_result(self) -> dict | tuple[dict, dict]:
+        """Return the fit result as a dictionary or a tuple of dictionaries."""
+        if self.parameters:
+            return self.header, self.parameters
+        return self.header
+
+    def __call__(self) -> dict | tuple[dict, dict]:
+        """Make the instance callable and return the result of as_result."""
+        return self.as_result()
+
+
+class WavelengthCalibrationFitter(BaseModel):
     """Object that brings together data, models (atlases), and fit parameters to run fits."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     input_parameters: WavelengthCalibrationParameters
     atlas: AtlasBase
+
+    @model_validator(mode="after")
+    def _validate_atlas_wavelength_monotonicity(self):
+        """Ensure that the wavelength arrays in the atlas are monotonic."""
+        if not self.atlas.telluric_atlas_wavelength_is_monotonic:
+            raise ValueError("Telluric atlas wavelength array is not monotonic.")
+        if not self.atlas.solar_atlas_wavelength_is_monotonic:
+            raise ValueError("Solar atlas wavelength array is not monotonic.")
+        return self
 
     def run_fit(
         self,
@@ -31,7 +60,7 @@ class WaveCalFitter(BaseModel):
         full: bool = False,
         method: str = "leastsq",
         **minimize_kwargs,
-    ) -> dict | tuple[dict, dict]:
+    ) -> FitResult:
         """Run data preparation and fitting.
 
         Parameters
@@ -53,8 +82,10 @@ class WaveCalFitter(BaseModel):
 
         Returns
         -------
-            dict | tuple[dict, dict]
-                The fit result headers as a dictionary, or a tuple containing the fit result headers and fit parameters if `full` is True.
+            FitResult
+            An instance of `FitResult` containing:
+            - `header` (dict[str, Quantity]): The WCS header information.
+            - `parameters` (dict[str, float] | None): The fit parameters if `full` is True, otherwise None.
         """
         cropped_atlas = self._prepare_atlas(expected_wavelength_vector)
         fit_result_params = self._fit_spectrum(
@@ -62,7 +93,7 @@ class WaveCalFitter(BaseModel):
         )
         return fit_result_params
 
-    def _prepare_atlas(self, expected_wavelength_vector: u.Quantity) -> CroppedAtlas:
+    def _prepare_atlas(self, expected_wavelength_vector: u.Quantity) -> AtlasSlice:
         """
         Crop and align the solar and telluric atlases to match the expected wavelength range.
 
@@ -94,23 +125,23 @@ class WaveCalFitter(BaseModel):
         cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask]
         cropped_solar_atlas_transmission = self.atlas.solar_atlas_transmission[cropped_solar_mask]
 
-        cropped_atlas = CroppedAtlas(
-            cropped_solar_atlas_wavelength=cropped_solar_atlas_wavelength.to_value(u.nm),
-            cropped_telluric_atlas_wavelength=cropped_telluric_atlas_wavelength.to_value(u.nm),
-            cropped_solar_atlas_transmission=cropped_solar_atlas_transmission,
-            cropped_telluric_atlas_transmission=cropped_telluric_atlas_transmission,
+        cropped_atlas = AtlasSlice(
+            solar_atlas_wavelength=cropped_solar_atlas_wavelength.to_value(u.nm),
+            telluric_atlas_wavelength=cropped_telluric_atlas_wavelength.to_value(u.nm),
+            solar_atlas_transmission=cropped_solar_atlas_transmission,
+            telluric_atlas_transmission=cropped_telluric_atlas_transmission,
         )
 
         return cropped_atlas
 
     def _fit_spectrum(
         self,
-        cropped_atlas: CroppedAtlas,
+        cropped_atlas: AtlasSlice,
         unfit_1d_spectrum: np.ndarray,
         full: bool,
         method: str,
         **minimize_kwargs,
-    ) -> dict:
+    ) -> FitResult:
         """Send the fitter on its way."""
         params_to_fit = self.input_parameters.lmfit_parameters
         constant_parameters = self.input_parameters.constant_parameters
@@ -147,6 +178,6 @@ class WaveCalFitter(BaseModel):
         }
 
         if full:
-            return fit_result_header, fit_result_params
+            return FitResult(header=fit_result_header, parameters=fit_result_params)
 
-        return fit_result_header
+        return FitResult(header=fit_result_header, parameters=None)

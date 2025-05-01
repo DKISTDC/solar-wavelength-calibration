@@ -12,7 +12,7 @@ from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
 from solar_wavelength_calibration.fitter.parameters import UnitlessBoundRange
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
-from solar_wavelength_calibration.fitter.wavelength_fitter import WaveCalFitter
+from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthCalibrationFitter
 from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
 
 
@@ -25,11 +25,11 @@ def test_wavecal_fitter(
     observed_wavelength_vector,
 ):
     """
-    Given: The correct WaveCalFitter inputs (data, models, and fit parameters)
-    When: Initializing a WaveCalFitter object with these inputs
+    Given: The correct WavelengthCalibrationFitter inputs (data, models, and fit parameters)
+    When: Initializing a WavelengthCalibrationFitter object with these inputs
     Then: Everything needed for the fit is correctly set up
     """
-    fitter = WaveCalFitter(
+    fitter = WavelengthCalibrationFitter(
         input_parameters=parameters,
         atlas=atlas,
     )
@@ -40,9 +40,9 @@ def test_wavecal_fitter(
     )
 
     # test that values have been fit (i.e. changed)
-    assert fit_result.get("CDELT1") != test_dispersion
+    assert fit_result.header.get("CDELT1") != test_dispersion
     assert (
-        fit_result.get("CRVAL1")
+        fit_result.header.get("CRVAL1")
         != atlas.telluric_atlas_wavelength[np.size(observed_spectrum) // 2 + 1]
     )
 
@@ -54,12 +54,12 @@ def test_incorrect_atlas(
 ):
     """
     Given: An incorrect atlas (i.e. a random array of numbers)
-    When: Initializing a WaveCalFitter object
+    When: Initializing a WavelengthCalibrationFitter object
     Then: Raise a ValidationError
     """
     atlas = np.linspace(1000, 3000, 1000) * u.nm
     with pytest.raises(ValidationError, match="Input should be an instance of AtlasBase"):
-        fitter = WaveCalFitter(
+        fitter = WavelengthCalibrationFitter(
             input_parameters=parameters,
             atlas=atlas,
         )
@@ -90,7 +90,7 @@ def test_fixing_parameters(
     observed_wavelength_vector,
 ):
     """
-    Given: A `WaveCalFitter` initialized with a `WavelengthCalibrationParameters` with a single fixed parameter
+    Given: A `WavelengthCalibrationFitter` initialized with a `WavelengthCalibrationParameters` with a single fixed parameter
     When: Running the fit
     Then: The "fit" value of the fixed parameter is the same as its initial value
     """
@@ -109,17 +109,17 @@ def test_fixing_parameters(
 
     initialized_parameters = WavelengthCalibrationParameters(fit_flags=fit_flags, **init_values)
 
-    fitter = WaveCalFitter(
+    fitter = WavelengthCalibrationFitter(
         input_parameters=initialized_parameters,
         atlas=atlas,
     )
 
-    _, fit_result_params = fitter.run_fit(
+    fit_result = fitter.run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
         full=True,
     )
-    for parameter in fit_result_params:
+    for parameter in fit_result.parameters:
         if parameter != fixed_parameter:
             continue
 
@@ -131,7 +131,7 @@ def test_fixing_parameters(
         if isinstance(init_value, Quantity):
             init_value = init_value.value
 
-        np.testing.assert_allclose(init_value, fit_result_params[parameter])
+        np.testing.assert_allclose(init_value, fit_result.parameters[parameter])
 
 
 def test_fit_stays_valid_with_fixed_crval1(
@@ -178,7 +178,7 @@ def test_fit_stays_valid_with_fixed_crval1(
         **init_values
     )
 
-    fitter = WaveCalFitter(
+    fitter = WavelengthCalibrationFitter(
         input_parameters=parameters,
         atlas=atlas,
     )
@@ -202,7 +202,7 @@ def test_fit_is_correct(
 ):
     """
     Given: A simulated unfit 1D spectrum with a known shift and dispersion scale.
-    When: The WaveCalFitter is used to fit the spectrum.
+    When: The WavelengthCalibrationFitter is used to fit the spectrum.
     Then: The fit parameters that parameterize the WCS header are correct
     """
 
@@ -232,7 +232,7 @@ def test_fit_is_correct(
         ),
     )
 
-    fitter = WaveCalFitter(
+    fitter = WavelengthCalibrationFitter(
         input_parameters=parameters,
         atlas=atlas,
     )
@@ -241,12 +241,14 @@ def test_fit_is_correct(
         unfit_1d_spectrum=observed_spectrum,
         method="nelder-meade",
     )
-    np.testing.assert_allclose(fit_result["CRVAL1"], test_crval1.to_value(u.nm), atol=1, rtol=1e-4)
     np.testing.assert_allclose(
-        fit_result["CDELT1"], test_dispersion.to_value(u.nm / u.pix), atol=1e-5, rtol=1e-1
+        fit_result.header["CRVAL1"], test_crval1.to_value(u.nm), atol=1, rtol=1e-4
+    )
+    np.testing.assert_allclose(
+        fit_result.header["CDELT1"], test_dispersion.to_value(u.nm / u.pix), atol=1e-5, rtol=1e-1
     )
 
-    fit_incident_light_angle = fit_result["PV1_2"]
+    fit_incident_light_angle = fit_result.header["PV1_2"]
     # Incident light angle is pretty weakly constrained for our test setup so let's say we pass if we get within a
     # degree.
     assert abs(fit_incident_light_angle - test_incident_light_angle.to_value(u.deg)) < 0.5
@@ -259,11 +261,11 @@ def test_prepare_atlas(
     observed_wavelength_vector,
 ):
     """
-    Given: The correct WaveCalFitter inputs (data, models, and fit parameters)
+    Given: The correct WavelengthCalibrationFitter inputs (data, models, and fit parameters)
     When: Preparing the atlas for the fit
     Then: Make sure that a sample of the atlas is taken, and make sure that it is the correct sample
     """
-    fitter = WaveCalFitter(
+    fitter = WavelengthCalibrationFitter(
         input_parameters=parameters,
         atlas=atlas,
     )
@@ -295,10 +297,10 @@ def test_full_flag_true(
 ):
     """
     Given: WaveCal inputs with the full flag set to true
-    When: Initializing a WaveCalFitter object
+    When: Initializing a WavelengthCalibrationFitter object
     Then: We get two fit results back; one WCS object, and one dictionary
     """
-    fitter = WaveCalFitter(
+    fitter = WavelengthCalibrationFitter(
         input_parameters=parameters,
         atlas=atlas,
     )
@@ -307,13 +309,11 @@ def test_full_flag_true(
         unfit_1d_spectrum=observed_spectrum,
         full=True,
     )
-    # make sure we get 2 outputs
-    assert len(fit_result) == 2
-    fit_result_header, fit_result_params = fit_result
+
     # and make sure that the first output is the WCS object...
-    assert isinstance(fit_result_header, dict)
+    assert isinstance(fit_result.header, dict)
     # and the second is a dictionary containing the rest of the fitted parameters
-    assert isinstance(fit_result_params, dict)
+    assert isinstance(fit_result.parameters, dict)
 
 
 def test_full_flag_false(
@@ -324,10 +324,10 @@ def test_full_flag_false(
 ):
     """
     Given: WaveCal inputs with the full flag set to false (default)
-    When: Initializing a WaveCalFitter object
+    When: Initializing a WavelengthCalibrationFitter object
     Then: We get one fit result back, and it is a dictionary
     """
-    fitter = WaveCalFitter(
+    fitter = WavelengthCalibrationFitter(
         input_parameters=parameters,
         atlas=atlas,
     )
@@ -337,6 +337,6 @@ def test_full_flag_false(
         unfit_1d_spectrum=observed_spectrum,
         full=False,
     )
-
-    # make sure we get one fit result back, and it is a dict
-    assert isinstance(fit_result, dict)
+    # make sure we get one fit result back, and it is the fitted headers as a dict
+    assert isinstance(fit_result.header, dict)
+    assert fit_result.parameters == None

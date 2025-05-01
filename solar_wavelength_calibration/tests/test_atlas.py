@@ -5,12 +5,14 @@ from unittest import mock
 
 import numpy as np
 import pooch
+import pydantic
 import pytest
 
 from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.atlas import CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR
 from solar_wavelength_calibration.atlas.atlas import DEFAULT_POOCH_CACHE_DIR
 from solar_wavelength_calibration.atlas.atlas import DownloadConfig
+from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthCalibrationFitter
 
 
 @pytest.fixture(
@@ -73,10 +75,10 @@ def test_atlas_repr():
     assert isinstance(eval(repr(atlas)), Atlas)
 
 
-def test_solar_wavelength_non_monotonic():
+def test_solar_wavelength_non_monotonic(parameters):
     """Given: an Atlas object with non-monotonically increasing solar wavelength
     When: accessing solar_atlas_wavelength
-    Then: a ValueError should be raised."""
+    Then: a Pydantic ValidationError should be raised."""
     atlas = Atlas()
     # Inject non-monotonic solar wavelength data into the Atlas object
     atlas._solar_atlas = (
@@ -84,14 +86,16 @@ def test_solar_wavelength_non_monotonic():
         np.array([1.0, 0.9, 0.8, 0.7]),  # Corresponding transmission
     )
 
-    with pytest.raises(ValueError, match="solar_atlas_wavelength must be monotonically increasing"):
-        atlas.solar_atlas_wavelength
+    with pytest.raises(
+        pydantic.ValidationError, match="Solar atlas wavelength array is not monotonic."
+    ):
+        WavelengthCalibrationFitter(input_parameters=parameters, atlas=atlas)
 
 
-def test_telluric_wavelength_non_monotonic():
+def test_telluric_wavelength_non_monotonic(parameters):
     """Given: an Atlas object with non-monotonically increasing telluric wavelength
     When: accessing telluric_atlas_wavelength
-    Then: a ValueError should be raised."""
+    Then: a Pydantic ValidationError should be raised."""
     atlas = Atlas()
     # Inject non-monotonic telluric wavelength data into the Atlas object
     atlas._telluric_atlas = (
@@ -100,6 +104,6 @@ def test_telluric_wavelength_non_monotonic():
     )
 
     with pytest.raises(
-        ValueError, match="telluric_atlas_wavelength must be monotonically increasing"
+        pydantic.ValidationError, match="Telluric atlas wavelength array is not monotonic."
     ):
-        atlas.telluric_atlas_wavelength
+        WavelengthCalibrationFitter(input_parameters=parameters, atlas=atlas)

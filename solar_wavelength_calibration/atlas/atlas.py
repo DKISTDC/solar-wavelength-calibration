@@ -46,17 +46,34 @@ default_config = DownloadConfig(
 class Atlas(AtlasBase):
     """Reference atlas file class."""
 
-    def __init__(self, config: DownloadConfig | None = None):
-        if config is None:
-            logger.info(f"Using default configuration for FTS atlas: {default_config}")
-            config = default_config
-        self.config = config
-        self.pooch = pooch.create(
-            path=pooch.os_cache(DEFAULT_POOCH_CACHE_DIR),
-            base_url=self.config.base_url,
-            registry=self.config.registry,
-            env=CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR,
-        )
+    def __init__(
+        self,
+        config: DownloadConfig | None = None,
+        solar_atlas_wavelength: np.ndarray | None = None,
+        telluric_atlas_wavelength: np.ndarray | None = None,
+        solar_atlas_transmission: np.ndarray | None = None,
+        telluric_atlas_transmission: np.ndarray | None = None,
+    ):
+        if (
+            solar_atlas_wavelength is not None
+            and telluric_atlas_wavelength is not None
+            and solar_atlas_transmission is not None
+            and telluric_atlas_transmission is not None
+        ):
+            self._solar_atlas = (solar_atlas_wavelength, solar_atlas_transmission)
+            self._telluric_atlas = (telluric_atlas_wavelength, telluric_atlas_transmission)
+            self.pooch = None  # Disable pooch since data is provided directly
+        else:
+            if config is None:
+                logger.info(f"Using default configuration for FTS atlas: {default_config}")
+                config = default_config
+            self.config = config
+            self.pooch = pooch.create(
+                path=pooch.os_cache(DEFAULT_POOCH_CACHE_DIR),
+                base_url=self.config.base_url,
+                registry=self.config.registry,
+                env=CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR,
+            )
 
     @cached_property
     def _telluric_atlas(self) -> tuple[np.ndarray, np.ndarray]:
@@ -70,14 +87,6 @@ class Atlas(AtlasBase):
         path = self.pooch.fetch(self.config.solar_reference_atlas_file_name)
         return np.load(path)
 
-    def _validate_monotonic(self, array: Quantity, name: str) -> Quantity:
-        """Check that the wavelength array is strictly increasing."""
-        if not np.all(np.diff(array) > 0):  # Strictly increasing check
-            raise ValueError(
-                f"{name} must be monotonically increasing. Found non-monotonic values."
-            )
-        return array
-
     @property
     def telluric_atlas_wavelength(self) -> Quantity:
         """
@@ -88,7 +97,7 @@ class Atlas(AtlasBase):
         oxygen, and carbon dioxide.
         """
         wavelength = self._telluric_atlas[0] * u.nm
-        return self._validate_monotonic(wavelength, "telluric_atlas_wavelength")
+        return wavelength
 
     @property
     def telluric_atlas_transmission(self) -> np.ndarray:
@@ -110,7 +119,7 @@ class Atlas(AtlasBase):
         capturing the spectral features of the Sun with high precision.
         """
         wavelength = self._solar_atlas[0] * u.nm
-        return self._validate_monotonic(wavelength, "solar_atlas_wavelength")
+        return wavelength
 
     @property
     def solar_atlas_transmission(self) -> np.ndarray:
@@ -126,21 +135,21 @@ class Atlas(AtlasBase):
         return f"Atlas(config={self.config!r})"
 
 
-class CroppedAtlas(AtlasBase):
+class AtlasSlice(AtlasBase):
     """Cropped version of the atlas."""
 
     def __init__(
         self,
         *,
-        cropped_solar_atlas_wavelength: np.ndarray,
-        cropped_telluric_atlas_wavelength: np.ndarray,
-        cropped_solar_atlas_transmission: np.ndarray,
-        cropped_telluric_atlas_transmission: np.ndarray,
+        solar_atlas_wavelength: np.ndarray,
+        telluric_atlas_wavelength: np.ndarray,
+        solar_atlas_transmission: np.ndarray,
+        telluric_atlas_transmission: np.ndarray,
     ):
-        self._solar_atlas_wavelength = cropped_solar_atlas_wavelength
-        self._telluric_atlas_wavelength = cropped_telluric_atlas_wavelength
-        self._solar_atlas_transmission = cropped_solar_atlas_transmission
-        self._telluric_atlas_transmission = cropped_telluric_atlas_transmission
+        self._solar_atlas_wavelength = solar_atlas_wavelength
+        self._telluric_atlas_wavelength = telluric_atlas_wavelength
+        self._solar_atlas_transmission = solar_atlas_transmission
+        self._telluric_atlas_transmission = telluric_atlas_transmission
 
     @property
     def telluric_atlas_wavelength(self) -> np.ndarray:

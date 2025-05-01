@@ -158,7 +158,7 @@ def test_only_required_parameters_dict(
     }
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def parameters(
     observed_spectrum,
     test_crval1,
