@@ -66,7 +66,7 @@ Perform the wavelength calibration fit:
 
 .. code:: python
 
-    >>> fit_result = fitter.run_fit(
+    >>> fit_result = fitter(
             expected_wavelength_vector=expected_wavelength_vector,
             unfit_1d_spectrum=unfit_1d_spectrum,
         )

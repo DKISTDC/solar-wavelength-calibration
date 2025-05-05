@@ -177,7 +177,7 @@ def test_fit_stays_valid_with_fixed_crval1(
         input_parameters=parameters,
         atlas=atlas,
     )
-    _ = fitter.run_fit(
+    _ = fitter(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
     )
@@ -231,7 +231,7 @@ def test_fit_is_correct(
         input_parameters=parameters,
         atlas=atlas,
     )
-    fit_result = fitter.run_fit(
+    fit_result = fitter(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
         method="nelder-meade",
@@ -299,7 +299,7 @@ def test_FitResult_class(
         input_parameters=parameters,
         atlas=atlas,
     )
-    fit_result = fitter.run_fit(
+    fit_result = fitter(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
     )

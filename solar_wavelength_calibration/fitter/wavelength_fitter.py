@@ -54,6 +54,21 @@ class WavelengthCalibrationFitter(BaseModel):
             raise ValueError("Solar atlas wavelength array is not monotonic.")
         return self
 
+    def __call__(
+        self,
+        expected_wavelength_vector: u.Quantity,
+        unfit_1d_spectrum: np.ndarray,
+        method: str = "leastsq",
+        **minimize_kwargs,
+    ) -> FitResult:
+        """Make the instance callable and run the fit."""
+        return self.run_fit(
+            expected_wavelength_vector,
+            unfit_1d_spectrum,
+            method,
+            **minimize_kwargs,
+        )
+
     def run_fit(
         self,
         expected_wavelength_vector: u.Quantity,
