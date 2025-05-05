@@ -41,21 +41,6 @@ test_config = DownloadConfig(
 )
 
 
-@pytest.fixture(
-    params=[
-        pytest.param(None, id="default_config"),
-        pytest.param(test_config, id="test_config"),
-    ]
-)
-def config(request) -> DownloadConfig | None:
-    return request.param
-
-
-@pytest.fixture()
-def atlas(cache_dir: Path, config: DownloadConfig | None) -> Atlas:
-    return Atlas(config=config)
-
-
 def test_atlas(atlas: Atlas, cache_dir: Path):
     """Given: an Atlas object
     When: the object is created
@@ -77,7 +62,7 @@ def test_atlas_repr():
 
 def test_solar_wavelength_non_monotonic(parameters):
     """Given: an Atlas object with non-monotonically increasing solar wavelength
-    When: accessing solar_atlas_wavelength
+    When: instantiating the WavelengthCalibrationFitter
     Then: a Pydantic ValidationError should be raised."""
     atlas = Atlas()
     # Inject non-monotonic solar wavelength data into the Atlas object
@@ -94,7 +79,7 @@ def test_solar_wavelength_non_monotonic(parameters):
 
 def test_telluric_wavelength_non_monotonic(parameters):
     """Given: an Atlas object with non-monotonically increasing telluric wavelength
-    When: accessing telluric_atlas_wavelength
+    When: instantiating the WavelengthCalibrationFitter
     Then: a Pydantic ValidationError should be raised."""
     atlas = Atlas()
     # Inject non-monotonic telluric wavelength data into the Atlas object

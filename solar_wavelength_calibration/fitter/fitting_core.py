@@ -195,13 +195,12 @@ def fitting_model(
     np.ndarray
         Residual amplitude between the observed spectrum and the fitted model.
     """
-    param_vals = params.valuesdict()
-    crval1 = param_vals["crval1"]
-    dispersion = param_vals["dispersion"]
-    opacity_factor = param_vals["opacity_factor"]
-    straylight_fraction = param_vals["straylight_fraction"]
-    continuum_level = param_vals["continuum_level"]
-    resolving_power = param_vals["resolving_power"]
+    crval1 = params["crval1"].value
+    dispersion = params["dispersion"].value
+    opacity_factor = params["opacity_factor"].value
+    straylight_fraction = params["straylight_fraction"].value
+    continuum_level = params["continuum_level"].value
+    resolving_power = params["resolving_power"].value
 
     # Calculate the linear wavelength vector
     linear_wave = calculate_linear_wave(params, number_of_wave_pix, grating_constant, order)

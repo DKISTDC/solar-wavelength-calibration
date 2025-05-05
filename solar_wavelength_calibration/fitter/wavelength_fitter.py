@@ -4,7 +4,6 @@ import logging
 import astropy.units as u
 import lmfit
 import numpy as np
-from astropy.units import Quantity
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import model_validator
@@ -57,7 +56,6 @@ class WavelengthCalibrationFitter(BaseModel):
         self,
         expected_wavelength_vector: u.Quantity,
         unfit_1d_spectrum: np.ndarray,
-        full: bool = False,
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
@@ -71,9 +69,6 @@ class WavelengthCalibrationFitter(BaseModel):
         unfit_1d_spectrum (np.ndarray)
             The unfit 1D spectrum to be fitted.
 
-        full (bool, optional)
-            If True, returns both the WCS header and fit parameters. Defaults to False.
-
         method (str, optional)
             The optimization method to use. Defaults to "leastsq".
 
@@ -85,11 +80,11 @@ class WavelengthCalibrationFitter(BaseModel):
             FitResult
             An instance of `FitResult` containing:
             - `header` (dict[str, Quantity]): The WCS header information.
-            - `parameters` (dict[str, float] | None): The fit parameters if `full` is True, otherwise None.
+            - `parameters` (dict[str, float] | None): The fit parameters.
         """
         cropped_atlas = self._prepare_atlas(expected_wavelength_vector)
         fit_result_params = self._fit_spectrum(
-            cropped_atlas, unfit_1d_spectrum, full, method, **minimize_kwargs
+            cropped_atlas, unfit_1d_spectrum, method, **minimize_kwargs
         )
         return fit_result_params
 
@@ -138,7 +133,6 @@ class WavelengthCalibrationFitter(BaseModel):
         self,
         cropped_atlas: AtlasSlice,
         unfit_1d_spectrum: np.ndarray,
-        full: bool,
         method: str,
         **minimize_kwargs,
     ) -> FitResult:
@@ -177,7 +171,4 @@ class WavelengthCalibrationFitter(BaseModel):
             "PV1_2": fit_result_params["incident_light_angle"],  # Incident angle [deg]
         }
 
-        if full:
-            return FitResult(header=fit_result_header, parameters=fit_result_params)
-
-        return FitResult(header=fit_result_header, parameters=None)
+        return FitResult(header=fit_result_header, parameters=fit_result_params)

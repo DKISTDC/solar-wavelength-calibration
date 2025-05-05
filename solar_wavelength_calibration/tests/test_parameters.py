@@ -3,7 +3,6 @@ import re
 import astropy.units as u
 import numpy as np
 import pytest
-from astropy.units import Quantity
 from hypothesis import example
 from hypothesis import given
 from hypothesis import settings

@@ -63,10 +63,6 @@ def test_incorrect_atlas(
             input_parameters=parameters,
             atlas=atlas,
         )
-        fitter.run_fit(
-            expected_wavelength_vector=observed_wavelength_vector,
-            unfit_1d_spectrum=observed_spectrum,
-        )
 
 
 @pytest.mark.parametrize(
@@ -117,7 +113,6 @@ def test_fixing_parameters(
     fit_result = fitter.run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
-        full=True,
     )
     for parameter in fit_result.parameters:
         if parameter != fixed_parameter:
@@ -289,16 +284,16 @@ def test_prepare_atlas(
     )
 
 
-def test_full_flag_true(
+def test_FitResult_class(
     parameters: WavelengthCalibrationParameters,
     observed_spectrum,
     atlas: AtlasBase,
     observed_wavelength_vector,
 ):
     """
-    Given: WaveCal inputs with the full flag set to true
-    When: Initializing a WavelengthCalibrationFitter object
-    Then: We get two fit results back; one WCS object, and one dictionary
+    Given: WaveCal inputs
+    When: Initializing a WavelengthCalibrationFitter object and running the fit
+    Then: We get two fit results back; one dictionary with the fit result headers, and one dictionary with the fit result parameters.
     """
     fitter = WavelengthCalibrationFitter(
         input_parameters=parameters,
@@ -307,36 +302,9 @@ def test_full_flag_true(
     fit_result = fitter.run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
-        full=True,
     )
 
     # and make sure that the first output is the WCS object...
     assert isinstance(fit_result.header, dict)
     # and the second is a dictionary containing the rest of the fitted parameters
     assert isinstance(fit_result.parameters, dict)
-
-
-def test_full_flag_false(
-    parameters: WavelengthCalibrationParameters,
-    observed_spectrum,
-    atlas: AtlasBase,
-    observed_wavelength_vector,
-):
-    """
-    Given: WaveCal inputs with the full flag set to false (default)
-    When: Initializing a WavelengthCalibrationFitter object
-    Then: We get one fit result back, and it is a dictionary
-    """
-    fitter = WavelengthCalibrationFitter(
-        input_parameters=parameters,
-        atlas=atlas,
-    )
-
-    fit_result = fitter.run_fit(
-        expected_wavelength_vector=observed_wavelength_vector,
-        unfit_1d_spectrum=observed_spectrum,
-        full=False,
-    )
-    # make sure we get one fit result back, and it is the fitted headers as a dict
-    assert isinstance(fit_result.header, dict)
-    assert fit_result.parameters == None
