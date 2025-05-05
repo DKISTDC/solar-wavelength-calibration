@@ -6,8 +6,10 @@ import lmfit
 import numpy as np
 from pydantic import BaseModel
 from pydantic import ConfigDict
+from pydantic import Field
 from pydantic import model_validator
 
+from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.atlas import AtlasSlice
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.fitting_core import fitting_model
@@ -41,7 +43,7 @@ class WavelengthCalibrationFitter(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     input_parameters: WavelengthCalibrationParameters
-    atlas: AtlasBase
+    atlas: AtlasBase = Field(default_factory=Atlas)
 
     @model_validator(mode="after")
     def _validate_atlas_wavelength_monotonicity(self):
@@ -77,16 +79,14 @@ class WavelengthCalibrationFitter(BaseModel):
 
         Returns
         -------
-            FitResult
+        fit_result:
             An instance of `FitResult` containing:
             - `header` (dict[str, Quantity]): The WCS header information.
             - `parameters` (dict[str, float] | None): The fit parameters.
         """
         cropped_atlas = self._prepare_atlas(expected_wavelength_vector)
-        fit_result_params = self._fit_spectrum(
-            cropped_atlas, unfit_1d_spectrum, method, **minimize_kwargs
-        )
-        return fit_result_params
+        fit_result = self._fit_spectrum(cropped_atlas, unfit_1d_spectrum, method, **minimize_kwargs)
+        return fit_result
 
     def _prepare_atlas(self, expected_wavelength_vector: u.Quantity) -> AtlasSlice:
         """
@@ -109,7 +109,9 @@ class WavelengthCalibrationFitter(BaseModel):
             telluric_atlas_wavelength < max_wavelength
         )
 
-        cropped_telluric_atlas_wavelength = telluric_atlas_wavelength[cropped_telluric_mask]
+        cropped_telluric_atlas_wavelength = telluric_atlas_wavelength[
+            cropped_telluric_mask
+        ].to_value(u.nm)
         cropped_telluric_atlas_transmission = self.atlas.telluric_atlas_transmission[
             cropped_telluric_mask
         ]
@@ -117,12 +119,12 @@ class WavelengthCalibrationFitter(BaseModel):
         cropped_solar_mask = (solar_atlas_wavelength > min_wavelength) & (
             solar_atlas_wavelength < max_wavelength
         )
-        cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask]
+        cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask].to_value(u.nm)
         cropped_solar_atlas_transmission = self.atlas.solar_atlas_transmission[cropped_solar_mask]
 
         cropped_atlas = AtlasSlice(
-            solar_atlas_wavelength=cropped_solar_atlas_wavelength.to_value(u.nm),
-            telluric_atlas_wavelength=cropped_telluric_atlas_wavelength.to_value(u.nm),
+            solar_atlas_wavelength=cropped_solar_atlas_wavelength,
+            telluric_atlas_wavelength=cropped_telluric_atlas_wavelength,
             solar_atlas_transmission=cropped_solar_atlas_transmission,
             telluric_atlas_transmission=cropped_telluric_atlas_transmission,
         )
@@ -154,11 +156,8 @@ class WavelengthCalibrationFitter(BaseModel):
         )
         fit_result = minimizer.minimize(params=params_to_fit, method=method, **minimize_kwargs)
         logger.info("Finished fit.")
-        fit_result_params = fit_result.params.valuesdict()
 
-        logger.info("Fitted Values:")
-        for (param, fitted_value) in fit_result_params.items():
-            logger.info(f"{param} = {fitted_value}")
+        logger.info(f"{fit_result.params=}")
 
         fit_result_header = {
             "CTYPE1": "AWAV-GRA",  # Grating dispersion function with air wavelengths
@@ -166,9 +165,9 @@ class WavelengthCalibrationFitter(BaseModel):
             "CRPIX1": number_of_wave_pix // 2 + 1,  # Reference pixel [pix]
             "PV1_0": constant_parameters["grating_constant"],  # Grating density
             "PV1_1": constant_parameters["order"],  # Diffraction order
-            "CRVAL1": fit_result_params["crval1"],  # Reference value [nm]
-            "CDELT1": fit_result_params["dispersion"],  # Linear dispersion [nm/pix]
-            "PV1_2": fit_result_params["incident_light_angle"],  # Incident angle [deg]
+            "CRVAL1": fit_result.params["crval1"].value,  # Reference value [nm]
+            "CDELT1": fit_result.params["dispersion"].value,  # Linear dispersion [nm/pix]
+            "PV1_2": fit_result.params["incident_light_angle"].value,  # Incident angle [deg]
         }
 
-        return FitResult(header=fit_result_header, parameters=fit_result_params)
+        return FitResult(header=fit_result_header, parameters=fit_result.params)

@@ -141,8 +141,8 @@ class AtlasSlice(AtlasBase):
     def __init__(
         self,
         *,
-        solar_atlas_wavelength: np.ndarray,
-        telluric_atlas_wavelength: np.ndarray,
+        solar_atlas_wavelength: Quantity,
+        telluric_atlas_wavelength: Quantity,
         solar_atlas_transmission: np.ndarray,
         telluric_atlas_transmission: np.ndarray,
     ):

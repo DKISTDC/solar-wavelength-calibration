@@ -28,27 +28,27 @@ Usage
 -----
 .. code:: python
 
-    >>> from solar_wavelength_calibration import Atlas, WavelengthCalibrationFitter
+    >>> from solar_wavelength_calibration import WavelengthCalibrationFitter
 
-    Create an
-
-Create an `Atlas` object to load DKIST's Telluric FTS Atlas and Disk Center (Solar) FTS Atlas (hosted on `zenodo <https://zenodo.org/records/14674504>`_):
+Define the spectrum to be fit and compute the expected wavelength vector based on header information:
 
 .. code:: python
 
-    >>> atlas = Atlas()
+    >>> unfit_1d_spectrum =
+
+    >>> expected_wavelength_vector =
 
 Set up the model parameters using values specific to your instrument:
 
 .. code:: python
 
     >>> input_parameters = WavelengthCalibrationParameters(
-            crval1=atlas.telluric_atlas_wavelength[np.size(unfit_1d_spectrum) // 2 + 1],
+            crval1=crval1,
             dispersion=dispersion,
             incident_light_angle=incident_light_angle,
             resolving_power=resolving_power,
-            opacity_factor=5.0,
-            straylight_fraction=0.2,
+            opacity_factor=opacity_factor,
+            straylight_fraction=straylight_fraction,
             grating_constant=grating_constant,
             doppler_velocity=doppler_velocity,
             order=order,
@@ -60,7 +60,6 @@ Initialize the wavelength calibration fitter:
 
     >>> fitter = WavelengthCalibrationFitter(
             input_parameters=input_parameters,
-            atlas=atlas,
         )
 
 Perform the wavelength calibration fit:
