@@ -18,23 +18,30 @@ from solar_wavelength_calibration.fitter.parameters import WavelengthCalibration
 logger = logging.getLogger(__name__)
 
 
+class FitResultHeader(BaseModel):
+    """Represents the Fitted WCS header information."""
+
+    CTYPE1: str
+    CUNIT1: str
+    CRPIX1: int
+    PV1_0: float
+    PV1_1: int
+    CRVAL1: float
+    CDELT1: float
+    PV1_2: float
+
+
 class FitResult(BaseModel):
     """Represents the output of the fitting process, including the WCS header information and optional fit parameters."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    header: dict
-    parameters: dict | None
+    header: FitResultHeader
+    parameters: dict
 
-    def as_result(self) -> dict | tuple[dict, dict]:
-        """Return the fit result as a dictionary or a tuple of dictionaries."""
-        if self.parameters:
-            return self.header, self.parameters
-        return self.header
-
-    def __call__(self) -> dict | tuple[dict, dict]:
-        """Make the instance callable and return the result of as_result."""
-        return self.as_result()
+    def __getattr__(self, item):
+        """Return the fit result as a tuple of dictionaries."""
+        return self.header, self.parameters
 
 
 class WavelengthCalibrationFitter(BaseModel):
@@ -174,15 +181,15 @@ class WavelengthCalibrationFitter(BaseModel):
 
         logger.info(f"{fit_result.params=}")
 
-        fit_result_header = {
-            "CTYPE1": "AWAV-GRA",  # Grating dispersion function with air wavelengths
-            "CUNIT1": "nm",  # Dispersion units
-            "CRPIX1": number_of_wave_pix // 2 + 1,  # Reference pixel [pix]
-            "PV1_0": constant_parameters["grating_constant"],  # Grating density
-            "PV1_1": constant_parameters["order"],  # Diffraction order
-            "CRVAL1": fit_result.params["crval1"].value,  # Reference value [nm]
-            "CDELT1": fit_result.params["dispersion"].value,  # Linear dispersion [nm/pix]
-            "PV1_2": fit_result.params["incident_light_angle"].value,  # Incident angle [deg]
-        }
+        fit_result_header = FitResultHeader(
+            CTYPE1="AWAV-GRA",  # Grating dispersion function with air wavelengths
+            CUNIT1="nm",  # Dispersion units
+            CRPIX1=number_of_wave_pix // 2 + 1,  # Reference pixel [pix]
+            PV1_0=constant_parameters["grating_constant"],  # Grating density
+            PV1_1=constant_parameters["order"],  # Diffraction order
+            CRVAL1=fit_result.params["crval1"].value,  # Reference value [nm]
+            CDELT1=fit_result.params["dispersion"].value,  # Linear dispersion [nm/pix]
+            PV1_2=fit_result.params["incident_light_angle"].value,  # Incident angle [deg]
+        )
 
         return FitResult(header=fit_result_header, parameters=fit_result.params)
