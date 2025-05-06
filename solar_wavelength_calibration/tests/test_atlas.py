@@ -16,7 +16,7 @@ from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthCali
 
 
 @pytest.fixture(
-    params=[pytest.param(True, id="override_cache"), pytest.param(False, id="default_cache")]
+    params=[pytest.param(True, id="override_cache"), pytest.param(False, id="default_cache")],
 )
 def cache_dir(request, tmp_path) -> Path:
     override_cache_dir = request.param
@@ -39,6 +39,21 @@ test_config = DownloadConfig(
     solar_reference_atlas_file_name="test_solar_reference_atlas.npy",
     solar_reference_atlas_hash_id="md5:d692bff029923e833f900ebc59c4435a",
 )
+
+
+@pytest.fixture(
+    params=[
+        pytest.param(None, id="default_config"),
+        pytest.param(test_config, id="test_config"),
+    ],
+)
+def config(request) -> DownloadConfig | None:
+    return request.param
+
+
+@pytest.fixture()
+def atlas(cache_dir: Path, config: DownloadConfig | None) -> Atlas:
+    return Atlas(config=config)
 
 
 def test_atlas(atlas: Atlas, cache_dir: Path):

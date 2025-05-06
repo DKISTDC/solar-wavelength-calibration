@@ -4,6 +4,7 @@ import pytest
 from astropy.units import Quantity
 from astropy.wcs import WCS
 from lmfit import Parameters
+from requests import session
 
 from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.atlas import DownloadConfig
@@ -15,58 +16,57 @@ from solar_wavelength_calibration.fitter.parameters import WavelengthCalibration
     params=[
         pytest.param(None, id="default_config"),
     ],
-    scope="session",
 )
 def config(request) -> DownloadConfig | None:
     return request.param
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def atlas(config: DownloadConfig | None) -> Atlas:
     return Atlas(config=config)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def num_wave_pix() -> int:
     return 2000
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_crval1() -> Quantity:
     return 1072 * u.nm
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_dispersion():
     """Dummy dispersion value."""
     return 0.004401829598401599 * u.nm / u.pix
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_incident_light_angle():
     """Dummy incident_light_angle value."""
     return 57.00577487796545 * u.deg
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_grating_constant():
     """Dummy grating constant."""
     return 31600.0 / u.m
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_doppler_velocity():
     """Dummy doppler velocity value."""
     return -0.4281437757265212 * u.km / u.s
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_order():
     """Dummy order."""
     return 52
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_WCS_header(
     test_crval1,
     test_dispersion,
@@ -87,7 +87,7 @@ def test_WCS_header(
     }
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def observed_wavelength_vector(test_WCS_header, num_wave_pix) -> Quantity:
     wcs = WCS(test_WCS_header)
 
@@ -96,7 +96,7 @@ def observed_wavelength_vector(test_WCS_header, num_wave_pix) -> Quantity:
     return obs_wave
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def observed_spectrum(atlas, observed_wavelength_vector) -> np.ndarray:
     obs_spec = np.interp(
         observed_wavelength_vector.to_value("nm"),
@@ -107,12 +107,12 @@ def observed_spectrum(atlas, observed_wavelength_vector) -> np.ndarray:
     return obs_spec
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def observed_continuum_level(observed_spectrum) -> float:
     return np.nanpercentile(observed_spectrum, 75)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_parameters_dict(
     atlas: AtlasBase,
     observed_spectrum,
@@ -137,7 +137,7 @@ def test_parameters_dict(
     }
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_only_required_parameters_dict(
     atlas: AtlasBase,
     observed_spectrum,
