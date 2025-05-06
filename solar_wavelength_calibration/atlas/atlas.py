@@ -15,6 +15,8 @@ DEFAULT_POOCH_CACHE_DIR = "pooch_solar_wave_cal"
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["Atlas", "DownloadConfig"]
+
 
 class DownloadConfig(BaseModel):
     """Configuration for downloading the reference atlas files."""
@@ -54,26 +56,16 @@ class Atlas(AtlasBase):
         solar_atlas_transmission: np.ndarray | None = None,
         telluric_atlas_transmission: np.ndarray | None = None,
     ):
-        if (
-            solar_atlas_wavelength is not None
-            and telluric_atlas_wavelength is not None
-            and solar_atlas_transmission is not None
-            and telluric_atlas_transmission is not None
-        ):
-            self._solar_atlas = (solar_atlas_wavelength, solar_atlas_transmission)
-            self._telluric_atlas = (telluric_atlas_wavelength, telluric_atlas_transmission)
-            self.pooch = None  # Disable pooch since data is provided directly
-        else:
-            if config is None:
-                logger.info(f"Using default configuration for FTS atlas: {default_config}")
-                config = default_config
-            self.config = config
-            self.pooch = pooch.create(
-                path=pooch.os_cache(DEFAULT_POOCH_CACHE_DIR),
-                base_url=self.config.base_url,
-                registry=self.config.registry,
-                env=CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR,
-            )
+        if config is None:
+            logger.info(f"Using default configuration for FTS atlas: {default_config}")
+            config = default_config
+        self.config = config
+        self.pooch = pooch.create(
+            path=pooch.os_cache(DEFAULT_POOCH_CACHE_DIR),
+            base_url=self.config.base_url,
+            registry=self.config.registry,
+            env=CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR,
+        )
 
     @cached_property
     def _telluric_atlas(self) -> tuple[np.ndarray, np.ndarray]:
@@ -136,7 +128,7 @@ class Atlas(AtlasBase):
 
 
 class LocalAtlas(AtlasBase):
-    """Cropped version of the atlas."""
+    """Local version of the atlas."""
 
     def __init__(
         self,

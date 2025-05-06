@@ -2,8 +2,7 @@
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version
 
-from .atlas.atlas import Atlas
-from .atlas.atlas import DownloadConfig
+from .atlas.atlas import *
 from .fitter.wavelength_fitter import WavelengthCalibrationFitter
 
 try:
