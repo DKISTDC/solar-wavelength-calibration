@@ -1,5 +1,6 @@
 """Function used during fitting."""
 import astropy.units as u
+import lmfit.parameter
 import numpy as np
 from astropy import constants as const
 from astropy.stats import gaussian_fwhm_to_sigma
@@ -7,10 +8,12 @@ from astropy.wcs import WCS
 from lmfit import Parameters
 from scipy.ndimage import gaussian_filter1d
 
-from solar_wavelength_calibration.atlas.atlas import AtlasSlice
+from solar_wavelength_calibration.atlas.atlas import LocalAtlas
 
 
-def calculate_linear_wave(params, number_of_wave_pix, grating_constant, order) -> np.ndarray:
+def calculate_linear_wave(
+    params: lmfit.parameter.Parameters, number_of_wave_pix: int, grating_constant: float, order: int
+) -> np.ndarray:
     """Calculate the linear wavelength vector.
 
     Parameters
@@ -29,20 +32,15 @@ def calculate_linear_wave(params, number_of_wave_pix, grating_constant, order) -
     linear_wave: np.ndarray
         Linear wavelength vector in nanometers.
     """
-    param_vals = params.valuesdict()
-    crval1 = param_vals["crval1"]
-    dispersion = param_vals["dispersion"]
-    incident_light_angle = param_vals["incident_light_angle"]
-
     non_linear_header = {
         "CTYPE1": "AWAV-GRA",
         "CUNIT1": "nm",
         "CRPIX1": number_of_wave_pix // 2 + 1,
         "PV1_0": grating_constant,
         "PV1_1": order,
-        "CRVAL1": crval1,
-        "CDELT1": dispersion,
-        "PV1_2": incident_light_angle,
+        "CRVAL1": params["crval1"].value,
+        "CDELT1": params["dispersion"].value,
+        "PV1_2": params["incident_light_angle"].value,
     }
 
     non_linear_wcs = WCS(non_linear_header)
@@ -61,7 +59,7 @@ def apply_telluric_absorption(linear_wave, cropped_atlas, opacity_factor) -> np.
     ----------
     linear_wave : np.ndarray
         Linear wavelength vector in nanometers.
-    cropped_atlas : AtlasSlice
+    cropped_atlas : LocalAtlas
         Cropped atlas containing telluric and solar atlas data.
     opacity_factor : float
         Factor to scale the telluric absorption.
@@ -87,7 +85,7 @@ def apply_doppler_shift(linear_wave, cropped_atlas, doppler_velocity, crval1) ->
     ----------
     linear_wave : np.ndarray
         Linear wavelength vector in nanometers.
-    cropped_atlas : AtlasSlice
+    cropped_atlas : LocalAtlas
         Cropped atlas containing telluric and solar atlas data.
     doppler_velocity : float
         Doppler velocity in km/s.
@@ -164,7 +162,7 @@ def normalize_and_convolve(
 def fitting_model(
     params: Parameters,
     unfit_1d_spectrum: np.ndarray,
-    cropped_atlas: AtlasSlice,
+    cropped_atlas: LocalAtlas,
     number_of_wave_pix: int,
     grating_constant: float,
     order: int,
@@ -179,7 +177,7 @@ def fitting_model(
         Parameters object containing the fitting parameters.
     unfit_1d_spectrum : np.ndarray
         The observed 1D spectrum to be fitted.
-    cropped_atlas : AtlasSlice
+    cropped_atlas : LocalAtlas
         Cropped atlas containing telluric and solar atlas data.
     number_of_wave_pix : int
         Number of wavelength pixels.

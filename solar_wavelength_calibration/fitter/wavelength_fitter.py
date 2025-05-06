@@ -10,7 +10,7 @@ from pydantic import Field
 from pydantic import model_validator
 
 from solar_wavelength_calibration.atlas.atlas import Atlas
-from solar_wavelength_calibration.atlas.atlas import AtlasSlice
+from solar_wavelength_calibration.atlas.atlas import LocalAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.fitting_core import fitting_model
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
@@ -110,7 +110,7 @@ class WavelengthCalibrationFitter(BaseModel):
         fit_result = self._fit_spectrum(cropped_atlas, unfit_1d_spectrum, method, **minimize_kwargs)
         return fit_result
 
-    def _prepare_atlas(self, expected_wavelength_vector: u.Quantity) -> AtlasSlice:
+    def _prepare_atlas(self, expected_wavelength_vector: u.Quantity) -> LocalAtlas:
         """
         Crop and align the solar and telluric atlases to match the expected wavelength range.
 
@@ -144,7 +144,7 @@ class WavelengthCalibrationFitter(BaseModel):
         cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask].to_value(u.nm)
         cropped_solar_atlas_transmission = self.atlas.solar_atlas_transmission[cropped_solar_mask]
 
-        cropped_atlas = AtlasSlice(
+        cropped_atlas = LocalAtlas(
             solar_atlas_wavelength=cropped_solar_atlas_wavelength,
             telluric_atlas_wavelength=cropped_telluric_atlas_wavelength,
             solar_atlas_transmission=cropped_solar_atlas_transmission,
@@ -155,7 +155,7 @@ class WavelengthCalibrationFitter(BaseModel):
 
     def _fit_spectrum(
         self,
-        cropped_atlas: AtlasSlice,
+        cropped_atlas: LocalAtlas,
         unfit_1d_spectrum: np.ndarray,
         method: str,
         **minimize_kwargs,

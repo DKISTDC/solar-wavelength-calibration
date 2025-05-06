@@ -135,7 +135,7 @@ class Atlas(AtlasBase):
         return f"Atlas(config={self.config!r})"
 
 
-class AtlasSlice(AtlasBase):
+class LocalAtlas(AtlasBase):
     """Cropped version of the atlas."""
 
     def __init__(
@@ -152,7 +152,7 @@ class AtlasSlice(AtlasBase):
         self._telluric_atlas_transmission = telluric_atlas_transmission
 
     @property
-    def telluric_atlas_wavelength(self) -> np.ndarray:
+    def telluric_atlas_wavelength(self) -> Quantity:
         """Return the wavelength array of the telluric atlas."""
         return self._telluric_atlas_wavelength
 
@@ -162,7 +162,7 @@ class AtlasSlice(AtlasBase):
         return self._telluric_atlas_transmission
 
     @property
-    def solar_atlas_wavelength(self) -> np.ndarray:
+    def solar_atlas_wavelength(self) -> Quantity:
         """Return the wavelength array of the solar atlas."""
         return self._solar_atlas_wavelength
 
