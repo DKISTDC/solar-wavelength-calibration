@@ -2,6 +2,7 @@ import astropy.units as u
 import numpy as np
 import pytest
 from astropy.units import Quantity
+from lmfit.minimizer import MinimizerResult
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
@@ -115,7 +116,7 @@ def test_fixing_parameters(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
     )
-    for parameter in fit_result.parameters:
+    for parameter in fit_result.parameters.params:
         if parameter != fixed_parameter:
             continue
 
@@ -127,7 +128,7 @@ def test_fixing_parameters(
         if isinstance(init_value, Quantity):
             init_value = init_value.value
 
-        np.testing.assert_allclose(init_value, fit_result.parameters[parameter])
+        np.testing.assert_allclose(init_value, fit_result.parameters.params[parameter])
 
 
 def test_fit_stays_valid_with_fixed_crval1(
@@ -308,4 +309,4 @@ def test_FitResult_class(
     # and make sure that the first output is the WCS object...
     assert isinstance(fit_result.header, FitResultHeader)
     # and the second is a dictionary containing the rest of the fitted parameters
-    assert isinstance(fit_result.parameters, dict)
+    assert isinstance(fit_result.parameters, MinimizerResult)

@@ -4,6 +4,7 @@ import logging
 import astropy.units as u
 import lmfit
 import numpy as np
+from lmfit.minimizer import MinimizerResult
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -37,7 +38,7 @@ class FitResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     header: FitResultHeader
-    parameters: lmfit.parameter.Parameters
+    parameters: MinimizerResult
 
     def __getattr__(self, item):
         """Return the fit result as a tuple of dictionaries."""
@@ -179,7 +180,8 @@ class WavelengthCalibrationFitter(BaseModel):
         fit_result = minimizer.minimize(params=params_to_fit, method=method, **minimize_kwargs)
         logger.info("Finished fit.")
 
-        logger.info(f"{fit_result.params=}")
+        fit_result.params.pretty_print()
+        logger.info(fit_result.params.pretty_repr())
 
         fit_result_header = FitResultHeader(
             CTYPE1="AWAV-GRA",  # Grating dispersion function with air wavelengths
@@ -192,4 +194,4 @@ class WavelengthCalibrationFitter(BaseModel):
             PV1_2=fit_result.params["incident_light_angle"].value,  # Incident angle [deg]
         )
 
-        return FitResult(header=fit_result_header, parameters=fit_result.params)
+        return FitResult(header=fit_result_header, parameters=fit_result)
