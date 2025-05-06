@@ -12,6 +12,7 @@ from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
 from solar_wavelength_calibration.fitter.parameters import UnitlessBoundRange
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
+from solar_wavelength_calibration.fitter.wavelength_fitter import FitResultHeader
 from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthCalibrationFitter
 from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
 
@@ -40,9 +41,9 @@ def test_wavecal_fitter(
     )
 
     # test that values have been fit (i.e. changed)
-    assert fit_result.header.get("CDELT1") != test_dispersion
+    assert fit_result.header.CDELT1 != test_dispersion
     assert (
-        fit_result.header.get("CRVAL1")
+        fit_result.header.CRVAL1
         != atlas.telluric_atlas_wavelength[np.size(observed_spectrum) // 2 + 1]
     )
 
@@ -237,13 +238,13 @@ def test_fit_is_correct(
         method="nelder-meade",
     )
     np.testing.assert_allclose(
-        fit_result.header["CRVAL1"], test_crval1.to_value(u.nm), atol=1, rtol=1e-4
+        fit_result.header.CRVAL1, test_crval1.to_value(u.nm), atol=1, rtol=1e-4
     )
     np.testing.assert_allclose(
-        fit_result.header["CDELT1"], test_dispersion.to_value(u.nm / u.pix), atol=1e-5, rtol=1e-1
+        fit_result.header.CDELT1, test_dispersion.to_value(u.nm / u.pix), atol=1e-5, rtol=1e-1
     )
 
-    fit_incident_light_angle = fit_result.header["PV1_2"]
+    fit_incident_light_angle = fit_result.header.PV1_2
     # Incident light angle is pretty weakly constrained for our test setup so let's say we pass if we get within a
     # degree.
     assert abs(fit_incident_light_angle - test_incident_light_angle.to_value(u.deg)) < 0.5
@@ -305,6 +306,6 @@ def test_FitResult_class(
     )
 
     # and make sure that the first output is the WCS object...
-    assert isinstance(fit_result.header, dict)
+    assert isinstance(fit_result.header, FitResultHeader)
     # and the second is a dictionary containing the rest of the fitted parameters
     assert isinstance(fit_result.parameters, dict)

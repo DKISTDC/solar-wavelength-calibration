@@ -37,7 +37,7 @@ class FitResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     header: FitResultHeader
-    parameters: dict
+    parameters: lmfit.parameter.Parameters
 
     def __getattr__(self, item):
         """Return the fit result as a tuple of dictionaries."""
