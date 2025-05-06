@@ -47,24 +47,24 @@ test_config = DownloadConfig(
         pytest.param(test_config, id="test_config"),
     ],
 )
-def config(request) -> DownloadConfig | None:
+def function_config(request) -> DownloadConfig | None:
     return request.param
 
 
 @pytest.fixture()
-def atlas(cache_dir: Path, config: DownloadConfig | None) -> Atlas:
-    return Atlas(config=config)
+def function_atlas(cache_dir: Path, function_config: DownloadConfig | None) -> Atlas:
+    return Atlas(config=function_config)
 
 
-def test_atlas(atlas: Atlas, cache_dir: Path):
+def test_atlas(function_atlas: Atlas, cache_dir: Path):
     """Given: an Atlas object
     When: the object is created
     Then: the object should have the correct attributes."""
-    assert isinstance(atlas.telluric_atlas_wavelength, np.ndarray)
-    assert isinstance(atlas.telluric_atlas_transmission, np.ndarray)
-    assert isinstance(atlas.solar_atlas_wavelength, np.ndarray)
-    assert isinstance(atlas.solar_atlas_transmission, np.ndarray)
-    assert atlas.pooch.path == cache_dir
+    assert isinstance(function_atlas.telluric_atlas_wavelength, np.ndarray)
+    assert isinstance(function_atlas.telluric_atlas_transmission, np.ndarray)
+    assert isinstance(function_atlas.solar_atlas_wavelength, np.ndarray)
+    assert isinstance(function_atlas.solar_atlas_transmission, np.ndarray)
+    assert function_atlas.pooch.path == cache_dir
 
 
 def test_atlas_repr():
