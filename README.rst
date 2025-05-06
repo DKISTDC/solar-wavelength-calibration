@@ -28,37 +28,38 @@ Usage
 -----
 .. code:: python
 
-    >>> from solar_wavelength_calibration import WavelengthCalibrationFitter
+    from solar_wavelength_calibration import WavelengthCalibrationFitter
+    import astropy.units as u
 
 Define the spectrum to be fit and compute the expected wavelength vector based on header information:
 
 .. code:: python
 
-    >>> unfit_1d_spectrum =
+    unfit_1d_spectrum =
 
-    >>> expected_wavelength_vector =
+    expected_wavelength_vector =
 
 Set up the model parameters using values specific to your instrument:
 
 .. code:: python
 
-    >>> input_parameters = WavelengthCalibrationParameters(
-            crval1=crval1,
-            dispersion=dispersion,
-            incident_light_angle=incident_light_angle,
-            resolving_power=resolving_power,
-            opacity_factor=opacity_factor,
-            straylight_fraction=straylight_fraction,
-            grating_constant=grating_constant,
-            doppler_velocity=doppler_velocity,
-            order=order,
+    input_parameters = WavelengthCalibrationParameters(
+            crval1=350.159 * u.nm,
+            dispersion=4.042 * u.nm/u.pix,
+            incident_light_angle=57.006 * u.deg,
+            resolving_power=42500,
+            opacity_factor=5.0,
+            straylight_fraction=0.2,
+            grating_constant=31600.0 * 1/u.m,
+            doppler_velocity=-0.428 * u.km/u.s,
+            order=52,
         )
 
 Initialize the wavelength calibration fitter:
 
 .. code:: python
 
-    >>> fitter = WavelengthCalibrationFitter(
+    fitter = WavelengthCalibrationFitter(
             input_parameters=input_parameters,
         )
 
@@ -66,7 +67,7 @@ Perform the wavelength calibration fit:
 
 .. code:: python
 
-    >>> fit_result = fitter(
+    fit_result = fitter(
             expected_wavelength_vector=expected_wavelength_vector,
             unfit_1d_spectrum=unfit_1d_spectrum,
         )

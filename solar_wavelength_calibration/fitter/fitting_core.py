@@ -32,6 +32,10 @@ def calculate_linear_wave(
     linear_wave: np.ndarray
         Linear wavelength vector in nanometers.
     """
+    # References about representing spectral coordinate in FITS:
+    # https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract (section 5)
+    # https://specreduce.readthedocs.io/en/latest/api/specreduce.utils.synth_data.make_2d_arc_image.html
+
     non_linear_header = {
         "CTYPE1": "AWAV-GRA",
         "CUNIT1": "nm",
