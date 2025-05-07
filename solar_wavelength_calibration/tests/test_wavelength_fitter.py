@@ -13,8 +13,8 @@ from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
 from solar_wavelength_calibration.fitter.parameters import UnitlessBoundRange
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
-from solar_wavelength_calibration.fitter.wavelength_fitter import FitResultHeader
 from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthCalibrationFitter
+from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthParameters
 from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
 
 
@@ -42,9 +42,9 @@ def test_wavecal_fitter(
     )
 
     # test that values have been fit (i.e. changed)
-    assert fit_result.header.CDELT1 != test_dispersion
+    assert fit_result.wavelength_parameters.dispersion != test_dispersion
     assert (
-        fit_result.header.CRVAL1
+        fit_result.wavelength_parameters.crval
         != atlas.telluric_atlas_wavelength[np.size(observed_spectrum) // 2 + 1]
     )
 
@@ -116,7 +116,7 @@ def test_fixing_parameters(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
     )
-    for parameter in fit_result.parameters.params:
+    for parameter in fit_result.minimizer_result.params:
         if parameter != fixed_parameter:
             continue
 
@@ -128,7 +128,7 @@ def test_fixing_parameters(
         if isinstance(init_value, Quantity):
             init_value = init_value.value
 
-        np.testing.assert_allclose(init_value, fit_result.parameters.params[parameter])
+        np.testing.assert_allclose(init_value, fit_result.minimizer_result.params[parameter])
 
 
 def test_fit_stays_valid_with_fixed_crval1(
@@ -239,13 +239,16 @@ def test_fit_is_correct(
         method="nelder-meade",
     )
     np.testing.assert_allclose(
-        fit_result.header.CRVAL1, test_crval1.to_value(u.nm), atol=1, rtol=1e-4
+        fit_result.wavelength_parameters.crval, test_crval1.to_value(u.nm), atol=1, rtol=1e-4
     )
     np.testing.assert_allclose(
-        fit_result.header.CDELT1, test_dispersion.to_value(u.nm / u.pix), atol=1e-5, rtol=1e-1
+        fit_result.wavelength_parameters.dispersion,
+        test_dispersion.to_value(u.nm / u.pix),
+        atol=1e-5,
+        rtol=1e-1,
     )
 
-    fit_incident_light_angle = fit_result.header.PV1_2
+    fit_incident_light_angle = fit_result.wavelength_parameters.incident_light_angle
     # Incident light angle is pretty weakly constrained for our test setup so let's say we pass if we get within a
     # degree.
     assert abs(fit_incident_light_angle - test_incident_light_angle.to_value(u.deg)) < 0.5
@@ -306,7 +309,7 @@ def test_FitResult_class(
         unfit_1d_spectrum=observed_spectrum,
     )
 
-    # and make sure that the first output is the WCS object...
-    assert isinstance(fit_result.header, FitResultHeader)
-    # and the second is a dictionary containing the rest of the fitted parameters
-    assert isinstance(fit_result.parameters, MinimizerResult)
+    # and make sure that the first output is the wavelength parameters object...
+    assert isinstance(fit_result.wavelength_parameters, WavelengthParameters)
+    # and the second is a dictionary containing the rest of the minimizer results
+    assert isinstance(fit_result.minimizer_result, MinimizerResult)

@@ -19,17 +19,43 @@ from solar_wavelength_calibration.fitter.parameters import WavelengthCalibration
 logger = logging.getLogger(__name__)
 
 
-class FitResultHeader(BaseModel):
+class WavelengthParameters(BaseModel):
     """Represents the Fitted WCS header information."""
 
-    CTYPE1: str
-    CUNIT1: str
-    CRPIX1: int
-    PV1_0: float
-    PV1_1: int
-    CRVAL1: float
-    CDELT1: float
-    PV1_2: float
+    crpix: int
+    crval: float
+    dispersion: float
+    grating_constant: float
+    order: int
+    incident_light_angle: float
+    ctype: str = "AWAV-GRA"
+    cunit: str = "nm"
+
+    def to_header(self, axis_num: int) -> dict:
+        """
+        Convert the wavelength parameters to a WCS header dictionary.
+
+        Parameters
+        ----------
+        axis_num : int
+            The axis number for the WCS header (e.g., 1 for the first axis).
+
+        Returns
+        -------
+        dict
+            A dictionary representing the WCS header with keys corresponding to
+            FITS header keywords and values derived from the wavelength parameters.
+        """
+        return {
+            f"CTYPE{axis_num}": self.ctype,
+            f"CUNIT{axis_num}": self.cunit,
+            f"CRPIX{axis_num}": self.crpix,
+            f"CRVAL{axis_num}": self.crval,
+            f"CDELT{axis_num}": self.dispersion,
+            f"PV{axis_num}_0": self.grating_constant,
+            f"PV{axis_num}_1": self.order,
+            f"PV{axis_num}_2": self.incident_light_angle,
+        }
 
 
 class FitResult(BaseModel):
@@ -37,12 +63,15 @@ class FitResult(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    header: FitResultHeader
-    parameters: MinimizerResult
+    wavelength_parameters: WavelengthParameters
+    minimizer_result: MinimizerResult
+
+    """header: FitResultHeader # TODO: change name. parameters? wavelength_parameters?
+    parameters: MinimizerResult # change to minimizer result?"""
 
     def __getattr__(self, item):
-        """Return the fit result as a tuple of dictionaries."""
-        return self.header, self.parameters
+        """Return the fit result."""
+        return self.wavelength_parameters, self.minimizer_result
 
 
 class WavelengthCalibrationFitter(BaseModel):
@@ -183,15 +212,15 @@ class WavelengthCalibrationFitter(BaseModel):
         fit_result.params.pretty_print()
         logger.info(fit_result.params.pretty_repr())
 
-        fit_result_header = FitResultHeader(
-            CTYPE1="AWAV-GRA",  # Grating dispersion function with air wavelengths
-            CUNIT1="nm",  # Dispersion units
-            CRPIX1=number_of_wave_pix // 2 + 1,  # Reference pixel [pix]
-            PV1_0=constant_parameters["grating_constant"],  # Grating density
-            PV1_1=constant_parameters["order"],  # Diffraction order
-            CRVAL1=fit_result.params["crval1"].value,  # Reference value [nm]
-            CDELT1=fit_result.params["dispersion"].value,  # Linear dispersion [nm/pix]
-            PV1_2=fit_result.params["incident_light_angle"].value,  # Incident angle [deg]
+        fit_result_parameters = WavelengthParameters(
+            crpix=number_of_wave_pix // 2 + 1,
+            crval=fit_result.params["crval1"].value,
+            dispersion=fit_result.params["dispersion"].value,
+            grating_constant=constant_parameters["grating_constant"],
+            order=constant_parameters["order"],
+            incident_light_angle=fit_result.params["incident_light_angle"].value,
+            ctype="AWAV-GRA",
+            cunit="nm",
         )
 
-        return FitResult(header=fit_result_header, parameters=fit_result)
+        return FitResult(wavelength_parameters=fit_result_parameters, minimizer_result=fit_result)

@@ -36,18 +36,20 @@ def calculate_linear_wave(
     # https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract (section 5)
     # https://specreduce.readthedocs.io/en/latest/api/specreduce.utils.synth_data.make_2d_arc_image.html
 
-    non_linear_header = {
-        "CTYPE1": "AWAV-GRA",
-        "CUNIT1": "nm",
-        "CRPIX1": number_of_wave_pix // 2 + 1,
-        "PV1_0": grating_constant,
-        "PV1_1": order,
-        "CRVAL1": params["crval1"].value,
-        "CDELT1": params["dispersion"].value,
-        "PV1_2": params["incident_light_angle"].value,
-    }
+    from .wavelength_fitter import WavelengthParameters
 
-    non_linear_wcs = WCS(non_linear_header)
+    non_linear_header = WavelengthParameters(
+        ctype="AWAV-GRA",
+        cunit="nm",
+        crpix=number_of_wave_pix // 2 + 1,
+        grating_constant=grating_constant,
+        order=order,
+        crval=params["crval1"].value,
+        dispersion=params["dispersion"].value,
+        incident_light_angle=params["incident_light_angle"].value,
+    )
+
+    non_linear_wcs = WCS(non_linear_header.to_header(axis_num=1))
     linear_wave = (non_linear_wcs.spectral.pixel_to_world(np.arange(number_of_wave_pix))).to_value(
         u.nm
     )
