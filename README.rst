@@ -72,6 +72,18 @@ Perform the wavelength calibration fit:
             unfit_1d_spectrum=unfit_1d_spectrum,
         )
 
+To access the fitted wavelength parameters (axis_num should the number for the WCS header corresponding to the wavelength axis (e.g., 1 for the first axis).):
+
+.. code:: python
+
+    fit_result.wavelength_parameters.to_header(axis_num=1)
+
+To access the full minimizer result:
+
+.. code:: python
+
+    fit_result.minimizer_result
+
 Changelog
 #########
 
