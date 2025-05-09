@@ -51,10 +51,6 @@ class Atlas(AtlasBase):
     def __init__(
         self,
         config: DownloadConfig | None = None,
-        solar_atlas_wavelength: np.ndarray | None = None,
-        telluric_atlas_wavelength: np.ndarray | None = None,
-        solar_atlas_transmission: np.ndarray | None = None,
-        telluric_atlas_transmission: np.ndarray | None = None,
     ):
         if config is None:
             logger.info(f"Using default configuration for FTS atlas: {default_config}")

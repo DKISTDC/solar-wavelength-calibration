@@ -5,6 +5,7 @@ from astropy.units import Quantity
 from lmfit.minimizer import MinimizerResult
 from pydantic import ValidationError
 
+from solar_wavelength_calibration.atlas.atlas import LocalAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import AngleBoundRange
 from solar_wavelength_calibration.fitter.parameters import BoundsModel
@@ -13,6 +14,12 @@ from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
 from solar_wavelength_calibration.fitter.parameters import UnitlessBoundRange
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
+from solar_wavelength_calibration.fitter.wavelength_fitter import apply_doppler_shift
+from solar_wavelength_calibration.fitter.wavelength_fitter import apply_telluric_absorption
+from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_linear_wave
+from solar_wavelength_calibration.fitter.wavelength_fitter import combine_spectra
+from solar_wavelength_calibration.fitter.wavelength_fitter import fitting_model
+from solar_wavelength_calibration.fitter.wavelength_fitter import normalize_and_convolve
 from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthCalibrationFitter
 from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthParameters
 from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
@@ -313,3 +320,172 @@ def test_FitResult_class(
     assert isinstance(fit_result.wavelength_parameters, WavelengthParameters)
     # and the second is a dictionary containing the rest of the minimizer results
     assert isinstance(fit_result.minimizer_result, MinimizerResult)
+
+
+def test_calculate_linear_wave(parameters):
+    """
+    Given: A set of valid parameters and a number of wavelength pixels.
+    When: The `calculate_linear_wave` function is called.
+    Then: It returns a linear wavelength vector as a numpy array with the correct length and positive values.
+    """
+    params = parameters.lmfit_parameters
+    grating_constant = parameters.constant_parameters["grating_constant"]
+    order = parameters.constant_parameters["order"]
+
+    # Test with valid input
+    number_of_wave_pix = 100
+    linear_wave = calculate_linear_wave(params, number_of_wave_pix, grating_constant, order)
+    assert isinstance(linear_wave, np.ndarray)
+    assert len(linear_wave) == number_of_wave_pix
+    assert np.all(linear_wave > 0)
+
+    # Test with edge-case input
+    number_of_wave_pix = 0
+    linear_wave = calculate_linear_wave(params, number_of_wave_pix, grating_constant, order)
+    assert isinstance(linear_wave, np.ndarray)
+    assert len(linear_wave) == 0
+
+
+def test_apply_telluric_absorption(parameters):
+    """
+    Given: A linear wavelength vector, a cropped atlas containing telluric data, and an opacity factor.
+    When: The `apply_telluric_absorption` function is called.
+    Then: It returns a telluric transmission spectrum as a numpy array with non-negative values and the same length as the input wavelength vector.
+    """
+    linear_wave = np.linspace(1067.5, 1076.3, 100)
+    cropped_atlas = LocalAtlas(
+        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        solar_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
+        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        telluric_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
+    )
+
+    # Test with valid opacity factor
+    opacity_factor = parameters.lmfit_parameters["opacity_factor"].value
+    telluric_transmission = apply_telluric_absorption(linear_wave, cropped_atlas, opacity_factor)
+    assert isinstance(telluric_transmission, np.ndarray)
+    assert len(telluric_transmission) == len(linear_wave)
+    assert np.all(telluric_transmission >= 0)
+
+    # Test with extreme opacity factors
+    for opacity_factor in [0, 1e6]:
+        telluric_transmission = apply_telluric_absorption(
+            linear_wave, cropped_atlas, opacity_factor
+        )
+        assert isinstance(telluric_transmission, np.ndarray)
+        assert len(telluric_transmission) == len(linear_wave)
+        assert np.all(telluric_transmission >= 0)
+
+
+def test_apply_doppler_shift(parameters):
+    """
+    Given: A linear wavelength vector, a cropped atlas containing solar data, a Doppler velocity, and a reference wavelength.
+    When: The `apply_doppler_shift` function is called.
+    Then: It returns a solar transmission spectrum as a numpy array with non-negative values and the same length as the input wavelength vector.
+    """
+    linear_wave = np.linspace(1067.5, 1076.3, 100)
+    crval1 = parameters.lmfit_parameters["crval1"].value
+    cropped_atlas = LocalAtlas(
+        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        solar_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
+        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        telluric_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
+    )
+
+    # Test with valid doppler velocity
+    doppler_velocity = parameters.constant_parameters["doppler_velocity"]
+    solar_transmission = apply_doppler_shift(linear_wave, cropped_atlas, doppler_velocity, crval1)
+    assert isinstance(solar_transmission, np.ndarray)
+    assert len(solar_transmission) == len(linear_wave)
+    assert np.all(solar_transmission >= 0)
+
+    # Test with edge-case doppler velocities
+    for doppler_velocity in [0, 1e6, -1e6] * u.km / u.s:
+        solar_transmission = apply_doppler_shift(
+            linear_wave, cropped_atlas, doppler_velocity, crval1
+        )
+        assert isinstance(solar_transmission, np.ndarray)
+        assert len(solar_transmission) == len(linear_wave)
+        assert np.all(solar_transmission >= 0)
+
+
+def test_combine_spectra():
+    """
+    Given: Two transmission spectra (telluric and solar) and a straylight fraction.
+    When: The `combine_spectra` function is called.
+    Then: It returns a combined spectrum as a numpy array with non-negative values and the same length as the input spectra.
+    """
+    telluric_transmission = np.linspace(0.8, 1.0, 100)
+    solar_transmission = np.linspace(0.9, 1.0, 100)
+
+    # Test with valid straylight fraction
+    straylight_fraction = 0.1
+    combined_spectrum = combine_spectra(
+        telluric_transmission, solar_transmission, straylight_fraction
+    )
+    assert isinstance(combined_spectrum, np.ndarray)
+    assert len(combined_spectrum) == len(telluric_transmission)
+    assert np.all(combined_spectrum >= 0)
+
+    # Test with extreme straylight fractions
+    for straylight_fraction in [0, 1]:
+        combined_spectrum = combine_spectra(
+            telluric_transmission, solar_transmission, straylight_fraction
+        )
+        assert isinstance(combined_spectrum, np.ndarray)
+        assert len(combined_spectrum) == len(telluric_transmission)
+        assert np.all(combined_spectrum >= 0)
+
+
+def test_normalize_and_convolve(parameters):
+    """
+    Given: A spectrum, continuum level, reference wavelength, resolving power, and dispersion.
+    When: The `normalize_and_convolve` function is called.
+    Then: It returns a normalized and convolved spectrum as a numpy array with non-negative values and the same length as the input spectrum.
+    """
+    spectrum = np.linspace(0.8, 1.0, 100)
+    continuum_level = 1.0
+    crval1 = parameters.lmfit_parameters["crval1"].value
+    resolving_power = parameters.lmfit_parameters["resolving_power"].value
+    dispersion = parameters.lmfit_parameters["dispersion"].value
+
+    normalized_spectrum = normalize_and_convolve(
+        spectrum, continuum_level, crval1, resolving_power, dispersion
+    )
+
+    assert isinstance(normalized_spectrum, np.ndarray)
+    assert len(normalized_spectrum) == len(spectrum)
+    assert np.all(normalized_spectrum >= 0)
+
+
+def test_fitting_model(parameters, atlas, observed_spectrum):
+    """
+    Given: A set of input parameters, an observed spectrum, and a cropped atlas.
+    When: The `fitting_model` function is called with these inputs.
+    Then: It returns the residual amplitude as a numpy array with the same length as the observed spectrum.
+    """
+    params = parameters.lmfit_parameters
+    unfit_1d_spectrum = observed_spectrum
+    cropped_atlas = LocalAtlas(
+        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        solar_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
+        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        telluric_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
+    )
+    number_of_wave_pix = len(unfit_1d_spectrum)
+    grating_constant = parameters.constant_parameters["grating_constant"]
+    order = parameters.constant_parameters["order"]
+    doppler_velocity = parameters.constant_parameters["doppler_velocity"]
+
+    residuals = fitting_model(
+        params,
+        unfit_1d_spectrum,
+        cropped_atlas,
+        number_of_wave_pix,
+        grating_constant,
+        order,
+        doppler_velocity,
+    )
+
+    assert isinstance(residuals, np.ndarray)
+    assert len(residuals) == len(unfit_1d_spectrum)

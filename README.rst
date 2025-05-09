@@ -35,9 +35,9 @@ Define the spectrum to be fit and compute the expected wavelength vector based o
 
 .. code:: python
 
-    unfit_1d_spectrum =
+    unfit_1d_spectrum = np.arange(0.8, 1.0, 0.01)
 
-    expected_wavelength_vector =
+    expected_wavelength_vector = np.arange(1067.5, 1076.3, 0.01) * u.nm
 
 Set up the model parameters using values specific to your instrument:
 
