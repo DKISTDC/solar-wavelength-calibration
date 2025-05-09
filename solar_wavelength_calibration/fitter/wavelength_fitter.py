@@ -209,7 +209,6 @@ class WavelengthCalibrationFitter(BaseModel):
         logger.info("Finished fit.")
 
         fit_result.params.pretty_print()
-        # logger.info(fit_result.params.pretty_repr())
 
         fit_result_parameters = WavelengthParameters(
             crpix=number_of_wave_pix // 2 + 1,
