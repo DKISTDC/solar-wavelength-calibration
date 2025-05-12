@@ -97,21 +97,6 @@ class WavelengthCalibrationFitter(BaseModel):
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
-        """Make the instance callable and run the fit."""
-        return self.run_fit(
-            expected_wavelength_vector,
-            unfit_1d_spectrum,
-            method,
-            **minimize_kwargs,
-        )
-
-    def run_fit(
-        self,
-        expected_wavelength_vector: u.Quantity,
-        unfit_1d_spectrum: np.ndarray,
-        method: str = "leastsq",
-        **minimize_kwargs,
-    ) -> FitResult:
         """Run data preparation and fitting.
 
         Parameters
@@ -132,9 +117,25 @@ class WavelengthCalibrationFitter(BaseModel):
         -------
         fit_result:
             An instance of `FitResult` containing:
-            - `header` (dict[str, Quantity]): The WCS header information.
-            - `parameters` (dict[str, float] | None): The fit parameters.
+            - `wavelength_parameters` (WavelengthParameters): The fitted parameters.
+            - `minimizer_result` (MinimizerResult): The result returned by the lmfit minimizer.
+
         """
+        return self._run_fit(
+            expected_wavelength_vector,
+            unfit_1d_spectrum,
+            method,
+            **minimize_kwargs,
+        )
+
+    def _run_fit(
+        self,
+        expected_wavelength_vector: u.Quantity,
+        unfit_1d_spectrum: np.ndarray,
+        method: str = "leastsq",
+        **minimize_kwargs,
+    ) -> FitResult:
+        """Run the fit."""
         cropped_atlas = self._prepare_atlas(expected_wavelength_vector)
         fit_result = self._fit_spectrum(cropped_atlas, unfit_1d_spectrum, method, **minimize_kwargs)
         return fit_result
@@ -212,7 +213,7 @@ class WavelengthCalibrationFitter(BaseModel):
 
         fit_result_parameters = WavelengthParameters(
             crpix=number_of_wave_pix // 2 + 1,
-            crval=fit_result.params["crval1"].value,
+            crval=fit_result.params["crval"].value,
             dispersion=fit_result.params["dispersion"].value,
             grating_constant=constant_parameters["grating_constant"],
             order=constant_parameters["order"],
@@ -255,7 +256,7 @@ def calculate_linear_wave(
         crpix=number_of_wave_pix // 2 + 1,
         grating_constant=grating_constant,
         order=order,
-        crval=params["crval1"].value,
+        crval=params["crval"].value,
         dispersion=params["dispersion"].value,
         incident_light_angle=params["incident_light_angle"].value,
     )
@@ -420,7 +421,7 @@ def fitting_model(
     np.ndarray
         Residual amplitude between the observed spectrum and the fitted model.
     """
-    crval1 = params["crval1"].value
+    crval1 = params["crval"].value
     dispersion = params["dispersion"].value
     opacity_factor = params["opacity_factor"].value
     straylight_fraction = params["straylight_fraction"].value

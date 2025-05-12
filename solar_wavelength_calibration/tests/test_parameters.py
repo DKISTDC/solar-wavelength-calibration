@@ -27,7 +27,7 @@ from solar_wavelength_calibration.fitter.parameters import WavelengthCalibration
 class WCSValidityParams(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    crval1: length_quantity
+    crval: length_quantity
     incident_light_angle: angle_quantity
     grating_constant: inverse_length_quantity
     order: int
@@ -41,7 +41,7 @@ def wcs_validity_params(draw, valid: bool) -> WCSValidityParams:
 
     If `valid is True` the parameters are guaranteed to represent a valid WCS. The converse is true is `valid is False`.
     """
-    # Cast this as nm for now to avoid potential overflows in unit conversion on `crval1`
+    # Cast this as nm for now to avoid potential overflows in unit conversion on `crval`
     grating_constant = draw(st.integers().filter(lambda n: n != 0)) / u.nm
     incident_light_angle = draw(st.floats(allow_nan=False, allow_infinity=False)) * u.deg
     order = draw(st.integers().filter(lambda n: n != 0))
@@ -53,10 +53,10 @@ def wcs_validity_params(draw, valid: bool) -> WCSValidityParams:
         )
     else:
         delta = draw(st.floats(allow_nan=False, allow_infinity=False).filter(lambda f: abs(f) > 1))
-    crval1 = ((delta + np.sin(incident_light_angle)) / (grating_constant * order)).to(u.nm)
+    crval = ((delta + np.sin(incident_light_angle)) / (grating_constant * order)).to(u.nm)
 
     return WCSValidityParams(
-        crval1=crval1,
+        crval=crval,
         incident_light_angle=incident_light_angle,
         grating_constant=grating_constant.to(1 / u.m),
         order=order,
@@ -67,11 +67,11 @@ def wcs_validity_params(draw, valid: bool) -> WCSValidityParams:
 class SaneBoundsAndWCSParams(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    crval1: length_quantity
+    crval: length_quantity
     incident_light_angle: angle_quantity
     grating_constant: inverse_length_quantity
     order: int
-    crval1_bounds: LengthBoundRange
+    crval_bounds: LengthBoundRange
     incident_light_angle_bounds: AngleBoundRange
 
 
@@ -80,13 +80,13 @@ def sane_wcs_params_and_bounds(
     draw, completely_sane_angles: bool = False
 ) -> SaneBoundsAndWCSParams:
     """
-    Use hypothesis to generate a set of parameters and then make bounds on `crval1` and `incident_light_angle.
+    Use hypothesis to generate a set of parameters and then make bounds on `crval` and `incident_light_angle.
 
     Very similar to `wcs_validity_params`, but here we're limiting the outer edges of numbers we're considering to be
     values well short of ±inf. So "sane" is still relative here.
 
     If `completely_sane_angles` is True then only generate angles in the range [0, 360]. This is to mimic inputs after
-    they have passed through `WavelengthCalibrationParameters.ensure_sane_ligth_angle_values_if_crval1_fixed`.
+    they have passed through `WavelengthCalibrationParameters.ensure_sane_ligth_angle_values_if_crval_fixed`.
     """
     sanity = 1e10
     # Grow the limits on bounds so we don't end up in a case where min=max=value
@@ -125,14 +125,14 @@ def sane_wcs_params_and_bounds(
     else:
         machine_precision = np.finfo(float).eps * 10
     delta = draw(st.floats(min_value=-1.0 + machine_precision, max_value=1.0 - machine_precision))
-    crval1 = ((delta + np.sin(incident_light_angle)) / (grating_constant * order)).to(u.nm)
+    crval = ((delta + np.sin(incident_light_angle)) / (grating_constant * order)).to(u.nm)
 
     crval_min = draw(
         st.floats(
             allow_nan=False,
             allow_infinity=False,
             min_value=-bound_sanity,
-            max_value=crval1.value,
+            max_value=crval.value,
             exclude_max=True,
         )
     )
@@ -140,7 +140,7 @@ def sane_wcs_params_and_bounds(
         st.floats(
             allow_nan=False,
             allow_infinity=False,
-            min_value=crval1.value,
+            min_value=crval.value,
             max_value=bound_sanity,
             exclude_min=True,
         )
@@ -184,25 +184,25 @@ def sane_wcs_params_and_bounds(
     if draw(st.integers()) % 2:
         angle_max = np.inf
 
-    crval1_bounds = LengthBoundRange(min=crval_min * u.nm, max=crval_max * u.nm)
+    crval_bounds = LengthBoundRange(min=crval_min * u.nm, max=crval_max * u.nm)
     angle_bounds = AngleBoundRange(min=angle_min * u.deg, max=angle_max * u.deg)
 
     return SaneBoundsAndWCSParams(
-        crval1=crval1,
+        crval=crval,
         incident_light_angle=incident_light_angle,
         grating_constant=grating_constant,
         order=order,
-        crval1_bounds=crval1_bounds,
+        crval_bounds=crval_bounds,
         incident_light_angle_bounds=angle_bounds,
     )
 
 
 sane_bounds_with_360angle_and_0_min = SaneBoundsAndWCSParams(
-    crval1=1070 * u.nm,
+    crval=1070 * u.nm,
     incident_light_angle=360 * u.deg,
     grating_constant=31600 / u.m,
     order=1,
-    crval1_bounds=LengthBoundRange(min=1060 * u.nm, max=1080 * u.nm),
+    crval_bounds=LengthBoundRange(min=1060 * u.nm, max=1080 * u.nm),
     incident_light_angle_bounds=AngleBoundRange(min=0 * u.deg, max=360 * u.deg),
 )
 
@@ -280,14 +280,14 @@ def test_bounds_model():
 
     # Test dict as input. Please NEVER do this.
     bounds = BoundsModel(
-        crval1={"min": -1 * u.m, "max": 3 * u.nm},
+        crval={"min": -1 * u.m, "max": 3 * u.nm},
         dispersion=dispersion_bound,
         resolving_power=unitless_bound,
         opacity_factor=unitless_bound,
         straylight_fraction=unitless_bound,
     )
-    np.testing.assert_allclose(bounds.crval1.min, -1e9 * u.nm)
-    np.testing.assert_allclose(bounds.crval1.max, 3 * u.nm)
+    np.testing.assert_allclose(bounds.crval.min, -1e9 * u.nm)
+    np.testing.assert_allclose(bounds.crval.max, 3 * u.nm)
     assert bounds.dispersion == dispersion_bound
     assert bounds.resolving_power == unitless_bound
     assert bounds.opacity_factor == unitless_bound
@@ -309,7 +309,7 @@ def test_incorrect_parameter_types(observed_spectrum):
     """
     with pytest.raises(ValidationError) as excinfo:
         WavelengthCalibrationParameters(
-            crval1=3,
+            crval=3,
             dispersion="shouldbeafloat",
             incident_light_angle=154 * u.nm,
             resolving_power="shouldbeanint",
@@ -320,7 +320,7 @@ def test_incorrect_parameter_types(observed_spectrum):
             order=1.5,
         )
 
-    assert excinfo.match(r"crval1\s+Input should be an instance of Quantity")
+    assert excinfo.match(r"crval\s+Input should be an instance of Quantity")
     assert excinfo.match(r"dispersion\s+Input should be an instance of Quantity")
     assert excinfo.match(
         r"incident_light_angle\s+Value error, 'nm' \(length\) and 'deg' \(angle\) are not convertible"
@@ -336,7 +336,7 @@ def test_non_finite_inputs():
     """
     with pytest.raises(ValidationError) as excinfo:
         WavelengthCalibrationParameters(
-            crval1=np.inf * u.m,  # Note that some units are the right type, but incorrect units.
+            crval=np.inf * u.m,  # Note that some units are the right type, but incorrect units.
             dispersion=np.nan * u.nm / u.pix,
             incident_light_angle=-np.inf * u.deg,
             resolving_power=3,
@@ -348,7 +348,7 @@ def test_non_finite_inputs():
         )
 
     assert excinfo.match("8 validation errors")
-    assert excinfo.match(r"crval1\s+Value error, parameters must be finite")
+    assert excinfo.match(r"crval\s+Value error, parameters must be finite")
     assert excinfo.match(r"dispersion\s+Value error, parameters must be finite")
     assert excinfo.match(r"incident_light_angle\s+Value error, parameters must be finite")
     assert excinfo.match(r"opacity_factor\s+Input should be a finite number")
@@ -360,14 +360,14 @@ def test_non_finite_inputs():
 
 def test_missing_parameters(test_only_required_parameters_dict):
     """
-    Given: Only the calculated crval1 input parameter value
+    Given: Only the calculated crval input parameter value
     When: Initializing a WavelengthCalibrationParameters object with these inputs
     Then: Raise a ValidationError
     """
     with pytest.raises(ValidationError) as excinfo:
-        WavelengthCalibrationParameters(crval1=9 * u.nm)
+        WavelengthCalibrationParameters(crval=9 * u.nm)
 
-    del test_only_required_parameters_dict["crval1"]  # removing this because we gave it as an input
+    del test_only_required_parameters_dict["crval"]  # removing this because we gave it as an input
     # check that all of the required inputs are reported to be missing
     for key in test_only_required_parameters_dict.keys():
         assert key in str(excinfo.value)
@@ -379,14 +379,14 @@ def test_parameter_outside_bounds_range():
     When: Instantiating the class
     Then: The correct error is raised
     """
-    bounds = BoundsModel(crval1=LengthBoundRange(min=1000 * u.nm, max=1001 * u.nm))
+    bounds = BoundsModel(crval=LengthBoundRange(min=1000 * u.nm, max=1001 * u.nm))
 
     with pytest.raises(
         ValidationError,
-        match=r"crval1 with value 999.0 nm is outside the bounds range of \(1000.0 nm, 1001.0 nm\)",
+        match=r"crval with value 999.0 nm is outside the bounds range of \(1000.0 nm, 1001.0 nm\)",
     ):
         WavelengthCalibrationParameters(
-            crval1=999 * u.nm,
+            crval=999 * u.nm,
             dispersion=1 * u.nm / u.pix,
             incident_light_angle=45 * u.deg,
             grating_constant=1 / u.m,
@@ -405,7 +405,7 @@ def test_annotated_types_unit_conversion():
     Then: The value with the correct, internal units is returned
     """
     params = WavelengthCalibrationParameters(
-        crval1=999 * u.m,
+        crval=999 * u.m,
         dispersion=1 * u.um / u.pix,
         incident_light_angle=np.pi * u.rad,
         grating_constant=1 / u.km,
@@ -415,7 +415,7 @@ def test_annotated_types_unit_conversion():
     )
 
     # Use `.value` here directly because we want to NOT rely on automatic unit conversion provided by `Quantity`
-    np.testing.assert_allclose(params.crval1.value, 999e9)
+    np.testing.assert_allclose(params.crval.value, 999e9)
     np.testing.assert_allclose(params.dispersion.value, 1e3)
     np.testing.assert_allclose(params.incident_light_angle.value, 180.0)
     np.testing.assert_allclose(params.grating_constant.value, 1e-3)
@@ -431,7 +431,7 @@ def test_valid_grating_equation(wcs_params: WCSValidityParams, test_parameters_d
     Then: No error is raised
     """
     WavelengthCalibrationParameters(
-        crval1=wcs_params.crval1,
+        crval=wcs_params.crval,
         dispersion=test_parameters_dict["dispersion"],
         incident_light_angle=wcs_params.incident_light_angle,
         opacity_factor=test_parameters_dict["opacity_factor"],
@@ -440,7 +440,7 @@ def test_valid_grating_equation(wcs_params: WCSValidityParams, test_parameters_d
         order=wcs_params.order,
         # Make bounds [-inf, inf] so we can test WCS validity on full range of wacko inputs
         bounds=BoundsModel(
-            crval1=LengthBoundRange(),
+            crval=LengthBoundRange(),
             incident_light_angle=AngleBoundRange(),
         ),
     )
@@ -449,7 +449,7 @@ def test_valid_grating_equation(wcs_params: WCSValidityParams, test_parameters_d
 @given(wcs_params=wcs_validity_params(valid=False))
 def test_invalid_grating_equation(wcs_params: WCSValidityParams, test_parameters_dict):
     """
-    Given: A set of input values such that `abs(crval1 * grating_constant * order - sin(incident_light_angle) > 1`
+    Given: A set of input values such that `abs(crval * grating_constant * order - sin(incident_light_angle) > 1`
     When: Instantiating a `WavelengthCalibrationParameters` object with these parameters
     Then: The correct ValidationError is raised
     """
@@ -457,7 +457,7 @@ def test_invalid_grating_equation(wcs_params: WCSValidityParams, test_parameters
         ValidationError, match="Input parameter values represent an un-invertible grating equation."
     ):
         WavelengthCalibrationParameters(
-            crval1=wcs_params.crval1,
+            crval=wcs_params.crval,
             dispersion=test_parameters_dict["dispersion"],
             incident_light_angle=wcs_params.incident_light_angle,
             opacity_factor=test_parameters_dict["opacity_factor"],
@@ -466,35 +466,35 @@ def test_invalid_grating_equation(wcs_params: WCSValidityParams, test_parameters
             order=wcs_params.order,
             # Make bounds [-inf, inf] so we can test WCS validity on full range of wacko inputs
             bounds=BoundsModel(
-                crval1=LengthBoundRange(),
+                crval=LengthBoundRange(),
                 incident_light_angle=AngleBoundRange(),
             ),
         )
 
 
 @pytest.mark.parametrize(
-    "fit_crval1", [pytest.param(True, id="crval1_free"), pytest.param(False, id="crval1_fixed")]
+    "fit_crval", [pytest.param(True, id="crval_free"), pytest.param(False, id="crval_fixed")]
 )
-def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict, fit_crval1):
+def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict, fit_crval):
     """
     Given: A dictionary of input parameter values
     When: Initializing a WavelengthCalibrationParameters object
     Then: The lmfit parameters were set up correctly and default parameters are used where necessary
     """
     input_params = WavelengthCalibrationParameters(
-        crval1=test_parameters_dict["crval1"],
+        crval=test_parameters_dict["crval"],
         dispersion=test_parameters_dict["dispersion"],
         incident_light_angle=test_parameters_dict["incident_light_angle"],
         opacity_factor=test_parameters_dict["opacity_factor"],
         grating_constant=test_parameters_dict["grating_constant"],
         doppler_velocity=test_parameters_dict["doppler_velocity"],
         order=test_parameters_dict["order"],
-        fit_flags=FitFlagsModel(crval1=fit_crval1),
+        fit_flags=FitFlagsModel(crval=fit_crval),
     )
 
     assert isinstance(input_params.lmfit_parameters, Parameters)
-    # make sure than only 7 parameters were added into lmfit_parameters [crval1, dispersion, incident_light_angle, resolving_power, opacity_factor, straylight_fraction, unfit_1d_spectrum]
-    assert len(input_params.lmfit_parameters.valuesdict()) == 8 if fit_crval1 else 7
+    # make sure than only 7 parameters were added into lmfit_parameters [crval, dispersion, incident_light_angle, resolving_power, opacity_factor, straylight_fraction, unfit_1d_spectrum]
+    assert len(input_params.lmfit_parameters.valuesdict()) == 8 if fit_crval else 7
 
     # Test default parameter values
     initialized_params_dict = input_params.lmfit_parameters.valuesdict()
@@ -511,26 +511,26 @@ def test_internal_delta_bounds(
     valid_bounds_and_params: SaneBoundsAndWCSParams, angle_free, test_parameters_dict
 ):
     """
-    Given: A `WavelengthCalibrationParameters` object with bounds on `crval1` and/or `incident_light_angle`
+    Given: A `WavelengthCalibrationParameters` object with bounds on `crval` and/or `incident_light_angle`
     When: Computing bounds on the internal `_delta` fit parameter to match
-    Then: The input bounds on `crval1` are at two corners of the `crval1(_delta_bounds, angle_bounds)` square
+    Then: The input bounds on `crval` are at two corners of the `crval(_delta_bounds, angle_bounds)` square
       and the new bounds on `_delta` are still in the range [-1, 1].
     """
-    input_crval1_bounds = valid_bounds_and_params.crval1_bounds
+    input_crval_bounds = valid_bounds_and_params.crval_bounds
     input_angle_bounds = valid_bounds_and_params.incident_light_angle_bounds
     params = WavelengthCalibrationParameters(
-        crval1=valid_bounds_and_params.crval1,
+        crval=valid_bounds_and_params.crval,
         dispersion=test_parameters_dict["dispersion"],
         incident_light_angle=valid_bounds_and_params.incident_light_angle,
         opacity_factor=test_parameters_dict["opacity_factor"],
         grating_constant=valid_bounds_and_params.grating_constant,
         doppler_velocity=test_parameters_dict["doppler_velocity"],
         order=valid_bounds_and_params.order,
-        bounds=BoundsModel(crval1=input_crval1_bounds, incident_light_angle=input_angle_bounds),
+        bounds=BoundsModel(crval=input_crval_bounds, incident_light_angle=input_angle_bounds),
         fit_flags=FitFlagsModel(incident_light_angle=angle_free),
     )
 
-    delta_bounds = params.delta_bounds_given_crval1_bounds
+    delta_bounds = params.delta_bounds_given_crval_bounds
 
     min_angle = (
         params.bounds.incident_light_angle.min
@@ -549,42 +549,42 @@ def test_internal_delta_bounds(
         angle_lims = u.Quantity([params.incident_light_angle])
     delta_lims = np.array([delta_bounds.min, delta_bounds.max])
 
-    crval1_at_corners = (delta_lims[:, None] + np.sin(angle_lims[None, :])) / (
+    crval_at_corners = (delta_lims[:, None] + np.sin(angle_lims[None, :])) / (
         params.grating_constant * params.order
     )
 
-    delta_min = params.delta_bounds_given_crval1_bounds.min
-    delta_max = params.delta_bounds_given_crval1_bounds.max
-    if not (np.isfinite(input_crval1_bounds.min) and np.isfinite(input_crval1_bounds.max)):
+    delta_min = params.delta_bounds_given_crval_bounds.min
+    delta_max = params.delta_bounds_given_crval_bounds.max
+    if not (np.isfinite(input_crval_bounds.min) and np.isfinite(input_crval_bounds.max)):
         assert delta_min == -1
         assert delta_max == 1
     else:
         assert -1.0 <= delta_min <= 1.0
         assert -1.0 <= delta_max <= 1.0
         if not (np.allclose(delta_min, -1.0) or np.allclose(delta_max, 1.0)):
-            # This is a weird way to ask `input_crval1_bounds.[min,max] in `crval1_at_corners`
+            # This is a weird way to ask `input_crval_bounds.[min,max] in `crval_at_corners`
             # We need to do this because floating point precision is crazy wack with `Quantities`
-            # print(f"{crval1_at_corners.to(u.nm) = }\n{input_crval1_bounds.min = }")
+            # print(f"{crval_at_corners.to(u.nm) = }\n{input_crval_bounds.min = }")
             np.testing.assert_allclose(
-                np.min(np.abs(crval1_at_corners - input_crval1_bounds.min)).to_value("nm"),
+                np.min(np.abs(crval_at_corners - input_crval_bounds.min)).to_value("nm"),
                 0.0,
                 atol=1e-5,
             )
             np.testing.assert_allclose(
-                np.min(np.abs(crval1_at_corners - input_crval1_bounds.max)).to_value("nm"),
+                np.min(np.abs(crval_at_corners - input_crval_bounds.max)).to_value("nm"),
                 0.0,
                 atol=1e-5,
             )
 
 
 @pytest.mark.parametrize(
-    "crval1_free", [pytest.param(True, id="crval1_free"), pytest.param(False, id="crval1_fixed")]
+    "crval_free", [pytest.param(True, id="crval_free"), pytest.param(False, id="crval_fixed")]
 )
 @given(valid_bounds_and_params=sane_wcs_params_and_bounds(completely_sane_angles=True))
 @example(valid_bounds_and_params=sane_bounds_with_360angle_and_0_min)
 @settings(max_examples=1000)
 def test_angle_bounds(
-    valid_bounds_and_params: SaneBoundsAndWCSParams, crval1_free, test_parameters_dict
+    valid_bounds_and_params: SaneBoundsAndWCSParams, crval_free, test_parameters_dict
 ):
     """
     Given: A `WavelengthCalibrationParameters` object
@@ -594,19 +594,19 @@ def test_angle_bounds(
     input_angle_bounds = valid_bounds_and_params.incident_light_angle_bounds
 
     params = WavelengthCalibrationParameters(
-        crval1=valid_bounds_and_params.crval1,
+        crval=valid_bounds_and_params.crval,
         dispersion=test_parameters_dict["dispersion"],
         incident_light_angle=valid_bounds_and_params.incident_light_angle,
         opacity_factor=test_parameters_dict["opacity_factor"],
         grating_constant=valid_bounds_and_params.grating_constant,
         doppler_velocity=test_parameters_dict["doppler_velocity"],
         order=valid_bounds_and_params.order,
-        bounds=BoundsModel(crval1=LengthBoundRange(), incident_light_angle=input_angle_bounds),
-        fit_flags=FitFlagsModel(crval1=crval1_free),
+        bounds=BoundsModel(crval=LengthBoundRange(), incident_light_angle=input_angle_bounds),
+        fit_flags=FitFlagsModel(crval=crval_free),
     )
 
     new_angle_bounds = params.bounds.incident_light_angle
-    if crval1_free:
+    if crval_free:
         assert new_angle_bounds == input_angle_bounds
     else:
         # Make sure we didn't grow the range
@@ -618,7 +618,7 @@ def test_angle_bounds(
         assert new_angle_bounds.min <= params.incident_light_angle <= new_angle_bounds.max
 
         # Make sure the range doesn't include any values that generate an invalid WCS
-        delta = float(params.crval1 * params.grating_constant * params.order)
+        delta = float(params.crval * params.grating_constant * params.order)
         angle_vector = np.linspace(new_angle_bounds.min, new_angle_bounds.max, 1000)
         delta_range = delta - np.sin(angle_vector)
         invalid_idx = (delta_range > 1.0) | (delta_range < -1.0)
@@ -632,17 +632,17 @@ def test_angle_bounds(
         pytest.param(AngleBoundRange(min=-12141 * u.deg, max=246243 * u.deg), id="outside_range"),
     ],
 )
-def test_insane_angle_values_when_crval1_fixed(test_parameters_dict, angle_bounds):
+def test_insane_angle_values_when_crval_fixed(test_parameters_dict, angle_bounds):
     """
     Given: A set of parameters where the `incident_light_angle` or its bounds are outside the range [0, 360]
-    When: Instantiatin a `WavelengthCalibrationParameters` object with `crval1` fixed in the fit
+    When: Instantiatin a `WavelengthCalibrationParameters` object with `crval` fixed in the fit
     Then: The correct error is raised
     """
-    err_str = "With `crval1` fixed in the fit the `incident_light_angle"
+    err_str = "With `crval` fixed in the fit the `incident_light_angle"
     with pytest.raises(ValidationError, match=err_str):
         _ = WavelengthCalibrationParameters(
             bounds=BoundsModel(incident_light_angle=angle_bounds),
-            fit_flags=FitFlagsModel(crval1=False),
+            fit_flags=FitFlagsModel(crval=False),
             **test_parameters_dict
         )
 
@@ -652,7 +652,7 @@ def test_insane_angle_values_when_crval1_fixed(test_parameters_dict, angle_bound
     with pytest.raises(ValidationError, match=err_str):
         _ = WavelengthCalibrationParameters(
             bounds=BoundsModel(incident_light_angle=AngleBoundRange()),
-            fit_flags=FitFlagsModel(crval1=False),
+            fit_flags=FitFlagsModel(crval=False),
             **params_with_out_of_range_angle
         )
 
@@ -661,17 +661,17 @@ def test_too_close_valid_WCS(test_parameters_dict):
     """
     Given: A set of parameters that represents a valid WCS, but is so close to invalidity that there is no room
       to adjust the range on `incident_light_angle`
-    When: Instantiating `WavelengthCalibrationParameters` with these parameters and fixing crval1
+    When: Instantiating `WavelengthCalibrationParameters` with these parameters and fixing crval
     Then: The correct error is raised
     """
     close_delta = 1 - np.finfo(float).eps
     close_angle = (90 - np.finfo(float).eps) * u.deg
-    crval1 = (close_delta + np.sin(close_angle)) / (
+    crval = (close_delta + np.sin(close_angle)) / (
         test_parameters_dict["grating_constant"] * test_parameters_dict["order"]
     )
-    input_params = test_parameters_dict | {"crval1": crval1, "incident_light_angle": close_angle}
+    input_params = test_parameters_dict | {"crval": crval, "incident_light_angle": close_angle}
     with pytest.raises(ValidationError, match="Input values are np.allclose to an invalid WCS"):
-        _ = WavelengthCalibrationParameters(fit_flags=FitFlagsModel(crval1=False), **input_params)
+        _ = WavelengthCalibrationParameters(fit_flags=FitFlagsModel(crval=False), **input_params)
 
 
 def test_default_fit_flags(test_parameters_dict):
@@ -681,7 +681,7 @@ def test_default_fit_flags(test_parameters_dict):
     Then: Each parameter's fit flag is the default value (True)
     """
     input_params = WavelengthCalibrationParameters(
-        crval1=test_parameters_dict["crval1"],
+        crval=test_parameters_dict["crval"],
         dispersion=test_parameters_dict["dispersion"],
         incident_light_angle=test_parameters_dict["incident_light_angle"],
         resolving_power=test_parameters_dict["resolving_power"],
@@ -692,7 +692,7 @@ def test_default_fit_flags(test_parameters_dict):
         order=test_parameters_dict["order"],
     )
 
-    assert input_params.fit_flags.crval1 == True
+    assert input_params.fit_flags.crval == True
     assert input_params.fit_flags.dispersion == True
     assert input_params.fit_flags.incident_light_angle == True
     assert input_params.fit_flags.resolving_power == True
@@ -709,7 +709,7 @@ def test_custom_fit_flags(test_parameters_dict):
     fit_flags = FitFlagsModel(dispersion=False, resolving_power=False, opacity_factor=False)
 
     input_params = WavelengthCalibrationParameters(
-        crval1=test_parameters_dict["crval1"],
+        crval=test_parameters_dict["crval"],
         dispersion=test_parameters_dict["dispersion"],
         incident_light_angle=test_parameters_dict["incident_light_angle"],
         resolving_power=test_parameters_dict["resolving_power"],
@@ -721,7 +721,7 @@ def test_custom_fit_flags(test_parameters_dict):
         fit_flags=fit_flags,
     )
 
-    assert input_params.fit_flags.crval1 == True
+    assert input_params.fit_flags.crval == True
     assert input_params.fit_flags.dispersion == False
     assert input_params.fit_flags.incident_light_angle == True
     assert input_params.fit_flags.resolving_power == False
@@ -736,9 +736,9 @@ def test_bounds_given_as_dict(test_parameters_dict):
     Then:
     """
     bounds = {
-        "crval1": {
-            "min": test_parameters_dict["crval1"] - (0.3 * u.nm),
-            "max": test_parameters_dict["crval1"] + (0.3 * u.nm),
+        "crval": {
+            "min": test_parameters_dict["crval"] - (0.3 * u.nm),
+            "max": test_parameters_dict["crval"] + (0.3 * u.nm),
         },
         "dispersion": {
             "min": test_parameters_dict["dispersion"] - (55 * u.nm / u.pix),
@@ -759,7 +759,7 @@ def test_bounds_given_as_dict(test_parameters_dict):
     }
 
     input_params = WavelengthCalibrationParameters(
-        crval1=test_parameters_dict["crval1"],
+        crval=test_parameters_dict["crval"],
         dispersion=test_parameters_dict["dispersion"],
         incident_light_angle=test_parameters_dict["incident_light_angle"],
         resolving_power=test_parameters_dict["resolving_power"],
@@ -772,5 +772,5 @@ def test_bounds_given_as_dict(test_parameters_dict):
     )
 
     np.testing.assert_allclose(
-        input_params.bounds.crval1.min, test_parameters_dict["crval1"] - (0.3 * u.nm)
+        input_params.bounds.crval.min, test_parameters_dict["crval"] - (0.3 * u.nm)
     )

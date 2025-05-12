@@ -113,7 +113,7 @@ class BoundsModel(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    crval1: LengthBoundRange = LengthBoundRange(min=0 * u.nm)
+    crval: LengthBoundRange = LengthBoundRange(min=0 * u.nm)
     dispersion: DispersionBoundRange = DispersionBoundRange(min=0 * u.nm / u.pix)
     incident_light_angle: AngleBoundRange = AngleBoundRange(min=0 * u.deg, max=180 * u.deg)
     resolving_power: UnitlessBoundRange = UnitlessBoundRange(min=0)
@@ -129,7 +129,7 @@ class FitFlagsModel(BaseModel):
     True indicates that the parameter should be fit.
     """
 
-    crval1: bool = True
+    crval: bool = True
     dispersion: bool = True
     incident_light_angle: bool = True
     resolving_power: bool = True
@@ -143,7 +143,7 @@ class WavelengthCalibrationParameters(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True)
 
-    crval1: finite_length_quantity
+    crval: finite_length_quantity
     dispersion: finite_dispersion_quantity
     incident_light_angle: finite_angle_quantity
     grating_constant: finite_inverse_length_quantity
@@ -191,15 +191,15 @@ class WavelengthCalibrationParameters(BaseModel):
         .. math::
             \gamma = \sin^{-1}(\lambda G m - \sin\alpha),
 
-        where :math:`\lambda` is `crval1`, :math:`G` is `grating_constant`, :math:`m` is `order`, and :math:`\alpha` is
+        where :math:`\lambda` is `crval`, :math:`G` is `grating_constant`, :math:`m` is `order`, and :math:`\alpha` is
         `incident_light_angle`. The arcsine is only valid for inputs in the range [-1, 1] and so a combination of
-        `crval1`, `grating_constant`, `order`, and `incident_light_angle` that fall outside of this range are considered
+        `crval`, `grating_constant`, `order`, and `incident_light_angle` that fall outside of this range are considered
         invalid and will raise an Error.
         """
         if abs(self.delta) > 1:
             raise ValueError(
                 "Input parameter values represent an un-invertible grating equation. "
-                "We need `crval1 * grating_constant * order - sin(incident_light_angle)` to be in the range "
+                "We need `crval * grating_constant * order - sin(incident_light_angle)` to be in the range "
                 f"[-1, 1] but the values provide result in {self.delta}"
             )
         return self
@@ -215,10 +215,10 @@ class WavelengthCalibrationParameters(BaseModel):
             -1 \leq \lambda G m - \sin\alpha \leq 1
 
         where :math:`G` (`grating_constant`) and :math:`m` (`order`) are fixed parameters while
-        :math:`\lambda` (`crval1`) and :math:`\alpha` (`incident_light_angle`) are free in the fit.
+        :math:`\lambda` (`crval`) and :math:`\alpha` (`incident_light_angle`) are free in the fit.
 
         As suggested by `lmfit <https://lmfit.github.io/lmfit-py/constraints.html#using-inequality-constraints>`_ we
-        ensure this constraint by forcing CRVAL1 to follow the equation
+        ensure this constraint by forcing CRVAL to follow the equation
 
         .. math::
             \lambda = \frac{\delta + \sin\alpha}{G m}
@@ -227,53 +227,53 @@ class WavelengthCalibrationParameters(BaseModel):
 
         This property is the initial guess of :math:`\delta_0 = \lambda_0 G m - \sin\alpha_0`.
 
-        NOTE: `_delta` is only used if `crval1` is set to vary during the fit (see `FitFlagsModel`).
+        NOTE: `_delta` is only used if `crval` is set to vary during the fit (see `FitFlagsModel`).
         """
-        delta = self.crval1 * self.grating_constant * self.order - np.sin(self.incident_light_angle)
+        delta = self.crval * self.grating_constant * self.order - np.sin(self.incident_light_angle)
 
         # `float` fully simplifies all units to be just a number
         return float(delta)
 
     @property
-    def crval1_constraint_function(self) -> Callable[[float, float], float]:
+    def crval_constraint_function(self) -> Callable[[float, float], float]:
         """
-        Return a function that computes `crval1` given values of `_delta` and `incident_light_angle`.
+        Return a function that computes `crval` given values of `_delta` and `incident_light_angle`.
 
         See `delta` for more information.
         """
         # Note that inside the minimization call all parameters do NOT have units; they are just bare `floats`
         # That's why we need to use `np.deg2rad` in the call to `np.sin` and use `to_value` in the hardcoded denominator
-        # (u.nm) as the unit for `crval1` derives from `length_quantity`
-        def constrain_crval1(_delta: float, incident_light_angle_deg: float) -> float:
+        # (u.nm) as the unit for `crval` derives from `length_quantity`
+        def constrain_crval(_delta: float, incident_light_angle_deg: float) -> float:
             numerator = _delta + np.sin(np.deg2rad(incident_light_angle_deg))
             denominator = (self.grating_constant * self.order).to_value(1 / u.nm)
             return numerator / denominator
 
-        return constrain_crval1
+        return constrain_crval
 
     @cached_property
-    def delta_bounds_given_crval1_bounds(self) -> UnitlessBoundRange:
+    def delta_bounds_given_crval_bounds(self) -> UnitlessBoundRange:
         """
-        Adjust the internal bounds on `_delta` to approximate the desired range on `crval1`.
+        Adjust the internal bounds on `_delta` to approximate the desired range on `crval`.
 
-        Because `crval1` is, internally, a dependent variable that is a function of `incident_light_angle` and `_delta`
-        (see `crval1_constraint_function` and `delta`) the user-supplied bounds on `crval1` can't be strictly honored.
-        This method computes modified internal bounds on `_delta` such that the search space of `crval1` is as close to
+        Because `crval` is, internally, a dependent variable that is a function of `incident_light_angle` and `_delta`
+        (see `crval_constraint_function` and `delta`) the user-supplied bounds on `crval` can't be strictly honored.
+        This method computes modified internal bounds on `_delta` such that the search space of `crval` is as close to
         the input bounds as possible.
 
         Note that, because the bounds on `_delta` must be defined independent of the bounds on `incident_light_angle`,
-        the true range of `crval1` values considered will likely fall outside the input bounds placed on `crval1`. The
+        the true range of `crval` values considered will likely fall outside the input bounds placed on `crval`. The
         amount of "bleed" outside the user-supplied bounds is correlated with the width of the bounds on
-        `incident_light_angle`; as the angle is given tighter bounds the *true* range of `crval1` values gets closer to
-        the input bounds on `crval1`. When `incident_light_angle` is fixed the true range of `crval1` values is equal to
-        the input bounds on `crval1`.
+        `incident_light_angle`; as the angle is given tighter bounds the *true* range of `crval` values gets closer to
+        the input bounds on `crval`. When `incident_light_angle` is fixed the true range of `crval` values is equal to
+        the input bounds on `crval`.
         """
-        if not (np.isfinite(self.bounds.crval1.min) and np.isfinite(self.bounds.crval1.max)):
+        if not (np.isfinite(self.bounds.crval.min) and np.isfinite(self.bounds.crval.max)):
             return UnitlessBoundRange(min=-1.0, max=1.0)
 
         logger.info(
-            "Updating internal bounds on `_delta` to approximate the desired bounds on `crval1` "
-            f"([{self.bounds.crval1.min}, {self.bounds.crval1.max}])"
+            "Updating internal bounds on `_delta` to approximate the desired bounds on `crval` "
+            f"([{self.bounds.crval.min}, {self.bounds.crval.max}])"
         )
         # We need pretty high resolution to get a good range in _delta. 1000 seems to work well enough
         # (this is all an approximation anyway).
@@ -303,15 +303,15 @@ class WavelengthCalibrationParameters(BaseModel):
         else:
             angles = u.Quantity([self.incident_light_angle])
 
-        delta_at_min_crval1 = self.bounds.crval1.min * self.grating_constant * self.order - np.sin(
+        delta_at_min_crval = self.bounds.crval.min * self.grating_constant * self.order - np.sin(
             angles
         )
-        delta_at_max_crval1 = self.bounds.crval1.max * self.grating_constant * self.order - np.sin(
+        delta_at_max_crval = self.bounds.crval.max * self.grating_constant * self.order - np.sin(
             angles
         )
 
-        min_delta = np.min(np.r_[delta_at_min_crval1, delta_at_max_crval1])
-        max_delta = np.max(np.r_[delta_at_min_crval1, delta_at_max_crval1])
+        min_delta = np.min(np.r_[delta_at_min_crval, delta_at_max_crval])
+        max_delta = np.max(np.r_[delta_at_min_crval, delta_at_max_crval])
 
         # Have to make sure we're still in the range of valid WCS
         min_delta = max(min_delta, -1.0)
@@ -323,17 +323,17 @@ class WavelengthCalibrationParameters(BaseModel):
         return new_delta_bounds
 
     @model_validator(mode="after")
-    def ensure_sane_light_angle_values_if_crval1_fixed(self) -> WavelengthCalibrationParameters:
+    def ensure_sane_light_angle_values_if_crval_fixed(self) -> WavelengthCalibrationParameters:
         """
-        Check that the `input_light_angle` and its bounds are in the range [0, 360] iff `crval1` is fixed in the fit.
+        Check that the `input_light_angle` and its bounds are in the range [0, 360] iff `crval` is fixed in the fit.
 
-        We do this to make sure the inputs to `update_incident_light_angle_if_crval1_fixed` are sane, which removes
+        We do this to make sure the inputs to `update_incident_light_angle_if_crval_fixed` are sane, which removes
         the need to check lots of edge cases in that method.
 
         If the value for `incident_light_angle` is 360 deg and the minimum bound is 0 deg then the value of
         `incident_light_angle` is changed to 0 deg.
         """
-        if self.fit_flags.crval1:
+        if self.fit_flags.crval:
             return self
 
         if not np.isfinite(self.bounds.incident_light_angle.min):
@@ -355,25 +355,25 @@ class WavelengthCalibrationParameters(BaseModel):
         )
         if any(values_to_check > 360.0 * u.deg) or any(values_to_check < 0.0 * u.deg):
             raise ValueError(
-                "With `crval1` fixed in the fit the `incident_light_angle` and its bounds must be in the "
+                "With `crval` fixed in the fit the `incident_light_angle` and its bounds must be in the "
                 "range [0, 360]."
             )
 
         return self
 
     @model_validator(mode="after")
-    def update_incident_light_angle_if_crval1_fixed(self) -> WavelengthCalibrationParameters:
+    def update_incident_light_angle_if_crval_fixed(self) -> WavelengthCalibrationParameters:
         """
         Potentially update the bounds on `incident_light_angle` to ensure we stay in a valid region of the fit.
 
-        We only need to update the `incident_light_angle` bounds if `crval1` is fixed in the fit (see `fit_flags`). In
+        We only need to update the `incident_light_angle` bounds if `crval` is fixed in the fit (see `fit_flags`). In
         this case, the validity assurance provided by `delta` does not apply, and so we need to ensure validity by
         constraining `incident_light_angle` to only span a valid parameter space.
 
         If either of the given `bounds` on `incident_light_angle` is already within the valid region it will be
         unchanged. In other words, this method will only ever shrink bounds, not expand them.
         """
-        if self.fit_flags.crval1:
+        if self.fit_flags.crval:
             return self
 
         logger.info(
@@ -400,7 +400,7 @@ class WavelengthCalibrationParameters(BaseModel):
         angle_vector = np.r_[min_to_value_vector, value_to_max_vector]
 
         # Float reduces and cancels out all units
-        length_expression = float(self.crval1 * self.grating_constant * self.order)
+        length_expression = float(self.crval * self.grating_constant * self.order)
 
         delta = length_expression - np.sin(angle_vector)
         valid_idx = (delta >= -1.0) & (delta <= 1.0)
@@ -447,7 +447,7 @@ class WavelengthCalibrationParameters(BaseModel):
         # Give lmfit knowledge of the constraint function
         # Fear not! This accessing of the private API is the official method recommended by lmfit:
         #  https://lmfit.github.io/lmfit-py/constraints.html#advanced-usage-of-expressions-in-lmfit
-        param._asteval.symtable["constrain_crval1"] = self.crval1_constraint_function
+        param._asteval.symtable["constrain_crval"] = self.crval_constraint_function
 
         param.add(
             "dispersion",
@@ -464,20 +464,20 @@ class WavelengthCalibrationParameters(BaseModel):
             max=self.bounds.incident_light_angle.max.value,
         )
 
-        if self.fit_flags.crval1:
+        if self.fit_flags.crval:
             param.add(
                 "_delta",
-                vary=self.fit_flags.crval1,
+                vary=self.fit_flags.crval,
                 value=self.delta,
-                min=self.delta_bounds_given_crval1_bounds.min,
-                max=self.delta_bounds_given_crval1_bounds.max,
+                min=self.delta_bounds_given_crval_bounds.min,
+                max=self.delta_bounds_given_crval_bounds.max,
             )
             param.add(
-                "crval1",
-                expr="constrain_crval1(_delta, incident_light_angle)",
+                "crval",
+                expr="constrain_crval(_delta, incident_light_angle)",
             )
         else:
-            param.add("crval1", vary=False, value=self.crval1.value)
+            param.add("crval", vary=False, value=self.crval.value)
 
         param.add(
             "resolving_power",

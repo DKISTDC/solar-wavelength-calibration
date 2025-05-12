@@ -32,7 +32,7 @@ def num_wave_pix() -> int:
 
 
 @pytest.fixture(scope="session")
-def test_crval1() -> Quantity:
+def test_crval() -> Quantity:
     return 1072 * u.nm
 
 
@@ -68,7 +68,7 @@ def test_order():
 
 @pytest.fixture(scope="session")
 def test_WCS_header(
-    test_crval1,
+    test_crval,
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
@@ -79,7 +79,7 @@ def test_WCS_header(
         "CTYPE1": "AWAV-GRA",
         "CUNIT1": "nm",
         "CRPIX1": num_wave_pix // 2 + 1,
-        "CRVAL1": test_crval1.to_value("nm"),
+        "CRVAL1": test_crval.to_value("nm"),
         "CDELT1": test_dispersion.to_value("nm / pix"),
         "PV1_0": test_grating_constant.to_value("1 / m"),
         "PV1_1": test_order,
@@ -116,7 +116,7 @@ def observed_continuum_level(observed_spectrum) -> float:
 def test_parameters_dict(
     atlas: AtlasBase,
     observed_spectrum,
-    test_crval1,
+    test_crval,
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
@@ -124,7 +124,7 @@ def test_parameters_dict(
     test_order,
 ):
     return {
-        "crval1": test_crval1,
+        "crval": test_crval,
         "dispersion": test_dispersion,
         "incident_light_angle": test_incident_light_angle,
         "resolving_power": 72500,
@@ -141,7 +141,7 @@ def test_parameters_dict(
 def test_only_required_parameters_dict(
     atlas: AtlasBase,
     observed_spectrum,
-    test_crval1,
+    test_crval,
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
@@ -149,7 +149,7 @@ def test_only_required_parameters_dict(
     test_order,
 ):
     return {
-        "crval1": test_crval1,
+        "crval": test_crval,
         "dispersion": test_dispersion,
         "incident_light_angle": test_incident_light_angle,
         "grating_constant": test_grating_constant,
@@ -161,7 +161,7 @@ def test_only_required_parameters_dict(
 @pytest.fixture(scope="function")
 def parameters(
     observed_spectrum,
-    test_crval1,
+    test_crval,
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
@@ -170,7 +170,7 @@ def parameters(
     atlas: AtlasBase,
 ) -> Parameters:
     params = WavelengthCalibrationParameters(
-        crval1=test_crval1,
+        crval=test_crval,
         dispersion=test_dispersion,
         incident_light_angle=test_incident_light_angle,
         resolving_power=72500,

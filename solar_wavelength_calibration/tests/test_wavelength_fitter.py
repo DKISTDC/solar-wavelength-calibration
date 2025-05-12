@@ -43,7 +43,7 @@ def test_wavecal_fitter(
         atlas=atlas,
     )
 
-    fit_result = fitter.run_fit(
+    fit_result = fitter._run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
     )
@@ -77,7 +77,7 @@ def test_incorrect_atlas(
 @pytest.mark.parametrize(
     "fixed_parameter",
     [
-        "crval1",
+        "crval",
         "dispersion",
         "incident_light_angle",
         "resolving_power",
@@ -104,7 +104,7 @@ def test_fixing_parameters(
 
     # Have starting values that are off of the true values so we can make sure free parameters change
     init_values = test_parameters_dict | {
-        "crval1": test_parameters_dict["crval1"] + 3 * u.nm,
+        "crval": test_parameters_dict["crval"] + 3 * u.nm,
         "dispersion": test_parameters_dict["dispersion"] * 1.01,
         "incident_light_angle": test_parameters_dict["incident_light_angle"] + 4 * u.deg,
         "resolving_power": test_parameters_dict["resolving_power"] + 10,
@@ -119,7 +119,7 @@ def test_fixing_parameters(
         atlas=atlas,
     )
 
-    fit_result = fitter.run_fit(
+    fit_result = fitter._run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
         unfit_1d_spectrum=observed_spectrum,
     )
@@ -138,22 +138,22 @@ def test_fixing_parameters(
         np.testing.assert_allclose(init_value, fit_result.minimizer_result.params[parameter])
 
 
-def test_fit_stays_valid_with_fixed_crval1(
+def test_fit_stays_valid_with_fixed_crval(
     test_parameters_dict, observed_wavelength_vector, observed_spectrum, atlas: AtlasBase
 ):
     """
     Given: A set of input parameters that is on the edge of WCS validity and bounds on `incident_light_angle` that
       would take the fit to invalid WCS values
-    When: Running the fit with `crval1` fixed
+    When: Running the fit with `crval` fixed
     Then: The fit stays within valid ranges
     """
 
-    input_crval1 = test_parameters_dict["crval1"] + 10 * u.nm
+    input_crval = test_parameters_dict["crval"] + 10 * u.nm
     edge_angle = (
         np.rad2deg(
             np.arcsin(
                 float(
-                    input_crval1
+                    input_crval
                     * test_parameters_dict["grating_constant"]
                     * test_parameters_dict["order"]
                 )
@@ -168,7 +168,7 @@ def test_fit_stays_valid_with_fixed_crval1(
     angle_max = edge_angle + 0.01 * u.deg
 
     init_values = test_parameters_dict | {
-        "crval1": input_crval1,
+        "crval": input_crval,
         "dispersion": test_parameters_dict["dispersion"] * 1.01,
         "incident_light_angle": edge_angle,
         "resolving_power": test_parameters_dict["resolving_power"] + 10,
@@ -177,7 +177,7 @@ def test_fit_stays_valid_with_fixed_crval1(
     }
 
     parameters = WavelengthCalibrationParameters(
-        fit_flags=FitFlagsModel(crval1=False),
+        fit_flags=FitFlagsModel(crval=False),
         bounds=BoundsModel(incident_light_angle=AngleBoundRange(min=angle_min, max=angle_max)),
         **init_values
     )
@@ -193,7 +193,7 @@ def test_fit_stays_valid_with_fixed_crval1(
 
 
 def test_fit_is_correct(
-    test_crval1,
+    test_crval,
     test_dispersion,
     test_incident_light_angle,
     test_grating_constant,
@@ -211,7 +211,7 @@ def test_fit_is_correct(
     """
 
     parameters = WavelengthCalibrationParameters(
-        crval1=test_crval1 + 0.5 * u.nm,
+        crval=test_crval + 0.5 * u.nm,
         dispersion=test_dispersion * 1.01,
         incident_light_angle=test_incident_light_angle + 0.2 * u.deg,
         resolving_power=725001,
@@ -221,7 +221,7 @@ def test_fit_is_correct(
         doppler_velocity=0 * u.km / u.s,
         order=test_order,
         bounds=BoundsModel(
-            crval1=LengthBoundRange(min=test_crval1 - 1 * u.nm, max=test_crval1 + 1 * u.nm),
+            crval=LengthBoundRange(min=test_crval - 1 * u.nm, max=test_crval + 1 * u.nm),
             incident_light_angle=AngleBoundRange(
                 min=test_incident_light_angle - 1 * u.deg, max=test_incident_light_angle + 1 * u.deg
             ),
@@ -246,7 +246,7 @@ def test_fit_is_correct(
         method="nelder-meade",
     )
     np.testing.assert_allclose(
-        fit_result.wavelength_parameters.crval, test_crval1.to_value(u.nm), atol=1, rtol=1e-4
+        fit_result.wavelength_parameters.crval, test_crval.to_value(u.nm), atol=1, rtol=1e-4
     )
     np.testing.assert_allclose(
         fit_result.wavelength_parameters.dispersion,
@@ -384,7 +384,7 @@ def test_apply_doppler_shift(parameters):
     Then: It returns a solar transmission spectrum as a numpy array with non-negative values and the same length as the input wavelength vector.
     """
     linear_wave = np.linspace(1067.5, 1076.3, 100)
-    crval1 = parameters.lmfit_parameters["crval1"].value
+    crval = parameters.lmfit_parameters["crval"].value
     cropped_atlas = LocalAtlas(
         solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
         solar_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
@@ -394,7 +394,7 @@ def test_apply_doppler_shift(parameters):
 
     # Test with valid doppler velocity
     doppler_velocity = parameters.constant_parameters["doppler_velocity"]
-    solar_transmission = apply_doppler_shift(linear_wave, cropped_atlas, doppler_velocity, crval1)
+    solar_transmission = apply_doppler_shift(linear_wave, cropped_atlas, doppler_velocity, crval)
     assert isinstance(solar_transmission, np.ndarray)
     assert len(solar_transmission) == len(linear_wave)
     assert np.all(solar_transmission >= 0)
@@ -402,7 +402,7 @@ def test_apply_doppler_shift(parameters):
     # Test with edge-case doppler velocities
     for doppler_velocity in [0, 1e6, -1e6] * u.km / u.s:
         solar_transmission = apply_doppler_shift(
-            linear_wave, cropped_atlas, doppler_velocity, crval1
+            linear_wave, cropped_atlas, doppler_velocity, crval
         )
         assert isinstance(solar_transmission, np.ndarray)
         assert len(solar_transmission) == len(linear_wave)
@@ -445,12 +445,12 @@ def test_normalize_and_convolve(parameters):
     """
     spectrum = np.linspace(0.8, 1.0, 100)
     continuum_level = 1.0
-    crval1 = parameters.lmfit_parameters["crval1"].value
+    crval = parameters.lmfit_parameters["crval"].value
     resolving_power = parameters.lmfit_parameters["resolving_power"].value
     dispersion = parameters.lmfit_parameters["dispersion"].value
 
     normalized_spectrum = normalize_and_convolve(
-        spectrum, continuum_level, crval1, resolving_power, dispersion
+        spectrum, continuum_level, crval, resolving_power, dispersion
     )
 
     assert isinstance(normalized_spectrum, np.ndarray)
