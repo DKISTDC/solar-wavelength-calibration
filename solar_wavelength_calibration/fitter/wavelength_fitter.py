@@ -206,12 +206,14 @@ class WavelengthCalibrationFitter(BaseModel):
             ),
             fcn_kws=constant_parameters,
         )
-        fit_result = minimizer.minimize(params=params_to_fit, method=method, **minimize_kwargs)
+        minimizer_result = minimizer.minimize(
+            params=params_to_fit, method=method, **minimize_kwargs
+        )
         logger.info("Finished fit.")
 
-        fit_result.params.pretty_print()
+        minimizer_result.params.pretty_print()
 
-        fit_result_parameters = WavelengthParameters(
+        wavelength_parameters = WavelengthParameters(
             crpix=number_of_wave_pix // 2 + 1,
             crval=fit_result.params["crval"].value,
             dispersion=fit_result.params["dispersion"].value,
@@ -222,7 +224,9 @@ class WavelengthCalibrationFitter(BaseModel):
             cunit="nm",
         )
 
-        return FitResult(wavelength_parameters=fit_result_parameters, minimizer_result=fit_result)
+        return FitResult(
+            wavelength_parameters=wavelength_parameters, minimizer_result=minimizer_result
+        )
 
 
 def calculate_linear_wave(
