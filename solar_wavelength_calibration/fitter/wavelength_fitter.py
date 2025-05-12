@@ -1,5 +1,6 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 import logging
+import sys
 
 import astropy.units as u
 import lmfit.parameter
@@ -211,15 +212,18 @@ class WavelengthCalibrationFitter(BaseModel):
         )
         logger.info("Finished fit.")
 
+        original_stdout = sys.stdout
+        sys.stdout = sys.stderr
         minimizer_result.params.pretty_print()
+        sys.stdout = original_stdout
 
         wavelength_parameters = WavelengthParameters(
             crpix=number_of_wave_pix // 2 + 1,
-            crval=fit_result.params["crval"].value,
-            dispersion=fit_result.params["dispersion"].value,
+            crval=minimizer_result.params["crval"].value,
+            dispersion=minimizer_result.params["dispersion"].value,
             grating_constant=constant_parameters["grating_constant"],
             order=constant_parameters["order"],
-            incident_light_angle=fit_result.params["incident_light_angle"].value,
+            incident_light_angle=minimizer_result.params["incident_light_angle"].value,
             ctype="AWAV-GRA",
             cunit="nm",
         )
