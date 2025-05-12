@@ -211,11 +211,7 @@ class WavelengthCalibrationFitter(BaseModel):
             params=params_to_fit, method=method, **minimize_kwargs
         )
         logger.info("Finished fit.")
-
-        original_stdout = sys.stdout
-        sys.stdout = sys.stderr
-        minimizer_result.params.pretty_print()
-        sys.stdout = original_stdout
+        logger.info(minimizer_result.params.pretty_repr())
 
         wavelength_parameters = WavelengthParameters(
             crpix=number_of_wave_pix // 2 + 1,
