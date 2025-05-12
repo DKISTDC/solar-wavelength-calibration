@@ -28,8 +28,9 @@ Usage
 -----
 .. code:: python
 
-    from solar_wavelength_calibration import WavelengthCalibrationFitter
+    from solar_wavelength_calibration import WavelengthCalibrationFitter, WavelengthCalibrationParameters
     import astropy.units as u
+    import numpy as np
 
 Define the spectrum to be fit and compute the expected wavelength vector based on header information:
 
@@ -44,7 +45,7 @@ Set up the model parameters using values specific to your instrument:
 .. code:: python
 
     input_parameters = WavelengthCalibrationParameters(
-            crval1=350.159 * u.nm,
+            crval=350.159 * u.nm,
             dispersion=4.042 * u.nm/u.pix,
             incident_light_angle=57.006 * u.deg,
             resolving_power=42500,
@@ -77,12 +78,6 @@ To access the fitted wavelength parameters (axis_num should the number for the W
 .. code:: python
 
     fit_result.wavelength_parameters.to_header(axis_num=1)
-
-To access the full minimizer result:
-
-.. code:: python
-
-    fit_result.minimizer_result
 
 Changelog
 #########

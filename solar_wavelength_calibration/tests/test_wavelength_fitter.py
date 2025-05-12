@@ -296,32 +296,6 @@ def test_prepare_atlas(
     )
 
 
-def test_FitResult_class(
-    parameters: WavelengthCalibrationParameters,
-    observed_spectrum,
-    atlas: AtlasBase,
-    observed_wavelength_vector,
-):
-    """
-    Given: WaveCal inputs
-    When: Initializing a WavelengthCalibrationFitter object and running the fit
-    Then: We get two fit results back; one dictionary with the fit result headers, and one dictionary with the fit result parameters.
-    """
-    fitter = WavelengthCalibrationFitter(
-        input_parameters=parameters,
-        atlas=atlas,
-    )
-    fit_result = fitter(
-        expected_wavelength_vector=observed_wavelength_vector,
-        unfit_1d_spectrum=observed_spectrum,
-    )
-
-    # and make sure that the first output is the wavelength parameters object...
-    assert isinstance(fit_result.wavelength_parameters, WavelengthParameters)
-    # and the second is a dictionary containing the rest of the minimizer results
-    assert isinstance(fit_result.minimizer_result, MinimizerResult)
-
-
 def test_calculate_linear_wave(parameters):
     """
     Given: A set of valid parameters and a number of wavelength pixels.

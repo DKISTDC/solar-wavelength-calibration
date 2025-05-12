@@ -101,13 +101,13 @@ class WavelengthCalibrationFitter(BaseModel):
 
         Parameters
         ----------
-        expected_wavelength_vector (u.Quantity)
+        expected_wavelength_vector: (u.Quantity)
             The expected wavelength vector for the fit.
 
-        unfit_1d_spectrum (np.ndarray)
+        unfit_1d_spectrum: (np.ndarray)
             The unfit 1D spectrum to be fitted.
 
-        method (str, optional)
+        method: (str, optional)
             The optimization method to use. Defaults to "leastsq".
 
         **minimize_kwargs

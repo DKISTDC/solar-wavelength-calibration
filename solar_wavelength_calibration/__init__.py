@@ -3,6 +3,7 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version
 
 from .atlas.atlas import *
+from .fitter.parameters import WavelengthCalibrationParameters
 from .fitter.wavelength_fitter import WavelengthCalibrationFitter
 
 try:
