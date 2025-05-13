@@ -2,7 +2,6 @@ import astropy.units as u
 import numpy as np
 import pytest
 from astropy.units import Quantity
-from lmfit.minimizer import MinimizerResult
 from pydantic import ValidationError
 
 from solar_wavelength_calibration.atlas.atlas import LocalAtlas
@@ -21,7 +20,6 @@ from solar_wavelength_calibration.fitter.wavelength_fitter import combine_spectr
 from solar_wavelength_calibration.fitter.wavelength_fitter import fitting_model
 from solar_wavelength_calibration.fitter.wavelength_fitter import normalize_and_convolve
 from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthCalibrationFitter
-from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthParameters
 from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
 
 
