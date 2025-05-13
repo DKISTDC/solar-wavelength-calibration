@@ -302,7 +302,7 @@ def apply_telluric_absorption(
 
 
 def apply_doppler_shift(
-    linear_wave: np.ndarray, cropped_atlas: LocalAtlas, doppler_velocity: Quantity, crval1: float
+    linear_wave: np.ndarray, cropped_atlas: LocalAtlas, doppler_velocity: Quantity, crval: float
 ) -> np.ndarray:
     """
     Apply Doppler shift to the solar spectrum.
@@ -315,7 +315,7 @@ def apply_doppler_shift(
         Cropped atlas containing telluric and solar atlas data.
     doppler_velocity : Quantity
         Doppler velocity in km/s.
-    crval1 : float
+    crval : float
         Reference wavelength in nanometers.
 
     Returns
@@ -324,7 +324,7 @@ def apply_doppler_shift(
         Solar transmission spectrum after applying the Doppler shift.
     """
     fts_wave_doppler_corrected = (
-        cropped_atlas.solar_atlas_wavelength + doppler_velocity / (const.c.to("km/s")) * crval1
+        cropped_atlas.solar_atlas_wavelength + doppler_velocity / (const.c.to("km/s")) * crval
     )
     return np.interp(
         linear_wave,
@@ -360,7 +360,7 @@ def combine_spectra(
 def normalize_and_convolve(
     spectrum: np.ndarray,
     continuum_level: float,
-    crval1: float,
+    crval: float,
     resolving_power: float,
     dispersion: float,
 ) -> np.ndarray:
@@ -373,7 +373,7 @@ def normalize_and_convolve(
         The input spectrum to be normalized and convolved.
     continuum_level : float
         The continuum level to scale the spectrum.
-    crval1 : float
+    crval : float
         Reference wavelength in nanometers.
     resolving_power : float
         Resolving power of the spectrograph.
@@ -386,7 +386,7 @@ def normalize_and_convolve(
         The normalized and convolved spectrum.
     """
     fts_solar_normalized = spectrum * continuum_level
-    sigma_wavelength = (crval1 / resolving_power) * gaussian_fwhm_to_sigma
+    sigma_wavelength = (crval / resolving_power) * gaussian_fwhm_to_sigma
     sigma_pix = sigma_wavelength / np.abs(dispersion)
     return gaussian_filter1d(fts_solar_normalized, np.abs(sigma_pix))
 
@@ -425,7 +425,7 @@ def fitting_model(
     np.ndarray
         Residual amplitude between the observed spectrum and the fitted model.
     """
-    crval1 = params["crval"].value
+    crval = params["crval"].value
     dispersion = params["dispersion"].value
     opacity_factor = params["opacity_factor"].value
     straylight_fraction = params["straylight_fraction"].value
@@ -439,7 +439,7 @@ def fitting_model(
     telluric_transmission = apply_telluric_absorption(linear_wave, cropped_atlas, opacity_factor)
 
     # Apply Doppler shift
-    solar_transmission = apply_doppler_shift(linear_wave, cropped_atlas, doppler_velocity, crval1)
+    solar_transmission = apply_doppler_shift(linear_wave, cropped_atlas, doppler_velocity, crval)
 
     # Combine spectra
     combined_spectrum = combine_spectra(
@@ -448,7 +448,7 @@ def fitting_model(
 
     # Normalize and convolve
     fts_final_spectrum = normalize_and_convolve(
-        combined_spectrum, continuum_level, crval1, resolving_power, dispersion
+        combined_spectrum, continuum_level, crval, resolving_power, dispersion
     )
 
     # Calculate residual amplitude
