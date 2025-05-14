@@ -13,12 +13,14 @@ from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
 from solar_wavelength_calibration.fitter.parameters import UnitlessBoundRange
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
-from solar_wavelength_calibration.fitter.wavelength_fitter import apply_doppler_shift
-from solar_wavelength_calibration.fitter.wavelength_fitter import apply_telluric_absorption
 from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_linear_wave
 from solar_wavelength_calibration.fitter.wavelength_fitter import combine_spectra
 from solar_wavelength_calibration.fitter.wavelength_fitter import fitting_model
 from solar_wavelength_calibration.fitter.wavelength_fitter import normalize_and_convolve
+from solar_wavelength_calibration.fitter.wavelength_fitter import prepare_telluric_transmission
+from solar_wavelength_calibration.fitter.wavelength_fitter import (
+    resample_solar_transmission_with_doppler_shift,
+)
 from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthCalibrationFitter
 from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
 
@@ -325,7 +327,7 @@ def test_calculate_linear_wave(parameters):
 def test_apply_telluric_absorption(parameters):
     """
     Given: A linear wavelength vector, a cropped atlas containing telluric data, and an opacity factor.
-    When: The `apply_telluric_absorption` function is called.
+    When: The `prepare_telluric_transmission` function is called.
     Then: It returns a telluric transmission spectrum as a numpy array with non-negative values and the same length as the input wavelength vector.
     """
     linear_wave = np.linspace(1067.5, 1076.3, 100)
@@ -338,14 +340,16 @@ def test_apply_telluric_absorption(parameters):
 
     # Test with valid opacity factor
     opacity_factor = parameters.lmfit_parameters["opacity_factor"].value
-    telluric_transmission = apply_telluric_absorption(linear_wave, cropped_atlas, opacity_factor)
+    telluric_transmission = prepare_telluric_transmission(
+        linear_wave, cropped_atlas, opacity_factor
+    )
     assert isinstance(telluric_transmission, np.ndarray)
     assert len(telluric_transmission) == len(linear_wave)
     assert np.all(telluric_transmission >= 0)
 
     # Test with extreme opacity factors
     for opacity_factor in [0, 1e6]:
-        telluric_transmission = apply_telluric_absorption(
+        telluric_transmission = prepare_telluric_transmission(
             linear_wave, cropped_atlas, opacity_factor
         )
         assert isinstance(telluric_transmission, np.ndarray)
@@ -356,7 +360,7 @@ def test_apply_telluric_absorption(parameters):
 def test_apply_doppler_shift(parameters):
     """
     Given: A linear wavelength vector, a cropped atlas containing solar data, a Doppler velocity, and a reference wavelength.
-    When: The `apply_doppler_shift` function is called.
+    When: The `resample_solar_transmission_with_doppler_shift` function is called.
     Then: It returns a solar transmission spectrum as a numpy array with non-negative values and the same length as the input wavelength vector.
     """
     linear_wave = np.linspace(1067.5, 1076.3, 100)
@@ -370,14 +374,16 @@ def test_apply_doppler_shift(parameters):
 
     # Test with valid doppler velocity
     doppler_velocity = parameters.constant_parameters["doppler_velocity"]
-    solar_transmission = apply_doppler_shift(linear_wave, cropped_atlas, doppler_velocity, crval)
+    solar_transmission = resample_solar_transmission_with_doppler_shift(
+        linear_wave, cropped_atlas, doppler_velocity, crval
+    )
     assert isinstance(solar_transmission, np.ndarray)
     assert len(solar_transmission) == len(linear_wave)
     assert np.all(solar_transmission >= 0)
 
     # Test with edge-case doppler velocities
     for doppler_velocity in [0, 1e6, -1e6] * u.km / u.s:
-        solar_transmission = apply_doppler_shift(
+        solar_transmission = resample_solar_transmission_with_doppler_shift(
             linear_wave, cropped_atlas, doppler_velocity, crval
         )
         assert isinstance(solar_transmission, np.ndarray)

@@ -235,6 +235,10 @@ def calculate_linear_wave(
 ) -> np.ndarray:
     """Calculate the linear wavelength vector.
 
+    References about representing spectral coordinate in FITS:
+    https://specreduce.readthedocs.io/en/latest/api/specreduce.utils.synth_data.make_2d_arc_image.html
+    Greisen et al (2006) https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract (section 5)
+
     Parameters
     ----------
     params:
@@ -251,10 +255,6 @@ def calculate_linear_wave(
     linear_wave: np.ndarray
         Linear wavelength vector in nanometers.
     """
-    # References about representing spectral coordinate in FITS:
-    # https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract (section 5)
-    # https://specreduce.readthedocs.io/en/latest/api/specreduce.utils.synth_data.make_2d_arc_image.html
-
     non_linear_header = WavelengthParameters(
         ctype="AWAV-GRA",
         cunit="nm",
@@ -274,25 +274,34 @@ def calculate_linear_wave(
     return linear_wave
 
 
-def apply_telluric_absorption(
+def resample_telluric_transmission_with_absorption_correction(
     linear_wave: np.ndarray, cropped_atlas: LocalAtlas, opacity_factor: float
 ) -> np.ndarray:
     """
-    Apply telluric absorption to the spectrum.
+    Resample the telluric transmission spectrum onto a linear wavelength grid and apply an absorption correction using the Beer–Lambert Law.
+
+    This function interpolates the telluric transmission data from the provided atlas onto a linear wavelength vector, then modifies the transmission by applying an absorption scaling based on the
+    Beer–Lambert Law:
+
+        I(λ) = I(λ) ** opacity_factor
+
+    This scaling simulates the attenuation of light due to atmospheric absorption, where the `opacity_factor` adjusts the strength of absorption across the spectrum.
 
     Parameters
     ----------
     linear_wave : np.ndarray
-        Linear wavelength vector in nanometers.
+        1D array of linearly spaced wavelengths (in nanometers) onto which the telluric transmission will be interpolated.
+
     cropped_atlas : LocalAtlas
-        Cropped atlas containing telluric and solar atlas data.
+        Object containing the telluric atlas data, including wavelength and transmission arrays cropped to the relevant spectral region.
+
     opacity_factor : float
-        Factor to scale the telluric absorption.
+        Multiplicative factor controlling the strength of telluric absorption. Values <1 reduce absorption, while values >1 increase it.
 
     Returns
     -------
     np.ndarray
-        Telluric transmission spectrum after applying absorption.
+        The resampled and absorption-corrected telluric transmission spectrum.
     """
     linear_fts_telluric_transmission = np.interp(
         linear_wave,
@@ -302,11 +311,11 @@ def apply_telluric_absorption(
     return linear_fts_telluric_transmission**opacity_factor
 
 
-def apply_doppler_shift(
+def resample_solar_transmission_with_doppler_shift(
     linear_wave: np.ndarray, cropped_atlas: LocalAtlas, doppler_velocity: Quantity, crval: float
 ) -> np.ndarray:
     """
-    Apply Doppler shift to the solar spectrum.
+    Interpolate the solar transmission onto the linear wavelength vector, and apply a doppler shift.
 
     Parameters
     ----------
@@ -438,10 +447,14 @@ def fitting_model(
     linear_wave = calculate_linear_wave(params, number_of_wave_pix, grating_constant, order)
 
     # Apply telluric absorption
-    telluric_transmission = apply_telluric_absorption(linear_wave, cropped_atlas, opacity_factor)
+    telluric_transmission = resample_telluric_transmission_with_absorption_correction(
+        linear_wave, cropped_atlas, opacity_factor
+    )
 
     # Apply Doppler shift
-    solar_transmission = apply_doppler_shift(linear_wave, cropped_atlas, doppler_velocity, crval)
+    solar_transmission = resample_solar_transmission_with_doppler_shift(
+        linear_wave, cropped_atlas, doppler_velocity, crval
+    )
 
     # Combine spectra
     combined_spectrum = combine_spectra(
