@@ -282,15 +282,19 @@ def test_prepare_atlas(
 
     # test that we took out the correct chunk for each atlas (i.e. mean of expected wavelength vector is contained in fts_[solar/telluric]wavelength)
     assert (
-        cropped_atlas.solar_atlas_wavelength[0]
+        cropped_atlas.solar_atlas_wavelength.to_value(u.nm)[0]
         < np.mean(observed_wavelength_vector).value
-        < cropped_atlas.solar_atlas_wavelength[len(cropped_atlas.solar_atlas_wavelength) - 1]
+        < cropped_atlas.solar_atlas_wavelength.to_value(u.nm)[
+            len(cropped_atlas.solar_atlas_wavelength.to_value(u.nm)) - 1
+        ]
     )
 
     assert (
-        cropped_atlas.telluric_atlas_wavelength[0]
+        cropped_atlas.telluric_atlas_wavelength.to_value(u.nm)[0]
         < np.mean(observed_wavelength_vector).value
-        < cropped_atlas.telluric_atlas_wavelength[len(cropped_atlas.telluric_atlas_wavelength) - 1]
+        < cropped_atlas.telluric_atlas_wavelength.to_value(u.nm)[
+            len(cropped_atlas.telluric_atlas_wavelength.to_value(u.nm)) - 1
+        ]
     )
 
 
@@ -326,9 +330,9 @@ def test_apply_telluric_absorption(parameters):
     """
     linear_wave = np.linspace(1067.5, 1076.3, 100)
     cropped_atlas = LocalAtlas(
-        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
         solar_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
-        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
         telluric_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
     )
 
@@ -358,9 +362,9 @@ def test_apply_doppler_shift(parameters):
     linear_wave = np.linspace(1067.5, 1076.3, 100)
     crval = parameters.lmfit_parameters["crval"].value
     cropped_atlas = LocalAtlas(
-        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
         solar_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
-        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
         telluric_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
     )
 
@@ -439,9 +443,9 @@ def test_fitting_model(parameters, atlas, observed_spectrum):
     params = parameters.lmfit_parameters
     unfit_1d_spectrum = observed_spectrum
     cropped_atlas = LocalAtlas(
-        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
         solar_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
-        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100),
+        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
         telluric_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
     )
     number_of_wave_pix = len(unfit_1d_spectrum)

@@ -161,9 +161,7 @@ class WavelengthCalibrationFitter(BaseModel):
             telluric_atlas_wavelength < max_wavelength
         )
 
-        cropped_telluric_atlas_wavelength = telluric_atlas_wavelength[
-            cropped_telluric_mask
-        ].to_value(u.nm)
+        cropped_telluric_atlas_wavelength = telluric_atlas_wavelength[cropped_telluric_mask]
         cropped_telluric_atlas_transmission = self.atlas.telluric_atlas_transmission[
             cropped_telluric_mask
         ]
@@ -171,7 +169,7 @@ class WavelengthCalibrationFitter(BaseModel):
         cropped_solar_mask = (solar_atlas_wavelength > min_wavelength) & (
             solar_atlas_wavelength < max_wavelength
         )
-        cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask].to_value(u.nm)
+        cropped_solar_atlas_wavelength = solar_atlas_wavelength[cropped_solar_mask]
         cropped_solar_atlas_transmission = self.atlas.solar_atlas_transmission[cropped_solar_mask]
 
         cropped_atlas = LocalAtlas(
@@ -209,6 +207,7 @@ class WavelengthCalibrationFitter(BaseModel):
         minimizer_result = minimizer.minimize(
             params=params_to_fit, method=method, **minimize_kwargs
         )
+
         logger.info("Finished fit.")
         logger.info(minimizer_result.params.pretty_repr())
 
@@ -222,6 +221,9 @@ class WavelengthCalibrationFitter(BaseModel):
             ctype="AWAV-GRA",
             cunit="nm",
         )
+        # fit_amplitude = fitting_model(minimizer_result.params, unfit_1d_spectrum, cropped_atlas, number_of_wave_pix, grating_constant=constant_parameters['grating_constant'], order=constant_parameters['order'], doppler_velocity=constant_parameters['doppler_velocity'])
+
+        # return fit_amplitude
 
         return FitResult(
             wavelength_parameters=wavelength_parameters, minimizer_result=minimizer_result
@@ -294,7 +296,7 @@ def apply_telluric_absorption(
     """
     linear_fts_telluric_transmission = np.interp(
         linear_wave,
-        cropped_atlas.telluric_atlas_wavelength,
+        cropped_atlas.telluric_atlas_wavelength.to_value(u.nm),
         cropped_atlas.telluric_atlas_transmission,
     )
     return linear_fts_telluric_transmission**opacity_factor
@@ -323,7 +325,8 @@ def apply_doppler_shift(
         Solar transmission spectrum after applying the Doppler shift.
     """
     fts_wave_doppler_corrected = (
-        cropped_atlas.solar_atlas_wavelength + doppler_velocity / (const.c.to("km/s")) * crval
+        cropped_atlas.solar_atlas_wavelength.to_value(u.nm)
+        + doppler_velocity / (const.c.to("km/s")) * crval
     )
     return np.interp(
         linear_wave,
