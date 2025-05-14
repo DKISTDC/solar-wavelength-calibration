@@ -92,7 +92,7 @@ class WavelengthCalibrationFitter(BaseModel):
 
     def __call__(
         self,
-        expected_wavelength_vector: u.Quantity,
+        input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
         method: str = "leastsq",
         **minimize_kwargs,
@@ -101,7 +101,7 @@ class WavelengthCalibrationFitter(BaseModel):
 
         Parameters
         ----------
-        expected_wavelength_vector: (u.Quantity)
+        input_wavelength_vector: (u.Quantity)
             The expected wavelength vector for the fit.
 
         input_spectrum: (np.ndarray)
@@ -122,7 +122,7 @@ class WavelengthCalibrationFitter(BaseModel):
 
         """
         return self._run_fit(
-            expected_wavelength_vector,
+            input_wavelength_vector,
             input_spectrum,
             method,
             **minimize_kwargs,
@@ -130,17 +130,17 @@ class WavelengthCalibrationFitter(BaseModel):
 
     def _run_fit(
         self,
-        expected_wavelength_vector: u.Quantity,
+        input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
         """Run the fit."""
-        cropped_atlas = self._prepare_atlas(expected_wavelength_vector)
+        cropped_atlas = self._prepare_atlas(input_wavelength_vector)
         fit_result = self._fit_spectrum(cropped_atlas, input_spectrum, method, **minimize_kwargs)
         return fit_result
 
-    def _prepare_atlas(self, expected_wavelength_vector: u.Quantity) -> LocalAtlas:
+    def _prepare_atlas(self, input_wavelength_vector: u.Quantity) -> LocalAtlas:
         """
         Crop and align the solar and telluric atlases to match the expected wavelength range.
 
@@ -151,11 +151,9 @@ class WavelengthCalibrationFitter(BaseModel):
         solar_atlas_wavelength = self.atlas.solar_atlas_wavelength
         telluric_atlas_wavelength = self.atlas.telluric_atlas_wavelength
 
-        expected_wavelength_range = (
-            expected_wavelength_vector.max() - expected_wavelength_vector.min()
-        )
-        min_wavelength = expected_wavelength_vector.min() - 0.25 * expected_wavelength_range
-        max_wavelength = expected_wavelength_vector.max() + 0.25 * expected_wavelength_range
+        expected_wavelength_range = input_wavelength_vector.max() - input_wavelength_vector.min()
+        min_wavelength = input_wavelength_vector.min() - 0.25 * expected_wavelength_range
+        max_wavelength = input_wavelength_vector.max() + 0.25 * expected_wavelength_range
 
         cropped_telluric_mask = (telluric_atlas_wavelength > min_wavelength) & (
             telluric_atlas_wavelength < max_wavelength

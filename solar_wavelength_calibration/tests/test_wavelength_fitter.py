@@ -46,7 +46,7 @@ def test_wavecal_fitter(
     )
 
     fit_result = fitter._run_fit(
-        expected_wavelength_vector=observed_wavelength_vector,
+        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
     )
 
@@ -122,7 +122,7 @@ def test_fixing_parameters(
     )
 
     fit_result = fitter._run_fit(
-        expected_wavelength_vector=observed_wavelength_vector,
+        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
     )
     for parameter in fit_result.minimizer_result.params:
@@ -189,7 +189,7 @@ def test_fit_stays_valid_with_fixed_crval(
         atlas=atlas,
     )
     _ = fitter(
-        expected_wavelength_vector=observed_wavelength_vector,
+        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
     )
 
@@ -243,7 +243,7 @@ def test_fit_is_correct(
         atlas=atlas,
     )
     fit_result = fitter(
-        expected_wavelength_vector=observed_wavelength_vector,
+        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
         method="nelder-meade",
     )
@@ -278,7 +278,7 @@ def test_prepare_atlas(
         input_parameters=parameters,
         atlas=atlas,
     )
-    cropped_atlas = fitter._prepare_atlas(expected_wavelength_vector=observed_wavelength_vector)
+    cropped_atlas = fitter._prepare_atlas(input_wavelength_vector=observed_wavelength_vector)
 
     # test that we took out a chunk of the atlas
     assert len(cropped_atlas.solar_atlas_transmission) < len(atlas.solar_atlas_transmission)

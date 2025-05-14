@@ -38,7 +38,7 @@ Define the spectrum to be fit and compute the expected wavelength vector based o
 
     input_spectrum = np.arange(0.8, 1.0, 0.01)
 
-    expected_wavelength_vector = np.arange(1067.5, 1076.3, 0.01) * u.nm
+    input_wavelength_vector = np.arange(1067.5, 1076.3, 0.01) * u.nm
 
 Set up the model parameters using values specific to your instrument:
 
@@ -69,7 +69,7 @@ Perform the wavelength calibration fit:
 .. code:: python
 
     fit_result = fitter(
-            expected_wavelength_vector=expected_wavelength_vector,
+            input_wavelength_vector=input_wavelength_vector,
             input_spectrum=input_spectrum,
         )
 
