@@ -36,7 +36,7 @@ Define the spectrum to be fit and compute the expected wavelength vector based o
 
 .. code:: python
 
-    unfit_1d_spectrum = np.arange(0.8, 1.0, 0.01)
+    input_spectrum = np.arange(0.8, 1.0, 0.01)
 
     expected_wavelength_vector = np.arange(1067.5, 1076.3, 0.01) * u.nm
 
@@ -70,7 +70,7 @@ Perform the wavelength calibration fit:
 
     fit_result = fitter(
             expected_wavelength_vector=expected_wavelength_vector,
-            unfit_1d_spectrum=unfit_1d_spectrum,
+            input_spectrum=input_spectrum,
         )
 
 To access the fitted wavelength parameters (axis_num should the number for the WCS header corresponding to the wavelength axis (e.g., 1 for the first axis).):

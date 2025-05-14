@@ -17,9 +17,11 @@ from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_line
 from solar_wavelength_calibration.fitter.wavelength_fitter import combine_spectra
 from solar_wavelength_calibration.fitter.wavelength_fitter import fitting_model
 from solar_wavelength_calibration.fitter.wavelength_fitter import normalize_and_convolve
-from solar_wavelength_calibration.fitter.wavelength_fitter import prepare_telluric_transmission
 from solar_wavelength_calibration.fitter.wavelength_fitter import (
     resample_solar_transmission_with_doppler_shift,
+)
+from solar_wavelength_calibration.fitter.wavelength_fitter import (
+    resample_telluric_transmission_with_absorption_correction,
 )
 from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthCalibrationFitter
 from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
@@ -45,7 +47,7 @@ def test_wavecal_fitter(
 
     fit_result = fitter._run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
-        unfit_1d_spectrum=observed_spectrum,
+        input_spectrum=observed_spectrum,
     )
 
     # test that values have been fit (i.e. changed)
@@ -121,7 +123,7 @@ def test_fixing_parameters(
 
     fit_result = fitter._run_fit(
         expected_wavelength_vector=observed_wavelength_vector,
-        unfit_1d_spectrum=observed_spectrum,
+        input_spectrum=observed_spectrum,
     )
     for parameter in fit_result.minimizer_result.params:
         if parameter != fixed_parameter:
@@ -188,7 +190,7 @@ def test_fit_stays_valid_with_fixed_crval(
     )
     _ = fitter(
         expected_wavelength_vector=observed_wavelength_vector,
-        unfit_1d_spectrum=observed_spectrum,
+        input_spectrum=observed_spectrum,
     )
 
 
@@ -242,7 +244,7 @@ def test_fit_is_correct(
     )
     fit_result = fitter(
         expected_wavelength_vector=observed_wavelength_vector,
-        unfit_1d_spectrum=observed_spectrum,
+        input_spectrum=observed_spectrum,
         method="nelder-meade",
     )
     np.testing.assert_allclose(
@@ -327,7 +329,7 @@ def test_calculate_linear_wave(parameters):
 def test_apply_telluric_absorption(parameters):
     """
     Given: A linear wavelength vector, a cropped atlas containing telluric data, and an opacity factor.
-    When: The `prepare_telluric_transmission` function is called.
+    When: The `resample_telluric_transmission_with_absorption_correction` function is called.
     Then: It returns a telluric transmission spectrum as a numpy array with non-negative values and the same length as the input wavelength vector.
     """
     linear_wave = np.linspace(1067.5, 1076.3, 100)
@@ -340,7 +342,7 @@ def test_apply_telluric_absorption(parameters):
 
     # Test with valid opacity factor
     opacity_factor = parameters.lmfit_parameters["opacity_factor"].value
-    telluric_transmission = prepare_telluric_transmission(
+    telluric_transmission = resample_telluric_transmission_with_absorption_correction(
         linear_wave, cropped_atlas, opacity_factor
     )
     assert isinstance(telluric_transmission, np.ndarray)
@@ -349,7 +351,7 @@ def test_apply_telluric_absorption(parameters):
 
     # Test with extreme opacity factors
     for opacity_factor in [0, 1e6]:
-        telluric_transmission = prepare_telluric_transmission(
+        telluric_transmission = resample_telluric_transmission_with_absorption_correction(
             linear_wave, cropped_atlas, opacity_factor
         )
         assert isinstance(telluric_transmission, np.ndarray)
@@ -447,21 +449,21 @@ def test_fitting_model(parameters, atlas, observed_spectrum):
     Then: It returns the residual amplitude as a numpy array with the same length as the observed spectrum.
     """
     params = parameters.lmfit_parameters
-    unfit_1d_spectrum = observed_spectrum
+    input_spectrum = observed_spectrum
     cropped_atlas = LocalAtlas(
         solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
         solar_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
         telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
         telluric_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
     )
-    number_of_wave_pix = len(unfit_1d_spectrum)
+    number_of_wave_pix = len(input_spectrum)
     grating_constant = parameters.constant_parameters["grating_constant"]
     order = parameters.constant_parameters["order"]
     doppler_velocity = parameters.constant_parameters["doppler_velocity"]
 
     residuals = fitting_model(
         params,
-        unfit_1d_spectrum,
+        input_spectrum,
         cropped_atlas,
         number_of_wave_pix,
         grating_constant,
@@ -470,4 +472,4 @@ def test_fitting_model(parameters, atlas, observed_spectrum):
     )
 
     assert isinstance(residuals, np.ndarray)
-    assert len(residuals) == len(unfit_1d_spectrum)
+    assert len(residuals) == len(input_spectrum)

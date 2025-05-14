@@ -93,7 +93,7 @@ class WavelengthCalibrationFitter(BaseModel):
     def __call__(
         self,
         expected_wavelength_vector: u.Quantity,
-        unfit_1d_spectrum: np.ndarray,
+        input_spectrum: np.ndarray,
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
@@ -104,7 +104,7 @@ class WavelengthCalibrationFitter(BaseModel):
         expected_wavelength_vector: (u.Quantity)
             The expected wavelength vector for the fit.
 
-        unfit_1d_spectrum: (np.ndarray)
+        input_spectrum: (np.ndarray)
             The unfit 1D spectrum to be fitted.
 
         method: (str, optional)
@@ -123,7 +123,7 @@ class WavelengthCalibrationFitter(BaseModel):
         """
         return self._run_fit(
             expected_wavelength_vector,
-            unfit_1d_spectrum,
+            input_spectrum,
             method,
             **minimize_kwargs,
         )
@@ -131,13 +131,13 @@ class WavelengthCalibrationFitter(BaseModel):
     def _run_fit(
         self,
         expected_wavelength_vector: u.Quantity,
-        unfit_1d_spectrum: np.ndarray,
+        input_spectrum: np.ndarray,
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
         """Run the fit."""
         cropped_atlas = self._prepare_atlas(expected_wavelength_vector)
-        fit_result = self._fit_spectrum(cropped_atlas, unfit_1d_spectrum, method, **minimize_kwargs)
+        fit_result = self._fit_spectrum(cropped_atlas, input_spectrum, method, **minimize_kwargs)
         return fit_result
 
     def _prepare_atlas(self, expected_wavelength_vector: u.Quantity) -> LocalAtlas:
@@ -184,21 +184,21 @@ class WavelengthCalibrationFitter(BaseModel):
     def _fit_spectrum(
         self,
         cropped_atlas: LocalAtlas,
-        unfit_1d_spectrum: np.ndarray,
+        input_spectrum: np.ndarray,
         method: str,
         **minimize_kwargs,
     ) -> FitResult:
         """Send the fitter on its way."""
         params_to_fit = self.input_parameters.lmfit_parameters
         constant_parameters = self.input_parameters.constant_parameters
-        number_of_wave_pix = np.size(unfit_1d_spectrum)
+        number_of_wave_pix = np.size(input_spectrum)
 
         logger.info("Beginning fit.")
         minimizer = lmfit.Minimizer(
             fitting_model,
             params_to_fit,
             fcn_args=(
-                unfit_1d_spectrum,
+                input_spectrum,
                 cropped_atlas,
                 number_of_wave_pix,
             ),
@@ -221,7 +221,7 @@ class WavelengthCalibrationFitter(BaseModel):
             ctype="AWAV-GRA",
             cunit="nm",
         )
-        # fit_amplitude = fitting_model(minimizer_result.params, unfit_1d_spectrum, cropped_atlas, number_of_wave_pix, grating_constant=constant_parameters['grating_constant'], order=constant_parameters['order'], doppler_velocity=constant_parameters['doppler_velocity'])
+        # fit_amplitude = fitting_model(minimizer_result.params, input_spectrum, cropped_atlas, number_of_wave_pix, grating_constant=constant_parameters['grating_constant'], order=constant_parameters['order'], doppler_velocity=constant_parameters['doppler_velocity'])
 
         # return fit_amplitude
 
@@ -404,12 +404,12 @@ def normalize_and_convolve(
 
 def fitting_model(
     params: Parameters,
-    unfit_1d_spectrum: np.ndarray,
+    input_spectrum: np.ndarray,
     cropped_atlas: LocalAtlas,
     number_of_wave_pix: int,
     grating_constant: float,
     order: int,
-    doppler_velocity: float,
+    doppler_velocity: Quantity,
 ) -> np.ndarray:
     """
     Compute the fitting model function for fitting wavelength calibration parameters.
@@ -418,7 +418,7 @@ def fitting_model(
     ----------
     params : Parameters
         Parameters object containing the fitting parameters.
-    unfit_1d_spectrum : np.ndarray
+    input_spectrum : np.ndarray
         The observed 1D spectrum to be fitted.
     cropped_atlas : LocalAtlas
         Cropped atlas containing telluric and solar atlas data.
@@ -428,7 +428,7 @@ def fitting_model(
         Grating constant of the spectrograph.
     order : int
         Diffraction order.
-    doppler_velocity : float
+    doppler_velocity : Quantity
         Doppler velocity in km/s.
 
     Returns
@@ -467,6 +467,6 @@ def fitting_model(
     )
 
     # Calculate residual amplitude
-    res_amplitude = unfit_1d_spectrum - fts_final_spectrum
+    res_amplitude = input_spectrum - fts_final_spectrum
 
     return res_amplitude

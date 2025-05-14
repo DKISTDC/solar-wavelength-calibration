@@ -493,7 +493,7 @@ def test_lmfit_parameters_was_set_up_correctly(test_parameters_dict, fit_crval):
     )
 
     assert isinstance(input_params.lmfit_parameters, Parameters)
-    # make sure than only 7 parameters were added into lmfit_parameters [crval, dispersion, incident_light_angle, resolving_power, opacity_factor, straylight_fraction, unfit_1d_spectrum]
+    # make sure than only 7 parameters were added into lmfit_parameters [crval, dispersion, incident_light_angle, resolving_power, opacity_factor, straylight_fraction, input_spectrum]
     assert len(input_params.lmfit_parameters.valuesdict()) == 8 if fit_crval else 7
 
     # Test default parameter values
