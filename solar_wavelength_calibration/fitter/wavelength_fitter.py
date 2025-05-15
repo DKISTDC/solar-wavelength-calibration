@@ -24,7 +24,7 @@ from solar_wavelength_calibration.fitter.parameters import WavelengthCalibration
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["WavelengthCalibrationFitter", "WavelengthCalibrationParameters"]
+__all__ = ["WavelengthCalibrationFitter"]
 
 
 class WavelengthParameters(BaseModel):
