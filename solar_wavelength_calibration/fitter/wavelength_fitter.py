@@ -24,6 +24,8 @@ from solar_wavelength_calibration.fitter.parameters import WavelengthCalibration
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["WavelengthCalibrationFitter", "WavelengthCalibrationParameters"]
+
 
 class WavelengthParameters(BaseModel):
     """Represents the Fitted WCS header information."""
@@ -219,9 +221,6 @@ class WavelengthCalibrationFitter(BaseModel):
             ctype="AWAV-GRA",
             cunit="nm",
         )
-        # fit_amplitude = fitting_model(minimizer_result.params, input_spectrum, cropped_atlas, number_of_wave_pix, grating_constant=constant_parameters['grating_constant'], order=constant_parameters['order'], doppler_velocity=constant_parameters['doppler_velocity'])
-
-        # return fit_amplitude
 
         return FitResult(
             wavelength_parameters=wavelength_parameters, minimizer_result=minimizer_result
