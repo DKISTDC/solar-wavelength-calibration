@@ -12,16 +12,16 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import ValidationError
 
+from solar_wavelength_calibration import AngleBoundRange
+from solar_wavelength_calibration import BoundsModel
+from solar_wavelength_calibration import DispersionBoundRange
+from solar_wavelength_calibration import FitFlagsModel
+from solar_wavelength_calibration import LengthBoundRange
+from solar_wavelength_calibration import UnitlessBoundRange
+from solar_wavelength_calibration import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.parameters import angle_quantity
-from solar_wavelength_calibration.fitter.parameters import AngleBoundRange
-from solar_wavelength_calibration.fitter.parameters import BoundsModel
-from solar_wavelength_calibration.fitter.parameters import DispersionBoundRange
-from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
 from solar_wavelength_calibration.fitter.parameters import inverse_length_quantity
 from solar_wavelength_calibration.fitter.parameters import length_quantity
-from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
-from solar_wavelength_calibration.fitter.parameters import UnitlessBoundRange
-from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
 
 class WCSValidityParams(BaseModel):

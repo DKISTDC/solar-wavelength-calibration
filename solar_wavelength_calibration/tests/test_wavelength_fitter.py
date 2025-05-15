@@ -4,15 +4,16 @@ import pytest
 from astropy.units import Quantity
 from pydantic import ValidationError
 
+from solar_wavelength_calibration import AngleBoundRange
+from solar_wavelength_calibration import BoundsModel
+from solar_wavelength_calibration import DispersionBoundRange
+from solar_wavelength_calibration import FitFlagsModel
+from solar_wavelength_calibration import LengthBoundRange
+from solar_wavelength_calibration import UnitlessBoundRange
+from solar_wavelength_calibration import WavelengthCalibrationFitter
+from solar_wavelength_calibration import WavelengthCalibrationParameters
 from solar_wavelength_calibration.atlas.atlas import LocalAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
-from solar_wavelength_calibration.fitter.parameters import AngleBoundRange
-from solar_wavelength_calibration.fitter.parameters import BoundsModel
-from solar_wavelength_calibration.fitter.parameters import DispersionBoundRange
-from solar_wavelength_calibration.fitter.parameters import FitFlagsModel
-from solar_wavelength_calibration.fitter.parameters import LengthBoundRange
-from solar_wavelength_calibration.fitter.parameters import UnitlessBoundRange
-from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_linear_wave
 from solar_wavelength_calibration.fitter.wavelength_fitter import combine_spectra
 from solar_wavelength_calibration.fitter.wavelength_fitter import fitting_model
@@ -23,7 +24,6 @@ from solar_wavelength_calibration.fitter.wavelength_fitter import (
 from solar_wavelength_calibration.fitter.wavelength_fitter import (
     resample_telluric_transmission_with_absorption_correction,
 )
-from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthCalibrationFitter
 from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
 
 

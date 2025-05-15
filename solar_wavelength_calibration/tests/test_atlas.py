@@ -8,11 +8,11 @@ import pooch
 import pydantic
 import pytest
 
-from solar_wavelength_calibration.atlas.atlas import Atlas
+from solar_wavelength_calibration import Atlas
+from solar_wavelength_calibration import WavelengthCalibrationFitter
 from solar_wavelength_calibration.atlas.atlas import CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR
 from solar_wavelength_calibration.atlas.atlas import DEFAULT_POOCH_CACHE_DIR
 from solar_wavelength_calibration.atlas.atlas import DownloadConfig
-from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthCalibrationFitter
 
 
 @pytest.fixture(
