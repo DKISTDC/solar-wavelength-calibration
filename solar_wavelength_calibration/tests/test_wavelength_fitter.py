@@ -284,7 +284,7 @@ def test_prepare_atlas(
     assert len(cropped_atlas.solar_atlas_transmission) < len(atlas.solar_atlas_transmission)
     assert len(cropped_atlas.telluric_atlas_transmission) < len(atlas.telluric_atlas_transmission)
 
-    # test that we took out the correct chunk for each atlas (i.e. mean of expected wavelength vector is contained in fts_[solar/telluric]wavelength)
+    # test that we took out the correct chunk for each atlas (i.e. mean of input wavelength vector is contained in fts_[solar/telluric]wavelength)
     assert (
         cropped_atlas.solar_atlas_wavelength.to_value(u.nm)[0]
         < np.mean(observed_wavelength_vector).value

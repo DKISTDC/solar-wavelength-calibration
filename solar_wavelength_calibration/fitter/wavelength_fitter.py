@@ -104,10 +104,10 @@ class WavelengthCalibrationFitter(BaseModel):
         Parameters
         ----------
         input_wavelength_vector: (u.Quantity)
-            The expected wavelength vector for the fit.
+            The wavelength vector corresponding to the input spectrum.
 
         input_spectrum: (np.ndarray)
-            The unfit 1D spectrum to be fitted.
+            The input 1D spectrum to be fitted.
 
         method: (str, optional)
             The optimization method to use. Defaults to "leastsq".
@@ -144,18 +144,18 @@ class WavelengthCalibrationFitter(BaseModel):
 
     def _prepare_atlas(self, input_wavelength_vector: u.Quantity) -> LocalAtlas:
         """
-        Crop and align the solar and telluric atlases to match the expected wavelength range.
+        Crop and align the solar and telluric atlases to match the input wavelength range.
 
         This is done by cropping the solar and telluric atlas data to a range
-        slightly larger than the expected wavelength vector. The resulting cropped data
+        slightly larger than the input wavelength vector. The resulting cropped data
         is returned for use in fitting procedures.
         """
         solar_atlas_wavelength = self.atlas.solar_atlas_wavelength
         telluric_atlas_wavelength = self.atlas.telluric_atlas_wavelength
 
-        expected_wavelength_range = input_wavelength_vector.max() - input_wavelength_vector.min()
-        min_wavelength = input_wavelength_vector.min() - 0.25 * expected_wavelength_range
-        max_wavelength = input_wavelength_vector.max() + 0.25 * expected_wavelength_range
+        input_wavelength_range = input_wavelength_vector.max() - input_wavelength_vector.min()
+        min_wavelength = input_wavelength_vector.min() - 0.25 * input_wavelength_range
+        max_wavelength = input_wavelength_vector.max() + 0.25 * input_wavelength_range
 
         cropped_telluric_mask = (telluric_atlas_wavelength > min_wavelength) & (
             telluric_atlas_wavelength < max_wavelength
@@ -293,7 +293,7 @@ def resample_telluric_transmission_with_absorption_correction(
         Object containing the telluric atlas data, including wavelength and transmission arrays cropped to the relevant spectral region.
 
     opacity_factor : float
-        Multiplicative factor controlling the strength of telluric absorption. Values <1 reduce absorption, while values >1 increase it.
+        Factor controlling the strength of telluric absorption. Values <1 reduce absorption, while values >1 increase it.
 
     Returns
     -------
