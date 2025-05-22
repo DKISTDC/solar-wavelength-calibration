@@ -3,7 +3,6 @@ import logging
 
 import astropy.units as u
 import lmfit.parameter
-import matplotlib.pyplot as plt
 import numpy as np
 from astropy import constants as const
 from astropy.stats import gaussian_fwhm_to_sigma
