@@ -3,6 +3,7 @@ import logging
 
 import astropy.units as u
 import lmfit.parameter
+import matplotlib.pyplot as plt
 import numpy as np
 from astropy import constants as const
 from astropy.stats import gaussian_fwhm_to_sigma
@@ -305,6 +306,7 @@ def resample_telluric_transmission_with_absorption_correction(
         cropped_atlas.telluric_atlas_wavelength.to_value(u.nm),
         cropped_atlas.telluric_atlas_transmission,
     )
+
     return linear_fts_telluric_transmission**opacity_factor
 
 
