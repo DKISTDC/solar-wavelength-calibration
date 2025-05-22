@@ -3,6 +3,7 @@ import logging
 
 import astropy.units as u
 import lmfit.parameter
+import matplotlib.pyplot as plt
 import numpy as np
 from astropy import constants as const
 from astropy.stats import gaussian_fwhm_to_sigma
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import model_validator
+from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 
 from solar_wavelength_calibration.atlas.atlas import Atlas
@@ -225,6 +227,109 @@ class WavelengthCalibrationFitter(BaseModel):
         return FitResult(
             wavelength_parameters=wavelength_parameters, minimizer_result=minimizer_result
         )
+
+    def plot_fit(
+        self, input_spectrum: np.ndarray, input_wavelength_vector: u.Quantity, fit_result: FitResult
+    ):
+        """
+        Plot the observed spectrum, fitted spectrum, and residuals.
+
+        This method visualizes the results of the wavelength calibration fit by plotting:
+        - The observed input spectrum.
+        - The fitted spectrum derived from the fit result.
+        - Residuals between the observed spectrum and the fitted spectrum.
+        - Residuals between the fitted spectrum and the interpolated FTS atlas.
+
+        Parameters
+        ----------
+        input_spectrum : np.ndarray
+            The observed 1D spectrum to be plotted.
+        input_wavelength_vector : u.Quantity
+            The wavelength vector corresponding to the input spectrum.
+        fit_result : FitResult
+            The result of the fitting process, containing the fitted parameters and minimizer result.
+        """
+        # Calculate the fitted spectrum
+        fitted_spectrum = input_spectrum - fit_result.minimizer_result.residual
+
+        fig, ax = plt.subplots(3, 1, figsize=(7, 6), height_ratios=[1, 0.4, 0.4])
+
+        # Plot the observed spectrum
+        ax[0].plot(input_wavelength_vector, input_spectrum, label="Observed Spectrum")
+
+        # Interpolate the telluric atlas transmission to match the solar atlas wavelength grid
+        telluric_interp = interp1d(
+            self.atlas.telluric_atlas_wavelength,
+            self.atlas.telluric_atlas_transmission,
+            bounds_error=False,
+            fill_value="extrapolate",
+        )
+
+        # Interpolated telluric transmission
+        aligned_telluric_transmission = telluric_interp(self.atlas.solar_atlas_wavelength)
+
+        # Combine the solar and telluric transmissions
+        fts_combined_transmission = (
+            self.atlas.solar_atlas_transmission * aligned_telluric_transmission
+        )
+
+        fitted_header = WavelengthParameters(
+            ctype="AWAV-GRA",
+            cunit="nm",
+            crpix=fit_result.wavelength_parameters.crpix,
+            grating_constant=fit_result.wavelength_parameters.grating_constant,
+            order=fit_result.wavelength_parameters.order,
+            crval=fit_result.wavelength_parameters.crval,
+            dispersion=fit_result.wavelength_parameters.dispersion,
+            incident_light_angle=fit_result.wavelength_parameters.incident_light_angle,
+        )
+
+        fitted_wcs = WCS(fitted_header.to_header(axis_num=1))
+
+        number_of_wave_pix = np.size(input_spectrum)
+
+        fitted_wave = (fitted_wcs.spectral.pixel_to_world(np.arange(number_of_wave_pix))).to_value(
+            u.nm
+        )
+
+        # Interpolate the FTS atlas to match the wavelength grid of the fitted spectrum
+        fts_interp = interp1d(
+            self.atlas.solar_atlas_wavelength,
+            fts_combined_transmission,
+            bounds_error=False,
+            fill_value="extrapolate",
+        )
+
+        # Interpolated FTS transmission on the fitted wavelength grid
+        aligned_fts_transmission = fts_interp(fitted_wave)
+
+        # Plot the interpolated FTS atlas
+        ax[0].plot(
+            fitted_wave, aligned_fts_transmission, label="Interpolated FTS Atlas", linestyle="--"
+        )
+
+        # Plot the shifted input spectrum
+        ax[0].plot(fitted_wave, input_spectrum, label="Fitted Spectrum")
+
+        # Add legend and labels
+        ax[0].legend()
+        ax[0].set_ylabel("Intensity")
+        ax[0].set_xlabel("Wavelength (nm)")
+
+        # Plot residuals
+        residuals = (input_spectrum - fitted_spectrum) / input_spectrum
+        ax[1].plot(input_wavelength_vector, residuals, label="Residuals")
+        ax[1].legend()
+
+        # Calculate residuals
+        residuals = (input_spectrum - aligned_fts_transmission) / input_spectrum
+        ax[2].plot(input_wavelength_vector, residuals, label="(fit - FTS) / fit")
+        ax[2].legend()
+
+        # Add title and layout adjustments
+        fig.suptitle("Fitted Spectrum vs Observed Spectrum")
+        fig.tight_layout()
+        plt.show()
 
 
 def calculate_linear_wave(
