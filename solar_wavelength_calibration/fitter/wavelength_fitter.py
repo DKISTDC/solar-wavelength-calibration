@@ -248,6 +248,10 @@ class WavelengthCalibrationFitter(BaseModel):
             The wavelength vector corresponding to the input spectrum.
         fit_result : FitResult
             The result of the fitting process, containing the fitted parameters and minimizer result.
+
+        Returns
+        -------
+        None
         """
         # Calculate the fitted spectrum
         fitted_spectrum = input_spectrum - fit_result.minimizer_result.residual
