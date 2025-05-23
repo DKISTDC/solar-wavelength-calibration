@@ -3,7 +3,6 @@ import logging
 
 import astropy.units as u
 import lmfit.parameter
-import matplotlib.pyplot as plt
 import numpy as np
 from astropy import constants as const
 from astropy.stats import gaussian_fwhm_to_sigma
@@ -15,7 +14,6 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import model_validator
-from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 
 from solar_wavelength_calibration.atlas.atlas import Atlas
