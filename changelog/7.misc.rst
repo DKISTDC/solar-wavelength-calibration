@@ -1,1 +1,0 @@
-Update Bitbucket pipelines to use execute script for standard steps.

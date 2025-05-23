@@ -1,1 +1,0 @@
-Test minimum dependencies in addition to latest.
