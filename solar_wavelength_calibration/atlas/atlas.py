@@ -2,8 +2,10 @@
 import logging
 from functools import cached_property
 
+import astropy.units as u
 import numpy as np
 import pooch
+from astropy.units import Quantity
 from pydantic import BaseModel
 
 from solar_wavelength_calibration.atlas.base import AtlasBase
@@ -12,6 +14,8 @@ CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR = "FTS_ATLAS_DATA_DIR"
 DEFAULT_POOCH_CACHE_DIR = "pooch_solar_wave_cal"
 
 logger = logging.getLogger(__name__)
+
+__all__ = ["Atlas", "DownloadConfig"]
 
 
 class DownloadConfig(BaseModel):
@@ -44,7 +48,10 @@ default_config = DownloadConfig(
 class Atlas(AtlasBase):
     """Reference atlas file class."""
 
-    def __init__(self, config: DownloadConfig | None = None):
+    def __init__(
+        self,
+        config: DownloadConfig | None = None,
+    ):
         if config is None:
             logger.info(f"Using default configuration for FTS atlas: {default_config}")
             config = default_config
@@ -69,7 +76,7 @@ class Atlas(AtlasBase):
         return np.load(path)
 
     @property
-    def telluric_atlas_wavelength(self) -> np.ndarray:
+    def telluric_atlas_wavelength(self) -> Quantity:
         """
         Return the wavelength array of the telluric atlas.
 
@@ -77,7 +84,8 @@ class Atlas(AtlasBase):
         capturing the absorption features caused by atmospheric molecules such as water vapor,
         oxygen, and carbon dioxide.
         """
-        return self._telluric_atlas[0]
+        wavelength = self._telluric_atlas[0] * u.nm
+        return wavelength
 
     @property
     def telluric_atlas_transmission(self) -> np.ndarray:
@@ -91,14 +99,15 @@ class Atlas(AtlasBase):
         return self._telluric_atlas[1]
 
     @property
-    def solar_atlas_wavelength(self) -> np.ndarray:
+    def solar_atlas_wavelength(self) -> Quantity:
         """
         Return the wavelength array of the high-resolution solar atlas.
 
         The solar atlas provides detailed measurements across a wide range of wavelengths,
-        capturing the spectral features of the Sun with exceptional precision.
+        capturing the spectral features of the Sun with high precision.
         """
-        return self._solar_atlas[0]
+        wavelength = self._solar_atlas[0] * u.nm
+        return wavelength
 
     @property
     def solar_atlas_transmission(self) -> np.ndarray:
@@ -106,9 +115,46 @@ class Atlas(AtlasBase):
         Return the transmission array of the high-resolution solar atlas.
 
         The solar atlas provides detailed measurements across a wide range of wavelengths,
-        capturing the spectral features of the Sun with exceptional precision.
+        capturing the spectral features of the Sun with high precision.
         """
         return self._solar_atlas[1]
 
     def __repr__(self):
         return f"Atlas(config={self.config!r})"
+
+
+class LocalAtlas(AtlasBase):
+    """Local version of the atlas."""
+
+    def __init__(
+        self,
+        *,
+        solar_atlas_wavelength: Quantity,
+        telluric_atlas_wavelength: Quantity,
+        solar_atlas_transmission: np.ndarray,
+        telluric_atlas_transmission: np.ndarray,
+    ):
+        self._solar_atlas_wavelength = solar_atlas_wavelength
+        self._telluric_atlas_wavelength = telluric_atlas_wavelength
+        self._solar_atlas_transmission = solar_atlas_transmission
+        self._telluric_atlas_transmission = telluric_atlas_transmission
+
+    @property
+    def telluric_atlas_wavelength(self) -> Quantity:
+        """Return the wavelength array of the telluric atlas."""
+        return self._telluric_atlas_wavelength
+
+    @property
+    def telluric_atlas_transmission(self) -> np.ndarray:
+        """Return the transmission array of the telluric atlas."""
+        return self._telluric_atlas_transmission
+
+    @property
+    def solar_atlas_wavelength(self) -> Quantity:
+        """Return the wavelength array of the solar atlas."""
+        return self._solar_atlas_wavelength
+
+    @property
+    def solar_atlas_transmission(self) -> np.ndarray:
+        """Return the transmission array of the solar atlas."""
+        return self._solar_atlas_transmission

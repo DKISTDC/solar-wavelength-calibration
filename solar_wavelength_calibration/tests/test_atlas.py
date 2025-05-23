@@ -5,17 +5,18 @@ from unittest import mock
 
 import numpy as np
 import pooch
+import pydantic
 import pytest
 
-from solar_wavelength_calibration.atlas import Atlas
-from solar_wavelength_calibration.atlas import default_config
-from solar_wavelength_calibration.atlas import DownloadConfig
+from solar_wavelength_calibration import Atlas
+from solar_wavelength_calibration import WavelengthCalibrationFitter
 from solar_wavelength_calibration.atlas.atlas import CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR
 from solar_wavelength_calibration.atlas.atlas import DEFAULT_POOCH_CACHE_DIR
+from solar_wavelength_calibration.atlas.atlas import DownloadConfig
 
 
 @pytest.fixture(
-    params=[pytest.param(True, id="override_cache"), pytest.param(False, id="default_cache")]
+    params=[pytest.param(True, id="override_cache"), pytest.param(False, id="default_cache")],
 )
 def cache_dir(request, tmp_path) -> Path:
     override_cache_dir = request.param
@@ -44,26 +45,26 @@ test_config = DownloadConfig(
     params=[
         pytest.param(None, id="default_config"),
         pytest.param(test_config, id="test_config"),
-    ]
+    ],
 )
-def config(request) -> DownloadConfig | None:
+def function_config(request) -> DownloadConfig | None:
     return request.param
 
 
 @pytest.fixture()
-def atlas(cache_dir: Path, config: DownloadConfig | None) -> Atlas:
-    return Atlas(config=config)
+def function_atlas(cache_dir: Path, function_config: DownloadConfig | None) -> Atlas:
+    return Atlas(config=function_config)
 
 
-def test_atlas(atlas: Atlas, cache_dir: Path):
+def test_atlas(function_atlas: Atlas, cache_dir: Path):
     """Given: an Atlas object
     When: the object is created
     Then: the object should have the correct attributes."""
-    assert isinstance(atlas.telluric_atlas_wavelength, np.ndarray)
-    assert isinstance(atlas.telluric_atlas_transmission, np.ndarray)
-    assert isinstance(atlas.solar_atlas_wavelength, np.ndarray)
-    assert isinstance(atlas.solar_atlas_transmission, np.ndarray)
-    assert atlas.pooch.path == cache_dir
+    assert isinstance(function_atlas.telluric_atlas_wavelength, np.ndarray)
+    assert isinstance(function_atlas.telluric_atlas_transmission, np.ndarray)
+    assert isinstance(function_atlas.solar_atlas_wavelength, np.ndarray)
+    assert isinstance(function_atlas.solar_atlas_transmission, np.ndarray)
+    assert function_atlas.pooch.path == cache_dir
 
 
 def test_atlas_repr():
@@ -72,3 +73,37 @@ def test_atlas_repr():
     Then: the object should have the correct representation."""
     atlas = Atlas()
     assert isinstance(eval(repr(atlas)), Atlas)
+
+
+def test_solar_wavelength_non_monotonic(parameters):
+    """Given: an Atlas object with non-monotonically increasing solar wavelength
+    When: instantiating the WavelengthCalibrationFitter
+    Then: a Pydantic ValidationError should be raised."""
+    atlas = Atlas()
+    # Inject non-monotonic solar wavelength data into the Atlas object
+    atlas._solar_atlas = (
+        np.array([400, 500, 480, 700]),  # Non-monotonic wavelength
+        np.array([1.0, 0.9, 0.8, 0.7]),  # Corresponding transmission
+    )
+
+    with pytest.raises(
+        pydantic.ValidationError, match="Solar atlas wavelength array is not monotonic."
+    ):
+        WavelengthCalibrationFitter(input_parameters=parameters, atlas=atlas)
+
+
+def test_telluric_wavelength_non_monotonic(parameters):
+    """Given: an Atlas object with non-monotonically increasing telluric wavelength
+    When: instantiating the WavelengthCalibrationFitter
+    Then: a Pydantic ValidationError should be raised."""
+    atlas = Atlas()
+    # Inject non-monotonic telluric wavelength data into the Atlas object
+    atlas._telluric_atlas = (
+        np.array([400, 500, 480, 700]),  # Non-monotonic wavelength
+        np.array([1.0, 0.9, 0.8, 0.7]),  # Corresponding transmission
+    )
+
+    with pytest.raises(
+        pydantic.ValidationError, match="Telluric atlas wavelength array is not monotonic."
+    ):
+        WavelengthCalibrationFitter(input_parameters=parameters, atlas=atlas)

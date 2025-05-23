@@ -1,0 +1,1 @@
+Wavelength axis correction done by fitting the corresponding section of the FTS Atlas using a least-squares optimization.

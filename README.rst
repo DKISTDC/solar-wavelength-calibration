@@ -18,6 +18,67 @@ Development
     pip install -e .[test]
     pytest -v --cov solar-wavelength-calibration
 
+Installation
+------------
+.. code:: bash
+
+   pip install solar-wavelength-calibration
+
+Usage
+-----
+.. code:: python
+
+    from solar_wavelength_calibration import WavelengthCalibrationFitter, WavelengthCalibrationParameters
+    import astropy.units as u
+    import numpy as np
+
+Define the spectrum to be fit and compute the expected wavelength vector based on header information:
+
+.. code:: python
+
+    input_spectrum = np.arange(0.8, 1.0, 0.01)
+
+    input_wavelength_vector = np.arange(1067.5, 1076.3, 0.01) * u.nm
+
+Set up the model parameters using values specific to your instrument:
+
+.. code:: python
+
+    input_parameters = WavelengthCalibrationParameters(
+            crval=350.159 * u.nm,
+            dispersion=4.042 * u.nm/u.pix,
+            incident_light_angle=57.006 * u.deg,
+            resolving_power=42500,
+            opacity_factor=5.0,
+            straylight_fraction=0.2,
+            grating_constant=31600.0 * 1/u.m,
+            doppler_velocity=-0.428 * u.km/u.s,
+            order=52,
+        )
+
+Initialize the wavelength calibration fitter:
+
+.. code:: python
+
+    fitter = WavelengthCalibrationFitter(
+            input_parameters=input_parameters,
+        )
+
+Perform the wavelength calibration fit:
+
+.. code:: python
+
+    fit_result = fitter(
+            input_wavelength_vector=input_wavelength_vector,
+            input_spectrum=input_spectrum,
+        )
+
+To access the fitted wavelength parameters (axis_num should the number for the WCS header corresponding to the wavelength axis (e.g., 1 for the first axis).):
+
+.. code:: python
+
+    fit_result.wavelength_parameters.to_header(axis_num=1)
+
 Changelog
 #########
 
