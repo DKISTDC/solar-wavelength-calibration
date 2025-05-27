@@ -82,6 +82,7 @@ class WavelengthCalibrationFitter(BaseModel):
 
     input_parameters: WavelengthCalibrationParameters
     atlas: AtlasBase = Field(default_factory=Atlas)
+    spectral_weights: np.ndarray = None
 
     @model_validator(mode="after")
     def _validate_atlas_wavelength_monotonicity(self):
@@ -202,8 +203,9 @@ class WavelengthCalibrationFitter(BaseModel):
                 cropped_atlas,
                 number_of_wave_pix,
             ),
-            fcn_kws=constant_parameters,
+            fcn_kws={**constant_parameters, "weights": self.spectral_weights},
         )
+
         minimizer_result = minimizer.minimize(
             params=params_to_fit, method=method, **minimize_kwargs
         )
@@ -408,6 +410,7 @@ def fitting_model(
     grating_constant: float,
     order: int,
     doppler_velocity: Quantity,
+    weights: np.ndarray = None,
 ) -> np.ndarray:
     """
     Compute the fitting model function for fitting wavelength calibration parameters.
@@ -428,6 +431,8 @@ def fitting_model(
         Diffraction order.
     doppler_velocity : Quantity
         Doppler velocity in km/s.
+    weights : np.ndarray
+        Array of weights to apply to the residuals. If provided, the residuals will be scaled by these weights.
 
     Returns
     -------
@@ -466,5 +471,9 @@ def fitting_model(
 
     # Calculate residual amplitude
     res_amplitude = input_spectrum - fts_final_spectrum
+
+    # Apply weights if provided
+    if weights is not None:
+        res_amplitude = (input_spectrum - fts_final_spectrum) * weights
 
     return res_amplitude
