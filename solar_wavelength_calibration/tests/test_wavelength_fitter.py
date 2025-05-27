@@ -473,3 +473,48 @@ def test_fitting_model(parameters, atlas, observed_spectrum):
 
     assert isinstance(residuals, np.ndarray)
     assert len(residuals) == len(input_spectrum)
+
+
+def test_fitting_model_with_weights(parameters, observed_spectrum):
+    """
+    Given: A set of input parameters and a synthetic spectrum
+    When: The `fitting_model` is called with and without spectral weights
+    Then: The residuals are scaled by the weights
+    """
+    params = parameters.lmfit_parameters
+    number_of_wave_pix = len(observed_spectrum)
+    grating_constant = parameters.constant_parameters["grating_constant"]
+    order = parameters.constant_parameters["order"]
+    doppler_velocity = parameters.constant_parameters["doppler_velocity"]
+
+    cropped_atlas = LocalAtlas(
+        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, number_of_wave_pix) * u.nm,
+        solar_atlas_transmission=np.ones(number_of_wave_pix),
+        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, number_of_wave_pix) * u.nm,
+        telluric_atlas_transmission=np.ones(number_of_wave_pix),
+    )
+
+    weights = np.linspace(0.5, 2.0, number_of_wave_pix)
+
+    residuals_unweighted = fitting_model(
+        params,
+        observed_spectrum,
+        cropped_atlas,
+        number_of_wave_pix,
+        grating_constant,
+        order,
+        doppler_velocity,
+    )
+
+    residuals_weighted = fitting_model(
+        params,
+        observed_spectrum,
+        cropped_atlas,
+        number_of_wave_pix,
+        grating_constant,
+        order,
+        doppler_velocity,
+        weights=weights,
+    )
+
+    assert np.allclose(residuals_weighted, residuals_unweighted * weights)
