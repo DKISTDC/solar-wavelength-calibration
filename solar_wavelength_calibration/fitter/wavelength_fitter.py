@@ -474,6 +474,6 @@ def fitting_model(
 
     # Apply weights if provided
     if weights is not None:
-        res_amplitude = (input_spectrum - fts_final_spectrum) * weights
+        res_amplitude *= weights
 
     return res_amplitude
