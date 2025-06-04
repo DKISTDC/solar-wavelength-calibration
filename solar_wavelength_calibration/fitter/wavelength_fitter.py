@@ -82,7 +82,6 @@ class WavelengthCalibrationFitter(BaseModel):
 
     input_parameters: WavelengthCalibrationParameters
     atlas: AtlasBase = Field(default_factory=Atlas)
-    spectral_weights: np.ndarray = None
 
     @model_validator(mode="after")
     def _validate_atlas_wavelength_monotonicity(self):
@@ -98,6 +97,7 @@ class WavelengthCalibrationFitter(BaseModel):
         input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
         method: str = "leastsq",
+        spectral_weights: np.ndarray | None = None,
         **minimize_kwargs,
     ) -> FitResult:
         """Run data preparation and fitting.
@@ -112,6 +112,9 @@ class WavelengthCalibrationFitter(BaseModel):
 
         method: (str, optional)
             The optimization method to use. Defaults to "leastsq".
+
+        spectral_weights: (np.ndarray, optional)
+            Array of weights to apply to the residuals during fitting. If None, no weights are applied.
 
         **minimize_kwargs
             Additional keyword arguments for the minimizer.
@@ -128,6 +131,7 @@ class WavelengthCalibrationFitter(BaseModel):
             input_wavelength_vector,
             input_spectrum,
             method,
+            spectral_weights,
             **minimize_kwargs,
         )
 
@@ -136,11 +140,14 @@ class WavelengthCalibrationFitter(BaseModel):
         input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
         method: str = "leastsq",
+        spectral_weights: np.ndarray | None = None,
         **minimize_kwargs,
     ) -> FitResult:
         """Run the fit."""
         cropped_atlas = self._prepare_atlas(input_wavelength_vector)
-        fit_result = self._fit_spectrum(cropped_atlas, input_spectrum, method, **minimize_kwargs)
+        fit_result = self._fit_spectrum(
+            cropped_atlas, input_spectrum, method, spectral_weights, **minimize_kwargs
+        )
         return fit_result
 
     def _prepare_atlas(self, input_wavelength_vector: u.Quantity) -> LocalAtlas:
@@ -187,6 +194,7 @@ class WavelengthCalibrationFitter(BaseModel):
         cropped_atlas: LocalAtlas,
         input_spectrum: np.ndarray,
         method: str,
+        spectral_weights: np.ndarray,
         **minimize_kwargs,
     ) -> FitResult:
         """Send the fitter on its way."""
@@ -203,7 +211,7 @@ class WavelengthCalibrationFitter(BaseModel):
                 cropped_atlas,
                 number_of_wave_pix,
             ),
-            fcn_kws={**constant_parameters, "weights": self.spectral_weights},
+            fcn_kws={**constant_parameters, "weights": spectral_weights},
         )
 
         minimizer_result = minimizer.minimize(
