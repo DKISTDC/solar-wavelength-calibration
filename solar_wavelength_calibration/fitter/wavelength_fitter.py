@@ -127,6 +127,9 @@ class WavelengthCalibrationFitter(BaseModel):
             - `minimizer_result` (MinimizerResult): The result returned by the lmfit minimizer.
 
         """
+        if spectral_weights is None:
+            spectral_weights = np.ones(len(input_spectrum))
+
         return self._run_fit(
             input_wavelength_vector,
             input_spectrum,
@@ -139,8 +142,8 @@ class WavelengthCalibrationFitter(BaseModel):
         self,
         input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
+        spectral_weights: np.ndarray,
         method: str = "leastsq",
-        spectral_weights: np.ndarray | None = None,
         **minimize_kwargs,
     ) -> FitResult:
         """Run the fit."""
@@ -199,7 +202,9 @@ class WavelengthCalibrationFitter(BaseModel):
     ) -> FitResult:
         """Send the fitter on its way."""
         params_to_fit = self.input_parameters.lmfit_parameters
-        constant_parameters = self.input_parameters.constant_parameters
+        fitting_model_kwargs = self.input_parameters.constant_parameters | {
+            "weights": spectral_weights
+        }
         number_of_wave_pix = np.size(input_spectrum)
 
         logger.info("Beginning fit.")
@@ -211,7 +216,7 @@ class WavelengthCalibrationFitter(BaseModel):
                 cropped_atlas,
                 number_of_wave_pix,
             ),
-            fcn_kws={**constant_parameters, "weights": spectral_weights},
+            fcn_kws=fitting_model_kwargs,
         )
 
         minimizer_result = minimizer.minimize(
@@ -225,8 +230,8 @@ class WavelengthCalibrationFitter(BaseModel):
             crpix=number_of_wave_pix // 2 + 1,
             crval=minimizer_result.params["crval"].value,
             dispersion=minimizer_result.params["dispersion"].value,
-            grating_constant=constant_parameters["grating_constant"],
-            order=constant_parameters["order"],
+            grating_constant=fitting_model_kwargs["grating_constant"],
+            order=fitting_model_kwargs["order"],
             incident_light_angle=minimizer_result.params["incident_light_angle"].value,
             ctype="AWAV-GRA",
             cunit="nm",
@@ -480,8 +485,9 @@ def fitting_model(
     # Calculate residual amplitude
     res_amplitude = input_spectrum - fts_final_spectrum
 
-    # Apply weights if provided
-    if weights is not None:
-        res_amplitude *= weights
+    # Apply weights if provided, else default to uniform weights
+    if weights is None:
+        weights = np.ones_like(input_spectrum)
+    res_amplitude *= weights
 
     return res_amplitude

@@ -48,6 +48,7 @@ def test_wavecal_fitter(
     fit_result = fitter._run_fit(
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
+        spectral_weights=None,
     )
 
     # test that values have been fit (i.e. changed)
@@ -124,6 +125,7 @@ def test_fixing_parameters(
     fit_result = fitter._run_fit(
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
+        spectral_weights=None,
     )
     for parameter in fit_result.minimizer_result.params:
         if parameter != fixed_parameter:
