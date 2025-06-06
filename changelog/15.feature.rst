@@ -1,0 +1,1 @@
+Introduced `calculate_initial_crval_guess` helper function to estimate an initial CRVAL value by aligning the observed spectrum with solar and telluric atlas data.
