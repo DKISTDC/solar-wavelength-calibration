@@ -96,8 +96,8 @@ class WavelengthCalibrationFitter(BaseModel):
         self,
         input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
-        method: str = "leastsq",
         spectral_weights: np.ndarray | None = None,
+        method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
         """Run data preparation and fitting.
@@ -133,8 +133,8 @@ class WavelengthCalibrationFitter(BaseModel):
         return self._run_fit(
             input_wavelength_vector,
             input_spectrum,
-            method,
             spectral_weights,
+            method,
             **minimize_kwargs,
         )
 
