@@ -14,6 +14,7 @@ from solar_wavelength_calibration import WavelengthCalibrationFitter
 from solar_wavelength_calibration import WavelengthCalibrationParameters
 from solar_wavelength_calibration.atlas.atlas import LocalAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
+from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_initial_crval_guess
 from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_linear_wave
 from solar_wavelength_calibration.fitter.wavelength_fitter import combine_spectra
 from solar_wavelength_calibration.fitter.wavelength_fitter import fitting_model
@@ -473,3 +474,34 @@ def test_fitting_model(parameters, atlas, observed_spectrum):
 
     assert isinstance(residuals, np.ndarray)
     assert len(residuals) == len(input_spectrum)
+
+
+def test_calculate_initial_crval_guess_returns_reasonable_value(
+    atlas: AtlasBase,
+    observed_spectrum: np.ndarray,
+    observed_wavelength_vector: Quantity,
+):
+    """
+    Given: A realistic observed spectrum and wavelength vector based on a shifted solar atlas,
+           and a full atlas instance.
+    When: The `calculate_initial_crval_guess` function is called.
+    Then: The estimated CRVAL is within the range of the input wavelengths,
+          and is greater than the center of the observed vector, consistent with shift correction.
+    """
+
+    estimated_crval = calculate_initial_crval_guess(
+        input_spectrum=observed_spectrum,
+        input_wavelength_vector=observed_wavelength_vector,
+        atlas=atlas,
+    )
+
+    # Ensure output is a Quantity with correct unit
+    assert isinstance(estimated_crval, Quantity)
+    assert estimated_crval.unit.is_equivalent(u.nm)
+
+    # Ensure estimated CRVAL lies within the input wavelength range
+    assert observed_wavelength_vector.min() < estimated_crval < observed_wavelength_vector.max()
+
+    # Check that estimated CRVAL is larger than the midpoint, which would correct the known synthetic shift
+    midpoint_wave = observed_wavelength_vector[len(observed_wavelength_vector) // 2]
+    assert estimated_crval > midpoint_wave

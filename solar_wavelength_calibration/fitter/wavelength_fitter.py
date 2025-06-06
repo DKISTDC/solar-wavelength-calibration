@@ -468,3 +468,54 @@ def fitting_model(
     res_amplitude = input_spectrum - fts_final_spectrum
 
     return res_amplitude
+
+
+def calculate_initial_crval_guess(
+    input_spectrum: np.ndarray,
+    input_wavelength_vector: u.Quantity,
+    atlas: AtlasBase,
+) -> u.Quantity:
+    """
+    Estimate the initial guess for the `crval` parameter by aligning the input wavelength vector with the atlas data.
+
+    This function calculates a shift for the input wavelength vector to minimize the difference between the input spectrum and the product of the solar and telluric atlas transmissions. The optimal shift is determined by evaluating a merit function over a range of possible shifts.
+
+    Parameters
+    ----------
+    input_spectrum : np.ndarray
+        The observed 1D spectrum to be fitted.
+    input_wavelength_vector : u.Quantity
+        The preliminary wavelength vector corresponding to the input spectrum.
+    atlas : AtlasBase
+        The atlas object containing solar and telluric wavelength and transmission data.
+
+    Returns
+    -------
+    u.Quantity
+        The estimated initial value for the `crval` parameter, representing the reference wavelength.
+    """
+    shifts = np.linspace(-2, 2, 550) * u.nm
+    merit = np.zeros(len(shifts))
+    for n, shift in enumerate(shifts):
+        preliminary_wavelength = input_wavelength_vector + shift
+        fts_solar = np.interp(
+            preliminary_wavelength, atlas.solar_atlas_wavelength, atlas.solar_atlas_transmission
+        )
+        fts_telluric = np.interp(
+            preliminary_wavelength,
+            atlas.telluric_atlas_wavelength,
+            atlas.telluric_atlas_transmission,
+        )
+        # calculate a merit value to be minimized
+        merit[n] = np.std(input_spectrum - fts_solar * fts_telluric)
+
+    # get minimum
+    shift = shifts[np.argmin(merit)]
+
+    # recalculate spectral axis and atlas spectrum for the best shift value
+    fts_wave = input_wavelength_vector + shift
+
+    crpix_updated = np.size(input_spectrum) // 2 + 1
+    crval_initial_guess = fts_wave[crpix_updated]
+
+    return crval_initial_guess
