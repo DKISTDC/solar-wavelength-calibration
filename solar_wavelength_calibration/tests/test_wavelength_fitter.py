@@ -473,3 +473,39 @@ def test_fitting_model(parameters, atlas, observed_spectrum):
 
     assert isinstance(residuals, np.ndarray)
     assert len(residuals) == len(input_spectrum)
+
+
+def test_to_header_add_equatorial_keys(
+    parameters: WavelengthCalibrationParameters,
+    observed_spectrum,
+    atlas: AtlasBase,
+    observed_wavelength_vector,
+):
+
+    fitter = WavelengthCalibrationFitter(
+        input_parameters=parameters,
+        atlas=atlas,
+    )
+
+    fit_result = fitter._run_fit(
+        input_wavelength_vector=observed_wavelength_vector,
+        input_spectrum=observed_spectrum,
+    )
+
+    # With add_equatorial_keys=True
+    header = fit_result.wavelength_parameters.to_header(axis_num=1, add_equatorial_keys=True)
+    # Check standard keys
+    for key in ["CTYPE1", "CUNIT1", "CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]:
+        assert key in header
+    # Check equatorial keys
+    for key in ["CRPIX1A", "CRVAL1A", "CDELT1A", "PV1_0A", "PV1_1A", "PV1_2A"]:
+        assert key in header
+
+    # With add_equatorial_keys=False
+    header_no_eq = fit_result.wavelength_parameters.to_header(axis_num=1, add_equatorial_keys=False)
+    # Standard keys should still be present
+    for key in ["CTYPE1", "CUNIT1", "CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]:
+        assert key in header
+    # Equatorial keys should not be present
+    for key in ["CRPIX1A", "CRVAL1A", "CDELT1A", "PV1_0A", "PV1_1A", "PV1_2A"]:
+        assert key not in header_no_eq

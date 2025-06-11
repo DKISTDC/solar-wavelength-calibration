@@ -39,22 +39,8 @@ class WavelengthParameters(BaseModel):
     ctype: str = "AWAV-GRA"
     cunit: str = "nm"
 
-    def to_header(self, axis_num: int) -> dict:
-        """
-        Convert the wavelength parameters to a WCS header dictionary.
-
-        Parameters
-        ----------
-        axis_num : int
-            The axis number for the WCS header (e.g., 1 for the first axis).
-
-        Returns
-        -------
-        dict
-            A dictionary representing the WCS header with keys corresponding to
-            FITS header keywords and values derived from the wavelength parameters.
-        """
-        return {
+    def to_header(self, axis_num: int, add_equatorial_keys: bool = False) -> dict:
+        header = {
             f"CTYPE{axis_num}": self.ctype,
             f"CUNIT{axis_num}": self.cunit,
             f"CRPIX{axis_num}": self.crpix,
@@ -64,6 +50,14 @@ class WavelengthParameters(BaseModel):
             f"PV{axis_num}_1": self.order,
             f"PV{axis_num}_2": self.incident_light_angle,
         }
+        if add_equatorial_keys:
+            header[f"CRPIX{axis_num}A"] = (self.crpix,)
+            header[f"CRVAL{axis_num}A"] = (self.crval,)
+            header[f"CDELT{axis_num}A"] = (self.dispersion,)
+            header[f"PV{axis_num}_0A"] = (self.grating_constant,)
+            header[f"PV{axis_num}_1A"] = (self.order,)
+            header[f"PV{axis_num}_2A"] = (self.incident_light_angle,)
+        return header
 
 
 class FitResult(BaseModel):
