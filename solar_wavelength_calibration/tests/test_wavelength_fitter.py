@@ -488,10 +488,9 @@ def test_calculate_initial_crval_guess_returns_reasonable_value(
     Then: The estimated CRVAL is within the range of the input wavelengths,
           and is greater than the center of the observed vector, consistent with shift correction.
     """
-
     estimated_crval = calculate_initial_crval_guess(
-        input_spectrum=observed_spectrum,
         input_wavelength_vector=observed_wavelength_vector,
+        input_spectrum=observed_spectrum,
         atlas=atlas,
     )
 

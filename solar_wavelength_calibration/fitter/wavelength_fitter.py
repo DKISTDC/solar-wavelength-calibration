@@ -471,21 +471,24 @@ def fitting_model(
 
 
 def calculate_initial_crval_guess(
-    input_spectrum: np.ndarray,
     input_wavelength_vector: u.Quantity,
+    input_spectrum: np.ndarray,
     atlas: AtlasBase,
 ) -> u.Quantity:
     """
     Estimate the initial guess for the `crval` parameter by aligning the input wavelength vector with the atlas data.
 
-    This function calculates a shift for the input wavelength vector to minimize the difference between the input spectrum and the product of the solar and telluric atlas transmissions. The optimal shift is determined by evaluating a merit function over a range of possible shifts.
+    This function calculates a shift for the input wavelength vector to minimize the
+    difference between the input spectrum and the product of the solar and telluric
+    atlas transmissions. The optimal shift is determined by evaluating a merit
+    function over a range of possible shifts.
 
     Parameters
     ----------
-    input_spectrum : np.ndarray
-        The observed 1D spectrum to be fitted.
     input_wavelength_vector : u.Quantity
         The preliminary wavelength vector corresponding to the input spectrum.
+    input_spectrum : np.ndarray
+        The observed 1D spectrum to be fitted.
     atlas : AtlasBase
         The atlas object containing solar and telluric wavelength and transmission data.
 
@@ -494,7 +497,10 @@ def calculate_initial_crval_guess(
     u.Quantity
         The estimated initial value for the `crval` parameter, representing the reference wavelength.
     """
-    shifts = np.linspace(-2, 2, 550) * u.nm
+    negative_limit = -2 * u.nm
+    positive_limit = 2 * u.nm
+    num_steps = 550
+    shifts = np.linspace(negative_limit, positive_limit, num_steps)
     merit = np.zeros(len(shifts))
     for n, shift in enumerate(shifts):
         preliminary_wavelength = input_wavelength_vector + shift
@@ -507,7 +513,7 @@ def calculate_initial_crval_guess(
             atlas.telluric_atlas_transmission,
         )
         # calculate a merit value to be minimized
-        merit[n] = np.std(input_spectrum - fts_solar * fts_telluric)
+        merit[n] = np.sum((input_spectrum - fts_solar * fts_telluric) ** 2)
 
     # get minimum
     shift = shifts[np.argmin(merit)]
