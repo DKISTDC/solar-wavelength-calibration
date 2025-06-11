@@ -502,7 +502,7 @@ def test_to_header_add_equatorial_keys(
         assert key in header
 
     # With add_equatorial_keys=False
-    header_no_eq = fit_result.wavelength_parameters.to_header(axis_num=1, add_equatorial_keys=False)
+    header_no_eq = fit_result.wavelength_parameters.to_header(axis_num=1)
     # Standard keys should still be present
     for key in ["CTYPE1", "CUNIT1", "CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]:
         assert key in header
