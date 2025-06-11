@@ -205,6 +205,7 @@ class WavelengthCalibrationFitter(BaseModel):
         fitting_model_kwargs = self.input_parameters.constant_parameters | {
             "weights": spectral_weights
         }
+
         number_of_wave_pix = np.size(input_spectrum)
 
         logger.info("Beginning fit.")
@@ -423,7 +424,7 @@ def fitting_model(
     grating_constant: float,
     order: int,
     doppler_velocity: Quantity,
-    weights: np.ndarray = None,
+    weights: np.ndarray | None,
 ) -> np.ndarray:
     """
     Compute the fitting model function for fitting wavelength calibration parameters.
@@ -488,6 +489,13 @@ def fitting_model(
     # Apply weights if provided, else default to uniform weights
     if weights is None:
         weights = np.ones_like(input_spectrum)
-    res_amplitude *= weights
+
+    # Normalize weights to sum to 1, then take the square root.
+    # This ensures that when res_amplitude is multiplied by these weights in fitting_model,
+    # the default lmfit-computed chisq is equivalent to a weighted sum of squared residuals.
+    normalized_weights = weights / np.sum(weights)
+    prepared_weights = np.sqrt(normalized_weights)
+
+    res_amplitude *= prepared_weights
 
     return res_amplitude

@@ -462,6 +462,7 @@ def test_fitting_model(parameters, atlas, observed_spectrum):
     grating_constant = parameters.constant_parameters["grating_constant"]
     order = parameters.constant_parameters["order"]
     doppler_velocity = parameters.constant_parameters["doppler_velocity"]
+    weights = None
 
     residuals = fitting_model(
         params,
@@ -471,6 +472,7 @@ def test_fitting_model(parameters, atlas, observed_spectrum):
         grating_constant,
         order,
         doppler_velocity,
+        weights,
     )
 
     assert isinstance(residuals, np.ndarray)
@@ -506,6 +508,7 @@ def test_fitting_model_with_weights(parameters, observed_spectrum):
         grating_constant,
         order,
         doppler_velocity,
+        weights=None,
     )
 
     residuals_weighted = fitting_model(
@@ -519,4 +522,7 @@ def test_fitting_model_with_weights(parameters, observed_spectrum):
         weights=weights,
     )
 
-    assert np.allclose(residuals_weighted, residuals_unweighted * weights)
+    normalized_weights = weights / np.sum(weights)
+    prepared_weights = np.sqrt(normalized_weights)
+
+    assert np.allclose(residuals_weighted, residuals_unweighted * prepared_weights)
