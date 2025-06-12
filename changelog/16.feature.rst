@@ -1,1 +1,1 @@
-Add support for equatorial WCS header keys in WavelengthParameters.to_header method.
+Add support for alternate header keys in WavelengthParameters.to_header method.

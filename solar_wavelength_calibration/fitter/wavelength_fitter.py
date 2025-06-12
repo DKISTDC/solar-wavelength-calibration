@@ -39,7 +39,7 @@ class WavelengthParameters(BaseModel):
     ctype: str = "AWAV-GRA"
     cunit: str = "nm"
 
-    def to_header(self, axis_num: int, add_equatorial_keys: bool = False) -> dict:
+    def to_header(self, axis_num: int, add_alternate_keys: bool = False) -> dict:
         header = {
             f"CTYPE{axis_num}": self.ctype,
             f"CUNIT{axis_num}": self.cunit,
@@ -50,7 +50,7 @@ class WavelengthParameters(BaseModel):
             f"PV{axis_num}_1": self.order,
             f"PV{axis_num}_2": self.incident_light_angle,
         }
-        if add_equatorial_keys:
+        if add_alternate_keys:
             header[f"CRPIX{axis_num}A"] = (self.crpix,)
             header[f"CRVAL{axis_num}A"] = (self.crval,)
             header[f"CDELT{axis_num}A"] = (self.dispersion,)
