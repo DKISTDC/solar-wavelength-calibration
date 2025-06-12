@@ -40,6 +40,22 @@ class WavelengthParameters(BaseModel):
     cunit: str = "nm"
 
     def to_header(self, axis_num: int, add_alternate_keys: bool = False) -> dict:
+        """
+        Convert the wavelength parameters to a WCS header dictionary.
+
+        Parameters
+        ----------
+        axis_num : int
+            The axis number for the WCS header (e.g., 1 for the first axis).
+        add_alternate_keys : bool, optional
+            If True, include alternate header keywords (ending with 'A') for compatibility.
+
+        Returns
+        -------
+        dict
+            A dictionary representing the WCS header with keys corresponding to
+            FITS header keywords and values derived from the wavelength parameters.
+        """
         header = {
             f"CTYPE{axis_num}": self.ctype,
             f"CUNIT{axis_num}": self.cunit,
@@ -51,7 +67,8 @@ class WavelengthParameters(BaseModel):
             f"PV{axis_num}_2": self.incident_light_angle,
         }
         if add_alternate_keys:
-            # should CTYPE and CUNIT be in here?
+            header[f"CTYPE{axis_num}A"] = self.ctype
+            header[f"CUNIT{axis_num}A"] = self.cunit
             header[f"CRPIX{axis_num}A"] = self.crpix
             header[f"CRVAL{axis_num}A"] = self.crval
             header[f"CDELT{axis_num}A"] = self.dispersion

@@ -495,20 +495,22 @@ def test_to_header_add_alternate_keys(
     # With add_alternate_keys=True
     header = fit_result.wavelength_parameters.to_header(axis_num=1, add_alternate_keys=True)
     # Check standard keys
-    for key in ["CTYPE1", "CUNIT1", "CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]:
+    standard_keys = ["CTYPE1", "CUNIT1", "CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]
+    alternate_keys = [
+        f"{key}A" for key in ["CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]
+    ]
+
+    for key in standard_keys:
         assert key in header
-    # Check alternate keys
-    for key in ["CRPIX1A", "CRVAL1A", "CDELT1A", "PV1_0A", "PV1_1A", "PV1_2A"]:
+    for key in alternate_keys:
         assert key in header
-    # Verify that corresponding standard and alternate keys have the same values
-    for key in ["CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]:
-        assert header[key] == header[f"{key}A"]
+    for key in standard_keys:
+        if f"{key}A" in header:
+            assert header[key] == header[f"{key}A"]
 
     # With add_alternate_keys=False
     header_no_alt = fit_result.wavelength_parameters.to_header(axis_num=1)
-    # Standard keys should still be present
-    for key in ["CTYPE1", "CUNIT1", "CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]:
+    for key in standard_keys:
         assert key in header
-    # Alternate keys should not be present
-    for key in ["CRPIX1A", "CRVAL1A", "CDELT1A", "PV1_0A", "PV1_1A", "PV1_2A"]:
+    for key in alternate_keys:
         assert key not in header_no_alt
