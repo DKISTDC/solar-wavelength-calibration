@@ -496,9 +496,7 @@ def test_to_header_add_alternate_keys(
     header = fit_result.wavelength_parameters.to_header(axis_num=1, add_alternate_keys=True)
     # Check standard keys
     standard_keys = ["CTYPE1", "CUNIT1", "CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]
-    alternate_keys = [
-        f"{key}A" for key in ["CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]
-    ]
+    alternate_keys = [f"{key}A" for key in standard_keys]
 
     for key in standard_keys:
         assert key in header
