@@ -501,11 +501,7 @@ def test_to_header_add_alternate_keys(
     for key in ["CRPIX1A", "CRVAL1A", "CDELT1A", "PV1_0A", "PV1_1A", "PV1_2A"]:
         assert key in header
     # Verify that corresponding standard and alternate keys have the same values
-    for key in ["CTYPE1", "CUNIT1", "CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]:
-        print(key)
-        print(header[key])
-        # print(header[f"{key}A"])
-        print(header)
+    for key in ["CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]:
         assert header[key] == header[f"{key}A"]
 
     # With add_alternate_keys=False

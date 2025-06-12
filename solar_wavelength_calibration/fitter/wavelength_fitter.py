@@ -51,6 +51,7 @@ class WavelengthParameters(BaseModel):
             f"PV{axis_num}_2": self.incident_light_angle,
         }
         if add_alternate_keys:
+            # should CTYPE and CUNIT be in here?
             header[f"CRPIX{axis_num}A"] = self.crpix
             header[f"CRVAL{axis_num}A"] = self.crval
             header[f"CDELT{axis_num}A"] = self.dispersion
