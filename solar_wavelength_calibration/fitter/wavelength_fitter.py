@@ -424,7 +424,7 @@ def fitting_model(
     grating_constant: float,
     order: int,
     doppler_velocity: Quantity,
-    weights: np.ndarray | None,
+    weights: np.ndarray,
 ) -> np.ndarray:
     """
     Compute the fitting model function for fitting wavelength calibration parameters.
@@ -485,10 +485,6 @@ def fitting_model(
 
     # Calculate residual amplitude
     res_amplitude = input_spectrum - fts_final_spectrum
-
-    # Apply weights if provided, else default to uniform weights
-    if weights is None:
-        weights = np.ones_like(input_spectrum)
 
     # Normalize weights to sum to 1, then take the square root.
     # This ensures that when res_amplitude is multiplied by these weights in fitting_model,

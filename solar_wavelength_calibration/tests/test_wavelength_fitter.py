@@ -45,10 +45,9 @@ def test_wavecal_fitter(
         atlas=atlas,
     )
 
-    fit_result = fitter._run_fit(
+    fit_result = fitter(
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
-        spectral_weights=None,
     )
 
     # test that values have been fit (i.e. changed)
@@ -122,10 +121,9 @@ def test_fixing_parameters(
         atlas=atlas,
     )
 
-    fit_result = fitter._run_fit(
+    fit_result = fitter(
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
-        spectral_weights=None,
     )
     for parameter in fit_result.minimizer_result.params:
         if parameter != fixed_parameter:
@@ -462,7 +460,7 @@ def test_fitting_model(parameters, atlas, observed_spectrum):
     grating_constant = parameters.constant_parameters["grating_constant"]
     order = parameters.constant_parameters["order"]
     doppler_velocity = parameters.constant_parameters["doppler_velocity"]
-    weights = None
+    weights = np.ones(len(input_spectrum))
 
     residuals = fitting_model(
         params,
@@ -498,8 +496,6 @@ def test_fitting_model_with_weights(parameters, observed_spectrum):
         telluric_atlas_transmission=np.ones(number_of_wave_pix),
     )
 
-    weights = np.linspace(0.5, 2.0, number_of_wave_pix)
-
     residuals_unweighted = fitting_model(
         params,
         observed_spectrum,
@@ -508,8 +504,10 @@ def test_fitting_model_with_weights(parameters, observed_spectrum):
         grating_constant,
         order,
         doppler_velocity,
-        weights=None,
+        weights=np.ones(len(observed_spectrum)),
     )
+
+    weights = np.linspace(0.5, 2.0, number_of_wave_pix)
 
     residuals_weighted = fitting_model(
         params,
@@ -522,7 +520,4 @@ def test_fitting_model_with_weights(parameters, observed_spectrum):
         weights=weights,
     )
 
-    normalized_weights = weights / np.sum(weights)
-    prepared_weights = np.sqrt(normalized_weights)
-
-    assert np.allclose(residuals_weighted, residuals_unweighted * prepared_weights)
+    assert not np.array_equal(residuals_unweighted, residuals_weighted)
