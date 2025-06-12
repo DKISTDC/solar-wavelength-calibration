@@ -181,7 +181,7 @@ def test_fit_stays_valid_with_fixed_crval(
     parameters = WavelengthCalibrationParameters(
         fit_flags=FitFlagsModel(crval=False),
         bounds=BoundsModel(incident_light_angle=AngleBoundRange(min=angle_min, max=angle_max)),
-        **init_values
+        **init_values,
     )
 
     fitter = WavelengthCalibrationFitter(
@@ -500,12 +500,19 @@ def test_to_header_add_alternate_keys(
     # Check alternate keys
     for key in ["CRPIX1A", "CRVAL1A", "CDELT1A", "PV1_0A", "PV1_1A", "PV1_2A"]:
         assert key in header
+    # Verify that corresponding standard and alternate keys have the same values
+    for key in ["CTYPE1", "CUNIT1", "CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]:
+        print(key)
+        print(header[key])
+        # print(header[f"{key}A"])
+        print(header)
+        assert header[key] == header[f"{key}A"]
 
     # With add_alternate_keys=False
-    header_no_eq = fit_result.wavelength_parameters.to_header(axis_num=1)
+    header_no_alt = fit_result.wavelength_parameters.to_header(axis_num=1)
     # Standard keys should still be present
     for key in ["CTYPE1", "CUNIT1", "CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]:
         assert key in header
     # Alternate keys should not be present
     for key in ["CRPIX1A", "CRVAL1A", "CDELT1A", "PV1_0A", "PV1_1A", "PV1_2A"]:
-        assert key not in header_no_eq
+        assert key not in header_no_alt

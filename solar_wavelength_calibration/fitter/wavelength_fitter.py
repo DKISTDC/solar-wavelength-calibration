@@ -51,12 +51,12 @@ class WavelengthParameters(BaseModel):
             f"PV{axis_num}_2": self.incident_light_angle,
         }
         if add_alternate_keys:
-            header[f"CRPIX{axis_num}A"] = (self.crpix,)
-            header[f"CRVAL{axis_num}A"] = (self.crval,)
-            header[f"CDELT{axis_num}A"] = (self.dispersion,)
-            header[f"PV{axis_num}_0A"] = (self.grating_constant,)
-            header[f"PV{axis_num}_1A"] = (self.order,)
-            header[f"PV{axis_num}_2A"] = (self.incident_light_angle,)
+            header[f"CRPIX{axis_num}A"] = self.crpix
+            header[f"CRVAL{axis_num}A"] = self.crval
+            header[f"CDELT{axis_num}A"] = self.dispersion
+            header[f"PV{axis_num}_0A"] = self.grating_constant
+            header[f"PV{axis_num}_1A"] = self.order
+            header[f"PV{axis_num}_2A"] = self.incident_light_angle
         return header
 
 
