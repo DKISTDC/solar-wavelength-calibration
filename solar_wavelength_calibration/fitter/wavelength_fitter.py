@@ -129,6 +129,7 @@ class WavelengthCalibrationFitter(BaseModel):
         """
         if spectral_weights is None:
             spectral_weights = np.ones(len(input_spectrum))
+        assert len(spectral_weights) == len(input_spectrum)
 
         return self._run_fit(
             input_wavelength_vector,
