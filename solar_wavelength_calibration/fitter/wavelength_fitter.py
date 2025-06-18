@@ -235,7 +235,7 @@ class WavelengthCalibrationFitter(BaseModel):
             crpix=number_of_wave_pix // 2 + 1,
             crval=minimizer_result.params["crval"].value,
             dispersion=minimizer_result.params["dispersion"].value,
-            grating_constant=self.input_parameters.grating_constant,
+            grating_constant=self.input_parameters.grating_constant.value,
             order=self.input_parameters.order,
             incident_light_angle=minimizer_result.params["incident_light_angle"].value,
             ctype="AWAV-GRA",
@@ -450,7 +450,7 @@ def fitting_model(
     doppler_velocity : Quantity
         Doppler velocity in km/s.
     spectral_weights : np.ndarray
-        Array of weights to apply to the residuals. If provided, the residuals will be scaled by these weights.
+        Array of weights to apply to the residuals. Residuals will be scaled by these weights.
 
     Returns
     -------
