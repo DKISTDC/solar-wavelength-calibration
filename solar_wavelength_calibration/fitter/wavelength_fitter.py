@@ -129,7 +129,10 @@ class WavelengthCalibrationFitter(BaseModel):
         """
         if spectral_weights is None:
             spectral_weights = np.ones(len(input_spectrum))
-        assert len(spectral_weights) == len(input_spectrum)
+        if len(spectral_weights) != len(input_spectrum):
+            raise ValueError(
+                f"Length of spectral_weights ({len(spectral_weights)}) does not match length of input_spectrum ({len(input_spectrum)})."
+            )
 
         return self._run_fit(
             input_wavelength_vector,
@@ -204,7 +207,7 @@ class WavelengthCalibrationFitter(BaseModel):
         """Send the fitter on its way."""
         params_to_fit = self.input_parameters.lmfit_parameters
         fitting_model_kwargs = self.input_parameters.constant_parameters | {
-            "weights": spectral_weights
+            "spectral_weights": spectral_weights
         }
 
         number_of_wave_pix = np.size(input_spectrum)
@@ -232,8 +235,8 @@ class WavelengthCalibrationFitter(BaseModel):
             crpix=number_of_wave_pix // 2 + 1,
             crval=minimizer_result.params["crval"].value,
             dispersion=minimizer_result.params["dispersion"].value,
-            grating_constant=fitting_model_kwargs["grating_constant"],
-            order=fitting_model_kwargs["order"],
+            grating_constant=self.input_parameters.grating_constant,
+            order=self.input_parameters.order,
             incident_light_angle=minimizer_result.params["incident_light_angle"].value,
             ctype="AWAV-GRA",
             cunit="nm",
@@ -425,7 +428,7 @@ def fitting_model(
     grating_constant: float,
     order: int,
     doppler_velocity: Quantity,
-    weights: np.ndarray,
+    spectral_weights: np.ndarray,
 ) -> np.ndarray:
     """
     Compute the fitting model function for fitting wavelength calibration parameters.
@@ -446,7 +449,7 @@ def fitting_model(
         Diffraction order.
     doppler_velocity : Quantity
         Doppler velocity in km/s.
-    weights : np.ndarray
+    spectral_weights : np.ndarray
         Array of weights to apply to the residuals. If provided, the residuals will be scaled by these weights.
 
     Returns
@@ -490,7 +493,7 @@ def fitting_model(
     # Normalize weights to sum to 1, then take the square root.
     # This ensures that when res_amplitude is multiplied by these weights in fitting_model,
     # the default lmfit-computed chisq is equivalent to a weighted sum of squared residuals.
-    normalized_weights = weights / np.sum(weights)
+    normalized_weights = spectral_weights / np.sum(spectral_weights)
     prepared_weights = np.sqrt(normalized_weights)
 
     res_amplitude *= prepared_weights
