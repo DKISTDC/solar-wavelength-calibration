@@ -474,6 +474,9 @@ def calculate_initial_crval_guess(
     input_wavelength_vector: u.Quantity,
     input_spectrum: np.ndarray,
     atlas: AtlasBase,
+    negative_limit=-2 * u.nm,
+    positive_limit=2 * u.nm,
+    num_steps=550,
 ) -> u.Quantity:
     """
     Estimate the initial guess for the `crval` parameter by aligning the input wavelength vector with the atlas data.
@@ -491,15 +494,18 @@ def calculate_initial_crval_guess(
         The observed 1D spectrum to be fitted.
     atlas : AtlasBase
         The atlas object containing solar and telluric wavelength and transmission data.
+    negative_limit : Quantity, optional
+        The lower bound of the wavelength shift range for the initial guess (default: -2 nm).
+    positive_limit : Quantity, optional
+        The upper bound of the wavelength shift range for the initial guess (default: 2 nm).
+    num_steps : int, optional
+        The number of steps to evaluate in the shift range (default: 550).
 
     Returns
     -------
     u.Quantity
         The estimated initial value for the `crval` parameter, representing the reference wavelength.
     """
-    negative_limit = -2 * u.nm
-    positive_limit = 2 * u.nm
-    num_steps = 550
     shifts = np.linspace(negative_limit, positive_limit, num_steps)
     merit = np.zeros(len(shifts))
     for n, shift in enumerate(shifts):
