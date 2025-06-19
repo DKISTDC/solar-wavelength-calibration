@@ -519,6 +519,9 @@ def test_fitting_model_with_weights(fitting_model_setup):
         prepared_weights=prepared_weights,
     )
 
+    # Undo the weighting caused by the default weights
+    residuals_unweighted /= np.sqrt(1.0 / observed_spectrum.size)
+
     weights = np.linspace(0.5, 2.0, number_of_wave_pix)
     normalized_weights = weights / np.sum(weights)
     prepared_weights = np.sqrt(normalized_weights)
@@ -534,6 +537,7 @@ def test_fitting_model_with_weights(fitting_model_setup):
         prepared_weights=prepared_weights,
     )
 
-    np.testing.assert_allclose(
-        residuals_weighted, residuals_unweighted * weights, rtol=1e-3, atol=1e-1
+    weighted_chisq = np.sum(residuals_weighted**2)
+    np.testing.assert_equal(
+        weighted_chisq, np.sum((residuals_unweighted * np.sqrt(weights / np.sum(weights))) ** 2)
     )
