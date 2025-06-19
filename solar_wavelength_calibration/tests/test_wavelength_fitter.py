@@ -503,6 +503,10 @@ def test_fitting_model_with_weights(fitting_model_setup):
     order = setup["order"]
     doppler_velocity = setup["doppler_velocity"]
 
+    spectral_weights = np.ones(len(observed_spectrum))
+    normalized_weights = spectral_weights / np.sum(spectral_weights)
+    prepared_weights = np.sqrt(normalized_weights)
+
     # Unweighted: weights are all 1, so residuals are unchanged
     residuals_unweighted = fitting_model(
         params,
@@ -512,10 +516,12 @@ def test_fitting_model_with_weights(fitting_model_setup):
         grating_constant,
         order,
         doppler_velocity,
-        spectral_weights=np.ones(len(observed_spectrum)),
+        prepared_weights=prepared_weights,
     )
 
     weights = np.linspace(0.5, 2.0, number_of_wave_pix)
+    normalized_weights = weights / np.sum(weights)
+    prepared_weights = np.sqrt(normalized_weights)
 
     residuals_weighted = fitting_model(
         params,
@@ -525,7 +531,7 @@ def test_fitting_model_with_weights(fitting_model_setup):
         grating_constant,
         order,
         doppler_velocity,
-        spectral_weights=weights,
+        prepared_weights=prepared_weights,
     )
 
     np.testing.assert_allclose(

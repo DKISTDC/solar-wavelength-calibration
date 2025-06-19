@@ -206,8 +206,15 @@ class WavelengthCalibrationFitter(BaseModel):
     ) -> FitResult:
         """Send the fitter on its way."""
         params_to_fit = self.input_parameters.lmfit_parameters
+
+        # Normalize weights to sum to 1, then take the square root.
+        # This ensures that when res_amplitude is multiplied by these weights in fitting_model,
+        # the default lmfit-computed chisq is equivalent to a weighted sum of squared residuals.
+        normalized_weights = spectral_weights / np.sum(spectral_weights)
+        prepared_weights = np.sqrt(normalized_weights)
+
         fitting_model_kwargs = self.input_parameters.constant_parameters | {
-            "spectral_weights": spectral_weights
+            "prepared_weights": prepared_weights
         }
 
         number_of_wave_pix = np.size(input_spectrum)
@@ -428,7 +435,7 @@ def fitting_model(
     grating_constant: float,
     order: int,
     doppler_velocity: Quantity,
-    spectral_weights: np.ndarray,
+    prepared_weights: np.ndarray,
 ) -> np.ndarray:
     """
     Compute the fitting model function for fitting wavelength calibration parameters.
@@ -449,8 +456,8 @@ def fitting_model(
         Diffraction order.
     doppler_velocity : Quantity
         Doppler velocity in km/s.
-    spectral_weights : np.ndarray
-        Array of weights to apply to the residuals. Residuals will be scaled by these weights.
+    prepared_weights : np.ndarray
+        Array of prepared weights (square roots of normalized spectral weights) to apply to the residuals to ensure proper weighting in the fit.
 
     Returns
     -------
@@ -489,12 +496,6 @@ def fitting_model(
 
     # Calculate residual amplitude
     res_amplitude = input_spectrum - fts_final_spectrum
-
-    # Normalize weights to sum to 1, then take the square root.
-    # This ensures that when res_amplitude is multiplied by these weights in fitting_model,
-    # the default lmfit-computed chisq is equivalent to a weighted sum of squared residuals.
-    normalized_weights = spectral_weights / np.sum(spectral_weights)
-    prepared_weights = np.sqrt(normalized_weights)
 
     res_amplitude *= prepared_weights
 
