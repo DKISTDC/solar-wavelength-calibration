@@ -486,6 +486,10 @@ def calculate_initial_crval_guess(
     atlas transmissions. The optimal shift is determined by evaluating a merit
     function over a range of possible shifts.
 
+    Note
+    ----
+    This function does not perform any continuum matching between the input spectrum and the atlas spectra.
+
     Parameters
     ----------
     input_wavelength_vector : u.Quantity
