@@ -538,6 +538,6 @@ def test_fitting_model_with_weights(fitting_model_setup):
     )
 
     weighted_chisq = np.sum(residuals_weighted**2)
-    np.testing.assert_equal(
+    np.testing.assert_allclose(
         weighted_chisq, np.sum((residuals_unweighted * np.sqrt(weights / np.sum(weights))) ** 2)
     )
