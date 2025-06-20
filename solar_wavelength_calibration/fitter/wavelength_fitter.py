@@ -458,7 +458,11 @@ def fitting_model(
         Doppler velocity in km/s.
     prepared_weights : np.ndarray
         Array of prepared weights (square roots of normalized spectral weights) to apply to the residuals to ensure proper weighting in the fit.
-        The weights are constructed by normalizing the input spectral weights so they sum to 1, then taking the square root of each value. This is done because the lmfit minimizer computes the chi-squared as the sum of squared residuals, i.e., \(\chi^2 = \sum_i (r_i)^2\), where \(r_i\) are the residuals. To achieve a standard weighted chi-squared, \(\chi^2 = \sum_i w_i (r_i)^2\), we multiply each residual by \(\sqrt{w_i}\), so that \((\sqrt{w_i} r_i)^2 = w_i (r_i)^2\). Thus, the use of square-rooted, normalized weights ensures that the minimizer's unweighted sum of squared residuals is mathematically equivalent to the standard weighted chi-squared.
+        The lmfit minimizer computes chi-squared as the sum of squared residuals, i.e., :math:`\chi^2 = \sum_i r_i^2`,
+        where :math:`r`, the residuals, are the result of this function. To achieve a standard weighted chi-squared,
+        (:math:`\chi^2 = \frac{\sum_i w_i r_i^2}{\sum_i w_i}`), we multiply each residual by the prepared weights such that
+        :math:`r_w = r \sqrt{w_i}`. The lmfit goodness-of-fit then becomes :math:`\chi^2 = \sum_i r_{w,i}^2 = \sum_i w_i r_i^2`,
+        which is equal to the standard weighted chi-squared when :math:`\sum_i w_i = 1`.
 
     Returns
     -------
