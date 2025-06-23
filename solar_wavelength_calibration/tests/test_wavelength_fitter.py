@@ -14,6 +14,7 @@ from solar_wavelength_calibration import WavelengthCalibrationFitter
 from solar_wavelength_calibration import WavelengthCalibrationParameters
 from solar_wavelength_calibration.atlas.atlas import LocalAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
+from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_initial_crval_guess
 from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_linear_wave
 from solar_wavelength_calibration.fitter.wavelength_fitter import combine_spectra
 from solar_wavelength_calibration.fitter.wavelength_fitter import fitting_model
@@ -25,6 +26,38 @@ from solar_wavelength_calibration.fitter.wavelength_fitter import (
     resample_telluric_transmission_with_absorption_correction,
 )
 from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
+
+
+@pytest.fixture
+def synthetic_local_atlas():
+    def _make(n=100):
+        return LocalAtlas(
+            solar_atlas_wavelength=np.linspace(1067.5, 1076.3, n) * u.nm,
+            solar_atlas_transmission=np.random.uniform(0.8, 1.0, n),
+            telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, n) * u.nm,
+            telluric_atlas_transmission=np.random.uniform(0.8, 1.0, n),
+        )
+
+    return _make
+
+
+@pytest.fixture
+def fitting_model_setup(parameters, observed_spectrum, synthetic_local_atlas):
+    n = len(observed_spectrum)
+    cropped_atlas = synthetic_local_atlas(n)
+    params = parameters.lmfit_parameters
+    grating_constant = parameters.constant_parameters["grating_constant"]
+    order = parameters.constant_parameters["order"]
+    doppler_velocity = parameters.constant_parameters["doppler_velocity"]
+    return {
+        "params": params,
+        "input_spectrum": observed_spectrum,
+        "cropped_atlas": cropped_atlas,
+        "number_of_wave_pix": n,
+        "grating_constant": grating_constant,
+        "order": order,
+        "doppler_velocity": doppler_velocity,
+    }
 
 
 def test_wavecal_fitter(
@@ -45,7 +78,7 @@ def test_wavecal_fitter(
         atlas=atlas,
     )
 
-    fit_result = fitter._run_fit(
+    fit_result = fitter(
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
     )
@@ -121,7 +154,7 @@ def test_fixing_parameters(
         atlas=atlas,
     )
 
-    fit_result = fitter._run_fit(
+    fit_result = fitter(
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
     )
@@ -326,19 +359,15 @@ def test_calculate_linear_wave(parameters):
     assert len(linear_wave) == 0
 
 
-def test_apply_telluric_absorption(parameters):
+@pytest.mark.usefixtures("synthetic_local_atlas")
+def test_apply_telluric_absorption(parameters, synthetic_local_atlas):
     """
     Given: A linear wavelength vector, a cropped atlas containing telluric data, and an opacity factor.
     When: The `resample_telluric_transmission_with_absorption_correction` function is called.
     Then: It returns a telluric transmission spectrum as a numpy array with non-negative values and the same length as the input wavelength vector.
     """
     linear_wave = np.linspace(1067.5, 1076.3, 100)
-    cropped_atlas = LocalAtlas(
-        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
-        solar_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
-        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
-        telluric_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
-    )
+    cropped_atlas = synthetic_local_atlas(100)
 
     # Test with valid opacity factor
     opacity_factor = parameters.lmfit_parameters["opacity_factor"].value
@@ -359,7 +388,8 @@ def test_apply_telluric_absorption(parameters):
         assert np.all(telluric_transmission >= 0)
 
 
-def test_apply_doppler_shift(parameters):
+@pytest.mark.usefixtures("synthetic_local_atlas")
+def test_apply_doppler_shift(parameters, synthetic_local_atlas):
     """
     Given: A linear wavelength vector, a cropped atlas containing solar data, a Doppler velocity, and a reference wavelength.
     When: The `resample_solar_transmission_with_doppler_shift` function is called.
@@ -367,12 +397,7 @@ def test_apply_doppler_shift(parameters):
     """
     linear_wave = np.linspace(1067.5, 1076.3, 100)
     crval = parameters.lmfit_parameters["crval"].value
-    cropped_atlas = LocalAtlas(
-        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
-        solar_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
-        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
-        telluric_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
-    )
+    cropped_atlas = synthetic_local_atlas(100)
 
     # Test with valid doppler velocity
     doppler_velocity = parameters.constant_parameters["doppler_velocity"]
@@ -442,37 +467,111 @@ def test_normalize_and_convolve(parameters):
     assert np.all(normalized_spectrum >= 0)
 
 
-def test_fitting_model(parameters, atlas, observed_spectrum):
+def test_fitting_model(fitting_model_setup):
     """
     Given: A set of input parameters, an observed spectrum, and a cropped atlas.
     When: The `fitting_model` function is called with these inputs.
     Then: It returns the residual amplitude as a numpy array with the same length as the observed spectrum.
     """
-    params = parameters.lmfit_parameters
-    input_spectrum = observed_spectrum
-    cropped_atlas = LocalAtlas(
-        solar_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
-        solar_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
-        telluric_atlas_wavelength=np.linspace(1067.5, 1076.3, 100) * u.nm,
-        telluric_atlas_transmission=np.random.uniform(0.8, 1.0, 100),
-    )
-    number_of_wave_pix = len(input_spectrum)
-    grating_constant = parameters.constant_parameters["grating_constant"]
-    order = parameters.constant_parameters["order"]
-    doppler_velocity = parameters.constant_parameters["doppler_velocity"]
-
+    setup = fitting_model_setup
+    weights = np.ones(setup["number_of_wave_pix"])
     residuals = fitting_model(
+        setup["params"],
+        setup["input_spectrum"],
+        setup["cropped_atlas"],
+        setup["number_of_wave_pix"],
+        setup["grating_constant"],
+        setup["order"],
+        setup["doppler_velocity"],
+        weights,
+    )
+    assert isinstance(residuals, np.ndarray)
+    assert len(residuals) == len(setup["input_spectrum"])
+
+
+def test_fitting_model_with_weights(fitting_model_setup):
+    """
+    Given: A set of input parameters and a synthetic spectrum
+    When: The `fitting_model` is called with and without spectral weights
+    Then: The residuals are scaled by the weights
+    """
+    setup = fitting_model_setup
+    params = setup["params"]
+    observed_spectrum = setup["input_spectrum"]
+    cropped_atlas = setup["cropped_atlas"]
+    number_of_wave_pix = setup["number_of_wave_pix"]
+    grating_constant = setup["grating_constant"]
+    order = setup["order"]
+    doppler_velocity = setup["doppler_velocity"]
+
+    spectral_weights = np.ones(len(observed_spectrum))
+    normalized_weights = spectral_weights / np.sum(spectral_weights)
+    prepared_weights = np.sqrt(normalized_weights)
+
+    # Unweighted: weights are all 1, so residuals are unchanged
+    residuals_unweighted = fitting_model(
         params,
-        input_spectrum,
+        observed_spectrum,
         cropped_atlas,
         number_of_wave_pix,
         grating_constant,
         order,
         doppler_velocity,
+        prepared_weights=prepared_weights,
     )
 
-    assert isinstance(residuals, np.ndarray)
-    assert len(residuals) == len(input_spectrum)
+    # Undo the weighting caused by the default weights
+    residuals_unweighted /= np.sqrt(1.0 / observed_spectrum.size)
+
+    weights = np.linspace(0.5, 2.0, number_of_wave_pix)
+    normalized_weights = weights / np.sum(weights)
+    prepared_weights = np.sqrt(normalized_weights)
+
+    residuals_weighted = fitting_model(
+        params,
+        observed_spectrum,
+        cropped_atlas,
+        number_of_wave_pix,
+        grating_constant,
+        order,
+        doppler_velocity,
+        prepared_weights=prepared_weights,
+    )
+
+    weighted_chisq = np.sum(residuals_weighted**2)
+    np.testing.assert_allclose(
+        weighted_chisq, np.sum((residuals_unweighted * np.sqrt(weights / np.sum(weights))) ** 2)
+    )
+
+
+def test_calculate_initial_crval_guess_returns_reasonable_value(
+    atlas: AtlasBase,
+    observed_spectrum: np.ndarray,
+    observed_wavelength_vector: Quantity,
+):
+    """
+    Given: A realistic observed spectrum and wavelength vector based on a shifted solar atlas,
+           and a full atlas instance.
+    When: The `calculate_initial_crval_guess` function is called.
+    Then: The estimated CRVAL is within the range of the input wavelengths,
+          and is greater than the center of the observed vector, consistent with shift correction.
+    """
+    estimated_crval = calculate_initial_crval_guess(
+        input_wavelength_vector=observed_wavelength_vector,
+        input_spectrum=observed_spectrum,
+        atlas=atlas,
+    )
+
+    # Ensure output is a Quantity with correct unit
+    assert isinstance(estimated_crval, Quantity)
+    assert estimated_crval.unit.is_equivalent(u.nm)
+
+    # Ensure estimated CRVAL lies within the input wavelength range
+    assert observed_wavelength_vector.min() < estimated_crval < observed_wavelength_vector.max()
+
+    # Check that estimated CRVAL is larger than the midpoint, which would correct the known synthetic shift
+    midpoint_wave = observed_wavelength_vector[len(observed_wavelength_vector) // 2]
+    assert estimated_crval > midpoint_wave
 
 
 def test_to_header_add_alternate_keys(

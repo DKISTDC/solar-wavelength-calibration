@@ -108,6 +108,7 @@ class WavelengthCalibrationFitter(BaseModel):
         self,
         input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
+        spectral_weights: np.ndarray | None = None,
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
@@ -124,6 +125,9 @@ class WavelengthCalibrationFitter(BaseModel):
         method: (str, optional)
             The optimization method to use. Defaults to "leastsq".
 
+        spectral_weights: (np.ndarray, optional)
+            Array of weights to apply to the residuals during fitting. If None, no weights are applied.
+
         **minimize_kwargs
             Additional keyword arguments for the minimizer.
 
@@ -135,9 +139,17 @@ class WavelengthCalibrationFitter(BaseModel):
             - `minimizer_result` (MinimizerResult): The result returned by the lmfit minimizer.
 
         """
+        if spectral_weights is None:
+            spectral_weights = np.ones(len(input_spectrum))
+        if len(spectral_weights) != len(input_spectrum):
+            raise ValueError(
+                f"Length of spectral_weights ({len(spectral_weights)}) does not match length of input_spectrum ({len(input_spectrum)})."
+            )
+
         return self._run_fit(
             input_wavelength_vector,
             input_spectrum,
+            spectral_weights,
             method,
             **minimize_kwargs,
         )
@@ -146,12 +158,15 @@ class WavelengthCalibrationFitter(BaseModel):
         self,
         input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
+        spectral_weights: np.ndarray,
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
         """Run the fit."""
         cropped_atlas = self._prepare_atlas(input_wavelength_vector)
-        fit_result = self._fit_spectrum(cropped_atlas, input_spectrum, method, **minimize_kwargs)
+        fit_result = self._fit_spectrum(
+            cropped_atlas, input_spectrum, method, spectral_weights, **minimize_kwargs
+        )
         return fit_result
 
     def _prepare_atlas(self, input_wavelength_vector: u.Quantity) -> LocalAtlas:
@@ -198,11 +213,22 @@ class WavelengthCalibrationFitter(BaseModel):
         cropped_atlas: LocalAtlas,
         input_spectrum: np.ndarray,
         method: str,
+        spectral_weights: np.ndarray,
         **minimize_kwargs,
     ) -> FitResult:
         """Send the fitter on its way."""
         params_to_fit = self.input_parameters.lmfit_parameters
-        constant_parameters = self.input_parameters.constant_parameters
+
+        # Normalize weights to sum to 1, then take the square root.
+        # This ensures that when res_amplitude is multiplied by these weights in fitting_model,
+        # the default lmfit-computed chisq is equivalent to a weighted sum of squared residuals.
+        normalized_weights = spectral_weights / np.sum(spectral_weights)
+        prepared_weights = np.sqrt(normalized_weights)
+
+        fitting_model_kwargs = self.input_parameters.constant_parameters | {
+            "prepared_weights": prepared_weights
+        }
+
         number_of_wave_pix = np.size(input_spectrum)
 
         logger.info("Beginning fit.")
@@ -214,8 +240,9 @@ class WavelengthCalibrationFitter(BaseModel):
                 cropped_atlas,
                 number_of_wave_pix,
             ),
-            fcn_kws=constant_parameters,
+            fcn_kws=fitting_model_kwargs,
         )
+
         minimizer_result = minimizer.minimize(
             params=params_to_fit, method=method, **minimize_kwargs
         )
@@ -227,8 +254,8 @@ class WavelengthCalibrationFitter(BaseModel):
             crpix=number_of_wave_pix // 2 + 1,
             crval=minimizer_result.params["crval"].value,
             dispersion=minimizer_result.params["dispersion"].value,
-            grating_constant=constant_parameters["grating_constant"],
-            order=constant_parameters["order"],
+            grating_constant=self.input_parameters.grating_constant.value,
+            order=self.input_parameters.order,
             incident_light_angle=minimizer_result.params["incident_light_angle"].value,
             ctype="AWAV-GRA",
             cunit="nm",
@@ -420,8 +447,9 @@ def fitting_model(
     grating_constant: float,
     order: int,
     doppler_velocity: Quantity,
+    prepared_weights: np.ndarray,
 ) -> np.ndarray:
-    """
+    r"""
     Compute the fitting model function for fitting wavelength calibration parameters.
 
     Parameters
@@ -440,6 +468,13 @@ def fitting_model(
         Diffraction order.
     doppler_velocity : Quantity
         Doppler velocity in km/s.
+    prepared_weights : np.ndarray
+        Array of prepared weights (square roots of normalized spectral weights) to apply to the residuals to ensure proper weighting in the fit.
+        The lmfit minimizer computes chi-squared as the sum of squared residuals, i.e., :math:`\chi^2 = \sum_i r_i^2`,
+        where :math:`r`, the residuals, are the result of this function. To achieve a standard weighted chi-squared,
+        (:math:`\chi^2 = \frac{\sum_i w_i r_i^2}{\sum_i w_i}`), we multiply each residual by the prepared weights such that
+        :math:`r_w = r \sqrt{w_i}`. The lmfit goodness-of-fit then becomes :math:`\chi^2 = \sum_i r_{w,i}^2 = \sum_i w_i r_i^2`,
+        which is equal to the standard weighted chi-squared when :math:`\sum_i w_i = 1`.
 
     Returns
     -------
@@ -479,4 +514,73 @@ def fitting_model(
     # Calculate residual amplitude
     res_amplitude = input_spectrum - fts_final_spectrum
 
+    res_amplitude *= prepared_weights
+
     return res_amplitude
+
+
+def calculate_initial_crval_guess(
+    input_wavelength_vector: u.Quantity,
+    input_spectrum: np.ndarray,
+    atlas: AtlasBase,
+    negative_limit=-2 * u.nm,
+    positive_limit=2 * u.nm,
+    num_steps=550,
+) -> u.Quantity:
+    """
+    Estimate the initial guess for the `crval` parameter by aligning the input wavelength vector with the atlas data.
+
+    This function calculates a shift for the input wavelength vector to minimize the
+    difference between the input spectrum and the product of the solar and telluric
+    atlas transmissions. The optimal shift is determined by evaluating a merit
+    function over a range of possible shifts.
+
+    Note
+    ----
+    This function does not perform any continuum matching between the input spectrum and the atlas spectra.
+
+    Parameters
+    ----------
+    input_wavelength_vector : u.Quantity
+        The preliminary wavelength vector corresponding to the input spectrum.
+    input_spectrum : np.ndarray
+        The observed 1D spectrum to be fitted.
+    atlas : AtlasBase
+        The atlas object containing solar and telluric wavelength and transmission data.
+    negative_limit : Quantity, optional
+        The lower bound of the wavelength shift range for the initial guess (default: -2 nm).
+    positive_limit : Quantity, optional
+        The upper bound of the wavelength shift range for the initial guess (default: 2 nm).
+    num_steps : int, optional
+        The number of steps to evaluate in the shift range (default: 550).
+
+    Returns
+    -------
+    u.Quantity
+        The estimated initial value for the `crval` parameter, representing the reference wavelength
+    """
+    shifts = np.linspace(negative_limit, positive_limit, num_steps)
+    merit = np.zeros(len(shifts))
+    for n, shift in enumerate(shifts):
+        preliminary_wavelength = input_wavelength_vector + shift
+        fts_solar = np.interp(
+            preliminary_wavelength, atlas.solar_atlas_wavelength, atlas.solar_atlas_transmission
+        )
+        fts_telluric = np.interp(
+            preliminary_wavelength,
+            atlas.telluric_atlas_wavelength,
+            atlas.telluric_atlas_transmission,
+        )
+        # calculate a merit value to be minimized
+        merit[n] = np.sum((input_spectrum - fts_solar * fts_telluric) ** 2)
+
+    # get minimum
+    shift = shifts[np.argmin(merit)]
+
+    # recalculate spectral axis and atlas spectrum for the best shift value
+    fts_wave = input_wavelength_vector + shift
+
+    crpix_updated = np.size(input_spectrum) // 2 + 1
+    crval_initial_guess = fts_wave[crpix_updated]
+
+    return crval_initial_guess
