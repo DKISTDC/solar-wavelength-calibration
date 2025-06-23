@@ -117,7 +117,7 @@ class WavelengthCalibrationFitter(BaseModel):
         Parameters
         ----------
         input_wavelength_vector: (u.Quantity)
-            The wavelength vector corresponding to the input spectrum.
+            The wavelength vector corresponding to the input spectrum
 
         input_spectrum: (np.ndarray)
             The input 1D spectrum to be fitted.
