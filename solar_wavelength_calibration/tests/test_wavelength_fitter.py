@@ -589,6 +589,7 @@ def test_to_header_add_alternate_keys(
     fit_result = fitter._run_fit(
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
+        spectral_weights=np.ones(len(observed_spectrum)),
     )
 
     # With add_alternate_keys=True
