@@ -1,3 +1,14 @@
+v1.0 (2025-06-23)
+=================
+
+Features
+--------
+
+- Added support for spectral weights in fitting, including residual scaling and corresponding tests. (`#14 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/14>`__)
+- Introduced `calculate_initial_crval_guess` helper function to estimate an initial CRVAL value by aligning the observed spectrum with solar and telluric atlas data. (`#15 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/15>`__)
+- Add support for alternate header keys in WavelengthParameters.to_header method. (`#16 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/16>`__)
+
+
 v0.1 (2025-05-27)
 =================
 
