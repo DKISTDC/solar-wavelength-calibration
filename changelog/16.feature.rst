@@ -1,0 +1,1 @@
+Add support for alternate header keys in WavelengthParameters.to_header method.

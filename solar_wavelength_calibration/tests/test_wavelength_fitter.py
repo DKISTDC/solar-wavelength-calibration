@@ -214,7 +214,7 @@ def test_fit_stays_valid_with_fixed_crval(
     parameters = WavelengthCalibrationParameters(
         fit_flags=FitFlagsModel(crval=False),
         bounds=BoundsModel(incident_light_angle=AngleBoundRange(min=angle_min, max=angle_max)),
-        **init_values
+        **init_values,
     )
 
     fitter = WavelengthCalibrationFitter(
@@ -572,3 +572,42 @@ def test_calculate_initial_crval_guess_returns_reasonable_value(
     # Check that estimated CRVAL is larger than the midpoint, which would correct the known synthetic shift
     midpoint_wave = observed_wavelength_vector[len(observed_wavelength_vector) // 2]
     assert estimated_crval > midpoint_wave
+
+
+def test_to_header_add_alternate_keys(
+    parameters: WavelengthCalibrationParameters,
+    observed_spectrum,
+    atlas: AtlasBase,
+    observed_wavelength_vector,
+):
+
+    fitter = WavelengthCalibrationFitter(
+        input_parameters=parameters,
+        atlas=atlas,
+    )
+
+    fit_result = fitter._run_fit(
+        input_wavelength_vector=observed_wavelength_vector,
+        input_spectrum=observed_spectrum,
+    )
+
+    # With add_alternate_keys=True
+    header = fit_result.wavelength_parameters.to_header(axis_num=1, add_alternate_keys=True)
+    # Check standard keys
+    standard_keys = ["CTYPE1", "CUNIT1", "CRPIX1", "CRVAL1", "CDELT1", "PV1_0", "PV1_1", "PV1_2"]
+    alternate_keys = [f"{key}A" for key in standard_keys]
+
+    for key in standard_keys:
+        assert key in header
+    for key in alternate_keys:
+        assert key in header
+    for key in standard_keys:
+        if f"{key}A" in header:
+            assert header[key] == header[f"{key}A"]
+
+    # With add_alternate_keys=False
+    header_no_alt = fit_result.wavelength_parameters.to_header(axis_num=1)
+    for key in standard_keys:
+        assert key in header
+    for key in alternate_keys:
+        assert key not in header_no_alt

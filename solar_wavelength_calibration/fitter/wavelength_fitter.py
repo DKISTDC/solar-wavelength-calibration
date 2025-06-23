@@ -39,7 +39,7 @@ class WavelengthParameters(BaseModel):
     ctype: str = "AWAV-GRA"
     cunit: str = "nm"
 
-    def to_header(self, axis_num: int) -> dict:
+    def to_header(self, axis_num: int, add_alternate_keys: bool = False) -> dict:
         """
         Convert the wavelength parameters to a WCS header dictionary.
 
@@ -47,6 +47,8 @@ class WavelengthParameters(BaseModel):
         ----------
         axis_num : int
             The axis number for the WCS header (e.g., 1 for the first axis).
+        add_alternate_keys : bool, optional
+            If True, include alternate header keywords (ending with 'A') for compatibility.
 
         Returns
         -------
@@ -54,7 +56,7 @@ class WavelengthParameters(BaseModel):
             A dictionary representing the WCS header with keys corresponding to
             FITS header keywords and values derived from the wavelength parameters.
         """
-        return {
+        header = {
             f"CTYPE{axis_num}": self.ctype,
             f"CUNIT{axis_num}": self.cunit,
             f"CRPIX{axis_num}": self.crpix,
@@ -64,6 +66,16 @@ class WavelengthParameters(BaseModel):
             f"PV{axis_num}_1": self.order,
             f"PV{axis_num}_2": self.incident_light_angle,
         }
+        if add_alternate_keys:
+            header[f"CTYPE{axis_num}A"] = self.ctype
+            header[f"CUNIT{axis_num}A"] = self.cunit
+            header[f"CRPIX{axis_num}A"] = self.crpix
+            header[f"CRVAL{axis_num}A"] = self.crval
+            header[f"CDELT{axis_num}A"] = self.dispersion
+            header[f"PV{axis_num}_0A"] = self.grating_constant
+            header[f"PV{axis_num}_1A"] = self.order
+            header[f"PV{axis_num}_2A"] = self.incident_light_angle
+        return header
 
 
 class FitResult(BaseModel):
@@ -105,7 +117,7 @@ class WavelengthCalibrationFitter(BaseModel):
         Parameters
         ----------
         input_wavelength_vector: (u.Quantity)
-            The wavelength vector corresponding to the input spectrum.
+            The wavelength vector corresponding to the input spectrum
 
         input_spectrum: (np.ndarray)
             The input 1D spectrum to be fitted.
