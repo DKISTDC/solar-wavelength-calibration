@@ -545,7 +545,7 @@ def calculate_initial_crval_guess(
     Returns
     -------
     u.Quantity
-        The estimated initial value for the `crval` parameter, representing the reference wavelength.
+        The estimated initial value for the `crval` parameter, representing the reference wavelength
     """
     shifts = np.linspace(negative_limit, positive_limit, num_steps)
     merit = np.zeros(len(shifts))
