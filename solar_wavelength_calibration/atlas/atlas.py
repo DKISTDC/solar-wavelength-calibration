@@ -61,6 +61,7 @@ class Atlas(AtlasBase):
             base_url=self.config.base_url,
             registry=self.config.registry,
             env=CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR,
+            retry_if_failed=5
         )
 
     @cached_property
