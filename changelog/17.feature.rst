@@ -1,1 +1,0 @@
-Enable retries in the download of atlas files in the event that the download fails.

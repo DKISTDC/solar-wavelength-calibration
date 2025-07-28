@@ -1,3 +1,12 @@
+v1.0.1 (2025-07-28)
+===================
+
+Features
+--------
+
+- Enable retries in the download of atlas files in the event that the download fails. (`#17 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/17>`__)
+
+
 v1.0 (2025-06-23)
 =================
 
