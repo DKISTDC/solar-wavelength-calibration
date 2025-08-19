@@ -1,4 +1,5 @@
 """Objects for storing fit parameters."""
+
 from __future__ import annotations
 
 import logging
@@ -13,8 +14,8 @@ from lmfit import Parameters
 from pydantic import AfterValidator
 from pydantic import BaseModel
 from pydantic import ConfigDict
-from pydantic import field_validator
 from pydantic import FiniteFloat
+from pydantic import field_validator
 from pydantic import model_validator
 from pydantic_core.core_schema import ValidationInfo
 
@@ -251,6 +252,7 @@ class WavelengthCalibrationParameters(BaseModel):
 
         See `delta` for more information.
         """
+
         # Note that inside the minimization call all parameters do NOT have units; they are just bare `floats`
         # That's why we need to use `np.deg2rad` in the call to `np.sin` and use `to_value` in the hardcoded denominator
         # (u.nm) as the unit for `crval` derives from `length_quantity`

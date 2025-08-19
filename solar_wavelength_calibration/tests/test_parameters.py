@@ -643,7 +643,7 @@ def test_insane_angle_values_when_crval_fixed(test_parameters_dict, angle_bounds
         _ = WavelengthCalibrationParameters(
             bounds=BoundsModel(incident_light_angle=angle_bounds),
             fit_flags=FitFlagsModel(crval=False),
-            **test_parameters_dict
+            **test_parameters_dict,
         )
 
     params_with_out_of_range_angle = test_parameters_dict | {
@@ -653,7 +653,7 @@ def test_insane_angle_values_when_crval_fixed(test_parameters_dict, angle_bounds
         _ = WavelengthCalibrationParameters(
             bounds=BoundsModel(incident_light_angle=AngleBoundRange()),
             fit_flags=FitFlagsModel(crval=False),
-            **params_with_out_of_range_angle
+            **params_with_out_of_range_angle,
         )
 
 

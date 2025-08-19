@@ -1,4 +1,5 @@
 """Base class for solar atlas data."""
+
 from abc import ABC
 from abc import abstractmethod
 

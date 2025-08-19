@@ -1,4 +1,5 @@
 """Tests for the atlas package."""
+
 import os
 from pathlib import Path
 from unittest import mock

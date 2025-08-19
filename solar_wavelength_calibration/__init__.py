@@ -1,4 +1,5 @@
 """Library that supports wavelength calibration."""
+
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version
 
