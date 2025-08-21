@@ -1,4 +1,5 @@
 """Task to load the reference atlas files."""
+
 import logging
 from functools import cached_property
 

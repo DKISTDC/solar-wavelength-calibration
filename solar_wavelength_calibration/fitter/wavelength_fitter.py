@@ -1,4 +1,5 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
+
 import logging
 
 import astropy.units as u
@@ -20,7 +21,6 @@ from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.atlas import LocalAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
-
 
 logger = logging.getLogger(__name__)
 
