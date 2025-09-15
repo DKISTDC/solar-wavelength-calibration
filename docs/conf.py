@@ -48,3 +48,4 @@ if is_release:
     warnings.simplefilter("ignore")
 # Extensions so we can create the reqmts table
 extensions += ["dkist_sphinx_theme.create_requirements_table"]
+autoapi_options.remove("imported-members")
