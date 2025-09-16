@@ -535,20 +535,20 @@ def fitting_model(
         crval=crval,
     )
 
-    combined_spectrum = telluric_transmission * solar_transmission
-    combined_spectrum += straylight_fraction
-
-    normalized_spectrum = combined_spectrum * continuum_level
+    combined_atlas_spectrum_w_straylight = telluric_transmission * solar_transmission
+    combined_atlas_spectrum_w_straylight = (
+        combined_atlas_spectrum_w_straylight + straylight_fraction
+    ) / (1 + straylight_fraction)
 
     fts_final_spectrum = apply_resolving_power(
-        spectrum=normalized_spectrum,
+        spectrum=combined_atlas_spectrum_w_straylight,
         crval=crval,
         resolving_power=resolving_power,
         dispersion=dispersion,
     )
 
     # Calculate residual amplitude
-    res_amplitude = input_spectrum - fts_final_spectrum
+    res_amplitude = input_spectrum / continuum_level - fts_final_spectrum
 
     res_amplitude *= prepared_weights
 
