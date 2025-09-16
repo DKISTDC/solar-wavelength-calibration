@@ -130,10 +130,10 @@ def test_parameters_dict(
         "resolving_power": 72500,
         "opacity_factor": 5.0,
         "straylight_fraction": 0.25,
-        "input_spectrum": observed_spectrum,
         "grating_constant": test_grating_constant,
         "doppler_velocity": test_doppler_velocity,
         "order": test_order,
+        "continuum_level": 1.0,
     }
 
 

@@ -118,7 +118,7 @@ def test_incorrect_atlas(
         "resolving_power",
         "opacity_factor",
         "straylight_fraction",
-        "continuum_intensity_correction",
+        "continuum_level",
     ],
 )
 def test_fixing_parameters(
@@ -145,6 +145,7 @@ def test_fixing_parameters(
         "resolving_power": test_parameters_dict["resolving_power"] + 10,
         "opacity_factor": test_parameters_dict["opacity_factor"] + 0.1,
         "straylight_fraction": test_parameters_dict["straylight_fraction"] + 0.2,
+        "continuum_level": test_parameters_dict["continuum_level"] * 1.1,
     }
 
     initialized_parameters = WavelengthCalibrationParameters(fit_flags=fit_flags, **init_values)
@@ -162,10 +163,7 @@ def test_fixing_parameters(
         if parameter != fixed_parameter:
             continue
 
-        if parameter == "continuum_intensity_correction":
-            init_value = observed_continuum_level
-        else:
-            init_value = init_values[parameter]
+        init_value = init_values[parameter]
 
         if isinstance(init_value, Quantity):
             init_value = init_value.value
