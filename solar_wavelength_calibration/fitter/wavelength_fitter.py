@@ -1,6 +1,7 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 
 import logging
+from typing import Callable
 
 import astropy.units as u
 import lmfit.parameter
@@ -23,6 +24,11 @@ from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
 logger = logging.getLogger(__name__)
+
+
+def scalar_continuum_function(wavelength: np.ndarray, parameters: Parameters) -> np.ndarray:
+    """Return a constant valued continuum level; the value of the "continuum_level" parameter."""
+    return parameters["continuum_level"].value
 
 
 class WavelengthParameters(BaseModel):
@@ -142,6 +148,9 @@ class WavelengthCalibrationFitter(BaseModel):
         input_spectrum: np.ndarray,
         spectral_weights: None | np.ndarray = None,
         method: str = "leastsq",
+        continuum_function: Callable[
+            [np.ndarray, Parameters], np.ndarray
+        ] = scalar_continuum_function,
         **minimize_kwargs,
     ) -> FitResult:
         """Run data preparation and fitting.
@@ -154,11 +163,20 @@ class WavelengthCalibrationFitter(BaseModel):
         input_spectrum
             The input 1D spectrum to be fitted.
 
+        spectral_weights
+            Array of weights to apply to the residuals during fitting. If None, no weights are applied.
+
         method
             The optimization method to use. Defaults to "leastsq".
 
         spectral_weights
             Array of weights to apply to the residuals during fitting. If None, no weights are applied.
+
+        continuum_function
+            Function that defines the continuum to be removed from the input spectrum. Must take the currently fit
+            wavelength vector and fit `lmfit.Parameters` as its only two arguments and return a value that can be
+            broadcast in division to the input spectrum. Default is a scalar value (the value of the
+            `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.continuum_level` parameter).
 
         **minimize_kwargs
             Additional keyword arguments for the minimizer.
@@ -176,10 +194,11 @@ class WavelengthCalibrationFitter(BaseModel):
             )
 
         return self._run_fit(
-            input_wavelength_vector,
-            input_spectrum,
-            spectral_weights,
-            method,
+            input_wavelength_vector=input_wavelength_vector,
+            input_spectrum=input_spectrum,
+            spectral_weights=spectral_weights,
+            method=method,
+            continuum_function=continuum_function,
             **minimize_kwargs,
         )
 
@@ -189,6 +208,9 @@ class WavelengthCalibrationFitter(BaseModel):
         input_spectrum: np.ndarray,
         spectral_weights: np.ndarray,
         method: str = "leastsq",
+        continuum_function: Callable[
+            [np.ndarray, Parameters], np.ndarray
+        ] = scalar_continuum_function,
         **minimize_kwargs,
     ) -> FitResult:
         """Run the fit."""
@@ -199,6 +221,7 @@ class WavelengthCalibrationFitter(BaseModel):
             input_spectrum=input_spectrum,
             method=method,
             spectral_weights=spectral_weights,
+            continuum_function=continuum_function,
             **minimize_kwargs,
         )
         return fit_result
@@ -249,6 +272,9 @@ class WavelengthCalibrationFitter(BaseModel):
         input_spectrum: np.ndarray,
         method: str,
         spectral_weights: np.ndarray,
+        continuum_function: Callable[
+            [np.ndarray, Parameters], np.ndarray
+        ] = scalar_continuum_function,
         **minimize_kwargs,
     ) -> FitResult:
         """Send the fitter on its way."""
@@ -261,7 +287,8 @@ class WavelengthCalibrationFitter(BaseModel):
         prepared_weights = np.sqrt(normalized_weights)
 
         fitting_model_kwargs = self.input_parameters.constant_parameters | {
-            "prepared_weights": prepared_weights
+            "prepared_weights": prepared_weights,
+            "continuum_function": continuum_function,
         }
 
         number_of_wave_pix = np.size(input_spectrum)
@@ -471,6 +498,7 @@ def fitting_model(
     order: int,
     doppler_velocity: Quantity,
     prepared_weights: np.ndarray,
+    continuum_function: Callable[[np.ndarray, Parameters], np.ndarray],
 ) -> np.ndarray:
     r"""
     Compute the fitting model function for fitting wavelength calibration parameters.
@@ -508,6 +536,12 @@ def fitting_model(
         :math:`r_w = r \sqrt{w_i}`. The lmfit goodness-of-fit then becomes :math:`\chi^2 = \sum_i r_{w,i}^2 = \sum_i w_i r_i^2`,
         which is equal to the standard weighted chi-squared when :math:`\sum_i w_i = 1`.
 
+    continuum_function:
+        Function that defines the continuum to be removed from the input spectrum. Must take the currently fit
+        wavelength vector and fit `lmfit.Parameters` as its only two arguments and return a value that can be
+        broadcast in division to the input spectrum. Default is a scalar value (the value of the
+        `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.continuum_level` parameter).
+
     Returns
     -------
     residuals
@@ -517,7 +551,6 @@ def fitting_model(
     dispersion = params["dispersion"].value
     opacity_factor = params["opacity_factor"].value
     straylight_fraction = params["straylight_fraction"].value
-    continuum_level = params["continuum_level"].value
     resolving_power = params["resolving_power"].value
 
     # Calculate the linear wavelength vector
@@ -547,8 +580,10 @@ def fitting_model(
         dispersion=dispersion,
     )
 
+    continuum = continuum_function(linear_wave, params)
+
     # Calculate residual amplitude
-    res_amplitude = input_spectrum / continuum_level - fts_final_spectrum
+    res_amplitude = input_spectrum / continuum - fts_final_spectrum
 
     res_amplitude *= prepared_weights
 
