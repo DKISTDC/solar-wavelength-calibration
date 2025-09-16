@@ -83,6 +83,39 @@ class FitResult(BaseModel):
 
     wavelength_parameters: WavelengthParameters
     minimizer_result: MinimizerResult
+    input_wavelength_vector: u.Quantity
+    input_spectrum: np.ndarray
+    spectral_weights: None | np.ndarray = None
+
+    @property
+    def prepared_weights(self) -> np.ndarray:
+        """
+        Return the weights as-used for fitting.
+
+        Specifically, return the square-root of the weights after normalizing their sum to 1. See
+        `fitting_model` for more information.
+        """
+        weight_data = (
+            np.ones(self.input_wavelength_vector.size)
+            if self.spectral_weights is None
+            else self.spectral_weights
+        )
+        prepared_weights = np.sqrt(weight_data / np.sum(weight_data))
+
+        return prepared_weights
+
+    @property
+    def best_fit_atlas(self) -> np.ndarray:
+        """
+        Return the best-fit combined Solar and Telluric atlas.
+
+        This is the exact atlas combination (with absorption and doppler-shift corrections applied) that produced the
+        best fit.
+        """
+        residuals = self.minimizer_result.residual / self.prepared_weights
+        best_fit_atlas = self.input_spectrum - residuals
+
+        return best_fit_atlas
 
 
 class WavelengthCalibrationFitter(BaseModel):
@@ -160,7 +193,12 @@ class WavelengthCalibrationFitter(BaseModel):
         """Run the fit."""
         cropped_atlas = self._prepare_atlas(input_wavelength_vector)
         fit_result = self._fit_spectrum(
-            cropped_atlas, input_spectrum, method, spectral_weights, **minimize_kwargs
+            cropped_atlas=cropped_atlas,
+            input_wavelength_vector=input_wavelength_vector,
+            input_spectrum=input_spectrum,
+            method=method,
+            spectral_weights=spectral_weights,
+            **minimize_kwargs,
         )
         return fit_result
 
@@ -206,6 +244,7 @@ class WavelengthCalibrationFitter(BaseModel):
     def _fit_spectrum(
         self,
         cropped_atlas: LocalAtlas,
+        input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
         method: str,
         spectral_weights: np.ndarray,
@@ -257,7 +296,11 @@ class WavelengthCalibrationFitter(BaseModel):
         )
 
         return FitResult(
-            wavelength_parameters=wavelength_parameters, minimizer_result=minimizer_result
+            wavelength_parameters=wavelength_parameters,
+            minimizer_result=minimizer_result,
+            input_wavelength_vector=input_wavelength_vector,
+            input_spectrum=input_spectrum,
+            spectral_weights=spectral_weights,
         )
 
 
