@@ -580,7 +580,12 @@ def fitting_model(
         dispersion=dispersion,
     )
 
-    continuum = continuum_function(linear_wave, params)
+    try:
+        continuum = continuum_function(linear_wave, params)
+    except Exception as e:
+        raise RuntimeError(
+            f"The continuum function has produced an unrecoverable error. The error is '{e}'"
+        )
 
     # Calculate residual amplitude
     res_amplitude = input_spectrum / continuum - fts_final_spectrum
