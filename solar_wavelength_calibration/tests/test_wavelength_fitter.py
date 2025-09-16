@@ -62,6 +62,21 @@ def fitting_model_setup(parameters, observed_spectrum, synthetic_local_atlas):
     }
 
 
+@pytest.fixture
+def wavecal_params_with_extra_continuum_param():
+    class NewWaveCalParams(WavelengthCalibrationParameters):
+
+        continuum_exponent: float
+
+        @property
+        def lmfit_parameters(self):
+            params = super().lmfit_parameters
+            params.add("continuum_exponent", value=self.continuum_exponent, vary=True)
+            return params
+
+    return NewWaveCalParams
+
+
 def test_wavecal_fitter(
     parameters: WavelengthCalibrationParameters,
     observed_spectrum,
@@ -136,6 +151,81 @@ def test_fit_results(
 
     np.testing.assert_array_equal(fit_result.prepared_weights, expected_prepared_weights)
     np.testing.assert_array_equal(fit_result.best_fit_atlas, expected_best_fit_atlas)
+
+
+def test_custom_continuum_function(
+    wavecal_params_with_extra_continuum_param,
+    parameters: WavelengthCalibrationParameters,
+    observed_spectrum,
+    atlas: AtlasBase,
+    test_dispersion,
+    test_parameters_dict,
+    observed_wavelength_vector,
+):
+    """
+    Given: A `WavelengthCalibrationFitter` with sanely populated data and parameters
+    When: Calling the fitter with a custom continuum function
+    Then: No errors occur
+    """
+    starting_value = 1.0
+    new_parameters = wavecal_params_with_extra_continuum_param(
+        continuum_exponent=starting_value, **parameters.model_dump()
+    )
+
+    def user_defined_continuum_function(input_wave, params):
+        return (np.ones_like(input_wave) * params["continuum_level"]) ** params[
+            "continuum_exponent"
+        ]
+
+    fitter = WavelengthCalibrationFitter(
+        input_parameters=new_parameters,
+        atlas=atlas,
+    )
+
+    fit_result = fitter(
+        input_wavelength_vector=observed_wavelength_vector,
+        input_spectrum=observed_spectrum,
+        continuum_function=user_defined_continuum_function,
+    )
+    assert "continuum_exponent" in fit_result.minimizer_result.params
+    assert fit_result.minimizer_result.params["continuum_exponent"] != starting_value
+
+
+def test_custom_continuum_function_error(
+    wavecal_params_with_extra_continuum_param,
+    parameters: WavelengthCalibrationParameters,
+    observed_spectrum,
+    atlas: AtlasBase,
+    test_dispersion,
+    test_parameters_dict,
+    observed_wavelength_vector,
+):
+    """
+    Given: A `WavelengthCalibrationFitter` with sanely populated data and parameters
+    When: Calling the fitter with a custom continuum function that hits an Error
+    Then: The error in the continuum function is correctly reported
+    """
+    new_parameters = wavecal_params_with_extra_continuum_param(
+        continuum_exponent=1.0, **parameters.model_dump()
+    )
+
+    def user_defined_continuum_function(input_wave, parameters):
+        raise FileNotFoundError("Not sure why I was even looking for a file")
+
+    fitter = WavelengthCalibrationFitter(
+        input_parameters=new_parameters,
+        atlas=atlas,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="The continuum function has produced an unrecoverable error. The error is 'Not sure why I was even looking for a file'",
+    ):
+        fit_result = fitter(
+            input_wavelength_vector=observed_wavelength_vector,
+            input_spectrum=observed_spectrum,
+            continuum_function=user_defined_continuum_function,
+        )
 
 
 def test_incorrect_atlas(
