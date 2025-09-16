@@ -122,7 +122,7 @@ class BoundsModel(BaseModel):
     This container also defines sensible defaults.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     crval: LengthBoundRange = LengthBoundRange(min=0 * u.nm)
     dispersion: DispersionBoundRange = DispersionBoundRange(min=0 * u.nm / u.pix)
@@ -140,6 +140,8 @@ class FitFlagsModel(BaseModel):
     True indicates that the parameter should be fit.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     crval: bool = True
     dispersion: bool = True
     incident_light_angle: bool = True
@@ -152,7 +154,7 @@ class FitFlagsModel(BaseModel):
 class WavelengthCalibrationParameters(BaseModel):
     """Object for initializing the fit parameters prior to a fit."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True, extra="forbid")
 
     crval: finite_length_quantity
     dispersion: finite_dispersion_quantity
