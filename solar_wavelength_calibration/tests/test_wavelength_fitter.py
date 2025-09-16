@@ -26,6 +26,7 @@ from solar_wavelength_calibration.fitter.wavelength_fitter import (
 from solar_wavelength_calibration.fitter.wavelength_fitter import (
     resample_telluric_transmission_with_absorption_correction,
 )
+from solar_wavelength_calibration.fitter.wavelength_fitter import scalar_continuum_function
 from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
 
 
@@ -498,6 +499,7 @@ def test_fitting_model(fitting_model_setup):
         setup["order"],
         setup["doppler_velocity"],
         weights,
+        continuum_function=scalar_continuum_function,
     )
     assert isinstance(residuals, np.ndarray)
     assert len(residuals) == len(setup["input_spectrum"])
@@ -532,6 +534,7 @@ def test_fitting_model_with_weights(fitting_model_setup):
         order,
         doppler_velocity,
         prepared_weights=prepared_weights,
+        continuum_function=scalar_continuum_function,
     )
 
     # Undo the weighting caused by the default weights
@@ -550,6 +553,7 @@ def test_fitting_model_with_weights(fitting_model_setup):
         order,
         doppler_velocity,
         prepared_weights=prepared_weights,
+        continuum_function=scalar_continuum_function,
     )
 
     weighted_chisq = np.sum(residuals_weighted**2)
