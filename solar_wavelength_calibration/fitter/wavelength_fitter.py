@@ -423,49 +423,19 @@ def resample_solar_transmission_with_doppler_shift(
     )
 
 
-def combine_spectra(
-    telluric_transmission: np.ndarray, solar_transmission: np.ndarray, straylight_fraction: float
-) -> np.ndarray:
-    """
-    Combine the telluric and solar spectra with straylight contamination.
-
-    Parameters
-    ----------
-    telluric_transmission
-        Telluric transmission spectrum.
-
-    solar_transmission
-        Solar transmission spectrum.
-
-    straylight_fraction
-        Fraction of straylight contamination.
-
-    Returns
-    -------
-    combined spectrum
-        Combined spectrum with straylight contamination.
-    """
-    fts_solar_atmos_corr = telluric_transmission * solar_transmission
-    return fts_solar_atmos_corr + straylight_fraction
-
-
-def normalize_and_convolve(
+def apply_resolving_power(
     spectrum: np.ndarray,
-    continuum_level: float,
     crval: float,
     resolving_power: float,
     dispersion: float,
 ) -> np.ndarray:
     """
-    Normalize the spectrum and apply convolution for the spectrograph line spread function.
+    Apply convolution for the spectrograph line spread function.
 
     Parameters
     ----------
     spectrum
         The input spectrum to be normalized and convolved.
-
-    continuum_level
-        The continuum level to scale the spectrum.
 
     crval
         Reference wavelength in nanometers.
@@ -481,10 +451,9 @@ def normalize_and_convolve(
     modified spectrum
         The normalized and convolved spectrum.
     """
-    fts_solar_normalized = spectrum * continuum_level
     sigma_wavelength = (crval / resolving_power) * gaussian_fwhm_to_sigma
     sigma_pix = sigma_wavelength / np.abs(dispersion)
-    return gaussian_filter1d(fts_solar_normalized, np.abs(sigma_pix))
+    return gaussian_filter1d(spectrum, np.abs(sigma_pix))
 
 
 def fitting_model(
@@ -546,24 +515,28 @@ def fitting_model(
     # Calculate the linear wavelength vector
     linear_wave = calculate_linear_wave(params, number_of_wave_pix, grating_constant, order)
 
-    # Apply telluric absorption
+    # Resample telluric and solar atlases onto `linear_wave` and apply absorption and doppler shift corrections,
+    # respectively
     telluric_transmission = resample_telluric_transmission_with_absorption_correction(
-        linear_wave, cropped_atlas, opacity_factor
+        linear_wave=linear_wave, cropped_atlas=cropped_atlas, opacity_factor=opacity_factor
     )
-
-    # Apply Doppler shift
     solar_transmission = resample_solar_transmission_with_doppler_shift(
-        linear_wave, cropped_atlas, doppler_velocity, crval
+        linear_wave=linear_wave,
+        cropped_atlas=cropped_atlas,
+        doppler_velocity=doppler_velocity,
+        crval=crval,
     )
 
-    # Combine spectra
-    combined_spectrum = combine_spectra(
-        telluric_transmission, solar_transmission, straylight_fraction
-    )
+    combined_spectrum = telluric_transmission * solar_transmission
+    combined_spectrum += straylight_fraction
 
-    # Normalize and convolve
-    fts_final_spectrum = normalize_and_convolve(
-        combined_spectrum, continuum_level, crval, resolving_power, dispersion
+    normalized_spectrum = combined_spectrum * continuum_level
+
+    fts_final_spectrum = apply_resolving_power(
+        spectrum=normalized_spectrum,
+        crval=crval,
+        resolving_power=resolving_power,
+        dispersion=dispersion,
     )
 
     # Calculate residual amplitude

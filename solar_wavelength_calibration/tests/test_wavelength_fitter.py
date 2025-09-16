@@ -16,11 +16,10 @@ from solar_wavelength_calibration import WavelengthCalibrationParameters
 from solar_wavelength_calibration.atlas.atlas import LocalAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthParameters
+from solar_wavelength_calibration.fitter.wavelength_fitter import apply_resolving_power
 from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_initial_crval_guess
 from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_linear_wave
-from solar_wavelength_calibration.fitter.wavelength_fitter import combine_spectra
 from solar_wavelength_calibration.fitter.wavelength_fitter import fitting_model
-from solar_wavelength_calibration.fitter.wavelength_fitter import normalize_and_convolve
 from solar_wavelength_calibration.fitter.wavelength_fitter import (
     resample_solar_transmission_with_doppler_shift,
 )
@@ -465,53 +464,21 @@ def test_apply_doppler_shift(parameters, synthetic_local_atlas):
         assert np.all(solar_transmission >= 0)
 
 
-def test_combine_spectra():
+def test_apply_resolving_power(parameters):
     """
-    Given: Two transmission spectra (telluric and solar) and a straylight fraction.
-    When: The `combine_spectra` function is called.
-    Then: It returns a combined spectrum as a numpy array with non-negative values and the same length as the input spectra.
-    """
-    telluric_transmission = np.linspace(0.8, 1.0, 100)
-    solar_transmission = np.linspace(0.9, 1.0, 100)
-
-    # Test with valid straylight fraction
-    straylight_fraction = 0.1
-    combined_spectrum = combine_spectra(
-        telluric_transmission, solar_transmission, straylight_fraction
-    )
-    assert isinstance(combined_spectrum, np.ndarray)
-    assert len(combined_spectrum) == len(telluric_transmission)
-    assert np.all(combined_spectrum >= 0)
-
-    # Test with extreme straylight fractions
-    for straylight_fraction in [0, 1]:
-        combined_spectrum = combine_spectra(
-            telluric_transmission, solar_transmission, straylight_fraction
-        )
-        assert isinstance(combined_spectrum, np.ndarray)
-        assert len(combined_spectrum) == len(telluric_transmission)
-        assert np.all(combined_spectrum >= 0)
-
-
-def test_normalize_and_convolve(parameters):
-    """
-    Given: A spectrum, continuum level, reference wavelength, resolving power, and dispersion.
-    When: The `normalize_and_convolve` function is called.
-    Then: It returns a normalized and convolved spectrum as a numpy array with non-negative values and the same length as the input spectrum.
+    Given: A spectrum, reference wavelength, resolving power, and dispersion.
+    When: The `apply_resolving_power` function is called.
+    Then: It returns a convolved spectrum as a numpy array with the same length as the input spectrum.
     """
     spectrum = np.linspace(0.8, 1.0, 100)
-    continuum_level = 1.0
     crval = parameters.lmfit_parameters["crval"].value
     resolving_power = parameters.lmfit_parameters["resolving_power"].value
     dispersion = parameters.lmfit_parameters["dispersion"].value
 
-    normalized_spectrum = normalize_and_convolve(
-        spectrum, continuum_level, crval, resolving_power, dispersion
-    )
+    adjusted_spectrum = apply_resolving_power(spectrum, crval, resolving_power, dispersion)
 
-    assert isinstance(normalized_spectrum, np.ndarray)
-    assert len(normalized_spectrum) == len(spectrum)
-    assert np.all(normalized_spectrum >= 0)
+    assert isinstance(adjusted_spectrum, np.ndarray)
+    assert len(adjusted_spectrum) == len(spectrum)
 
 
 def test_fitting_model(fitting_model_setup):
