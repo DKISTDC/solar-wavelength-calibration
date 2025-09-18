@@ -307,11 +307,12 @@ class WavelengthCalibrationFitter(BaseModel):
 def calculate_linear_wave(
     params: lmfit.parameter.Parameters, number_of_wave_pix: int, grating_constant: float, order: int
 ) -> np.ndarray:
-    """Calculate the linear wavelength vector.
+    """Calculate a linearly sampled wavelength vector given parameters describing a non-linear spectral WCS.
 
-    References about representing spectral coordinate in FITS:
-    https://specreduce.readthedocs.io/en/latest/api/specreduce.utils.synth_data.make_2d_arc_image.html
-    Greisen et al (2006) https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract (section 5)
+    We use `astropy.wcs.WCS`, which follows the parameterization of
+    `Greisen et al (2006) <https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract>`_ (see section 5). In
+    particular, the parameterization used here assumes a reflection grating in air so that higher-order terms above
+    ``PVk_2`` can be ignored.
 
     Parameters
     ----------
