@@ -9,8 +9,8 @@ from astropy import constants as const
 from astropy.stats import gaussian_fwhm_to_sigma
 from astropy.units import Quantity
 from astropy.wcs import WCS
-from lmfit import Parameters
 from lmfit.minimizer import MinimizerResult
+from lmfit.parameter import Parameters
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -132,10 +132,7 @@ class WavelengthCalibrationFitter(BaseModel):
         Returns
         -------
         fit_result:
-            An instance of `FitResult` containing:
-            - `wavelength_parameters` (WavelengthParameters): The fitted parameters.
-            - `minimizer_result` (MinimizerResult): The result returned by the lmfit minimizer.
-
+            An instance of `FitResult`
         """
         if spectral_weights is None:
             spectral_weights = np.ones(len(input_spectrum))
