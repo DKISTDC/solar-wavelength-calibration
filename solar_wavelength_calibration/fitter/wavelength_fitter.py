@@ -43,16 +43,16 @@ class WavelengthParameters(BaseModel):
 
         Parameters
         ----------
-        axis_num : int
+        axis_num
             The axis number for the WCS header (e.g., 1 for the first axis).
-        add_alternate_keys : bool, optional
+        add_alternate_keys
             If True, include alternate header keywords (ending with 'A') for compatibility.
 
         Returns
         -------
-        dict
-            A dictionary representing the WCS header with keys corresponding to
-            FITS header keywords and values derived from the wavelength parameters.
+        header dictionary
+            A dictionary representing the WCS header with keys corresponding to FITS header keywords and values derived
+            from the wavelength parameters.
         """
         header = {
             f"CTYPE{axis_num}": self.ctype,
@@ -106,7 +106,7 @@ class WavelengthCalibrationFitter(BaseModel):
         self,
         input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
-        spectral_weights: np.ndarray | None = None,
+        spectral_weights: None | np.ndarray = None,
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
@@ -114,16 +114,16 @@ class WavelengthCalibrationFitter(BaseModel):
 
         Parameters
         ----------
-        input_wavelength_vector: (u.Quantity)
+        input_wavelength_vector
             The wavelength vector corresponding to the input spectrum
 
-        input_spectrum: (np.ndarray)
+        input_spectrum
             The input 1D spectrum to be fitted.
 
-        method: (str, optional)
+        method
             The optimization method to use. Defaults to "leastsq".
 
-        spectral_weights: (np.ndarray, optional)
+        spectral_weights
             Array of weights to apply to the residuals during fitting. If None, no weights are applied.
 
         **minimize_kwargs
@@ -272,18 +272,18 @@ def calculate_linear_wave(
 
     Parameters
     ----------
-    params:
+    params
         Parameters object containing the fitting parameters.
-    number_of_wave_pix:
+    number_of_wave_pix
         Number of wavelength pixels.
-    grating_constant:
+    grating_constant
         Grating constant of the spectrograph.
-    order:
+    order
         Diffraction order.
 
     Returns
     -------
-    linear_wave: np.ndarray
+    linear_wave
         Linear wavelength vector in nanometers.
     """
     non_linear_header = WavelengthParameters(
@@ -320,18 +320,18 @@ def resample_telluric_transmission_with_absorption_correction(
 
     Parameters
     ----------
-    linear_wave : np.ndarray
+    linear_wave
         1D array of linearly spaced wavelengths (in nanometers) onto which the telluric transmission will be interpolated.
 
-    cropped_atlas : LocalAtlas
+    cropped_atlas
         Object containing the telluric atlas data, including wavelength and transmission arrays cropped to the relevant spectral region.
 
-    opacity_factor : float
-        Factor controlling the strength of telluric absorption. Values <1 reduce absorption, while values >1 increase it.
+    opacity_factor
+        Factor controlling the strength of telluric absorption. Values < 1 reduce absorption, while values > 1 increase it.
 
     Returns
     -------
-    np.ndarray
+    telluric spectrum
         The resampled and absorption-corrected telluric transmission spectrum.
     """
     linear_fts_telluric_transmission = np.interp(
@@ -351,18 +351,21 @@ def resample_solar_transmission_with_doppler_shift(
 
     Parameters
     ----------
-    linear_wave : np.ndarray
+    linear_wave
         Linear wavelength vector in nanometers.
-    cropped_atlas : LocalAtlas
+
+    cropped_atlas
         Cropped atlas containing telluric and solar atlas data.
-    doppler_velocity : Quantity
+
+    doppler_velocity
         Doppler velocity in km/s.
-    crval : float
+
+    crval
         Reference wavelength in nanometers.
 
     Returns
     -------
-    np.ndarray
+    solar spectrum
         Solar transmission spectrum after applying the Doppler shift.
     """
     fts_wave_doppler_corrected = (
@@ -384,16 +387,18 @@ def combine_spectra(
 
     Parameters
     ----------
-    telluric_transmission : np.ndarray
+    telluric_transmission
         Telluric transmission spectrum.
-    solar_transmission : np.ndarray
+
+    solar_transmission
         Solar transmission spectrum.
-    straylight_fraction : float
+
+    straylight_fraction
         Fraction of straylight contamination.
 
     Returns
     -------
-    np.ndarray
+    combined spectrum
         Combined spectrum with straylight contamination.
     """
     fts_solar_atmos_corr = telluric_transmission * solar_transmission
@@ -412,20 +417,24 @@ def normalize_and_convolve(
 
     Parameters
     ----------
-    spectrum : np.ndarray
+    spectrum
         The input spectrum to be normalized and convolved.
-    continuum_level : float
+
+    continuum_level
         The continuum level to scale the spectrum.
-    crval : float
+
+    crval
         Reference wavelength in nanometers.
-    resolving_power : float
+
+    resolving_power
         Resolving power of the spectrograph.
-    dispersion : float
+
+    dispersion
         Dispersion in nanometers per pixel.
 
     Returns
     -------
-    np.ndarray
+    modified spectrum
         The normalized and convolved spectrum.
     """
     fts_solar_normalized = spectrum * continuum_level
@@ -449,21 +458,28 @@ def fitting_model(
 
     Parameters
     ----------
-    params : Parameters
+    params
         Parameters object containing the fitting parameters.
-    input_spectrum : np.ndarray
+
+    input_spectrum
         The observed 1D spectrum to be fitted.
-    cropped_atlas : LocalAtlas
+
+    cropped_atlas
         Cropped atlas containing telluric and solar atlas data.
-    number_of_wave_pix : int
+
+    number_of_wave_pix
         Number of wavelength pixels.
-    grating_constant : float
+
+    grating_constant
         Grating constant of the spectrograph.
-    order : int
+
+    order
         Diffraction order.
-    doppler_velocity : Quantity
+
+    doppler_velocity
         Doppler velocity in km/s.
-    prepared_weights : np.ndarray
+
+    prepared_weights
         Array of prepared weights (square roots of normalized spectral weights) to apply to the residuals to ensure proper weighting in the fit.
         The lmfit minimizer computes chi-squared as the sum of squared residuals, i.e., :math:`\chi^2 = \sum_i r_i^2`,
         where :math:`r`, the residuals, are the result of this function. To achieve a standard weighted chi-squared,
@@ -473,7 +489,7 @@ def fitting_model(
 
     Returns
     -------
-    np.ndarray
+    residuals
         Residual amplitude between the observed spectrum and the fitted model.
     """
     crval = params["crval"].value
@@ -536,22 +552,27 @@ def calculate_initial_crval_guess(
 
     Parameters
     ----------
-    input_wavelength_vector : u.Quantity
+    input_wavelength_vector
         The preliminary wavelength vector corresponding to the input spectrum.
-    input_spectrum : np.ndarray
+
+    input_spectrum
         The observed 1D spectrum to be fitted.
-    atlas : AtlasBase
+
+    atlas
         The atlas object containing solar and telluric wavelength and transmission data.
-    negative_limit : Quantity, optional
+
+    negative_limit
         The lower bound of the wavelength shift range for the initial guess (default: -2 nm).
-    positive_limit : Quantity, optional
+
+    positive_limit
         The upper bound of the wavelength shift range for the initial guess (default: 2 nm).
-    num_steps : int, optional
+
+    num_steps
         The number of steps to evaluate in the shift range (default: 550).
 
     Returns
     -------
-    u.Quantity
+    crval_init
         The estimated initial value for the `crval` parameter, representing the reference wavelength
     """
     shifts = np.linspace(negative_limit, positive_limit, num_steps)
