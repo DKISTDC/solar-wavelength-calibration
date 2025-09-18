@@ -34,7 +34,9 @@ autoapi_dirs = [Path(package.__file__).parent]
 suppress_warnings = ["autoapi.python_import_resolution"]
 
 # -- Options for intersphinx extension -----------------------------------------
-intersphinx_mapping = create_intersphinx_mapping(repo_name)
+intersphinx_mapping = create_intersphinx_mapping(repo_name) | {
+    "lmfit": ("https://lmfit.github.io/lmfit-py", None)
+}
 # Remaining sphinx settings are in dkist-sphinx-theme conf.py
 
 # -- Project information -------------------------------------------------------

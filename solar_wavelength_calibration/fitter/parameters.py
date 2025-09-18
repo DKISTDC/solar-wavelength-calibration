@@ -10,7 +10,7 @@ from typing import Callable
 import astropy.units as u
 import numpy as np
 from astropy.units import Quantity
-from lmfit import Parameters
+from lmfit.parameter import Parameters
 from pydantic import AfterValidator
 from pydantic import BaseModel
 from pydantic import ConfigDict
