@@ -299,7 +299,7 @@ def test_fixing_parameters(
         if parameter != fixed_parameter:
             continue
 
-        if parameter == "continuum_intensity_correction":
+        if parameter == "continuum_level":
             init_value = observed_continuum_level
         else:
             init_value = init_values[parameter]
