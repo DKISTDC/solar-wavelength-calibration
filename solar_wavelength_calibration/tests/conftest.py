@@ -97,19 +97,19 @@ def observed_wavelength_vector(test_WCS_header, num_wave_pix) -> Quantity:
 
 
 @pytest.fixture(scope="session")
-def observed_spectrum(atlas, observed_wavelength_vector) -> np.ndarray:
+def observed_spectrum(atlas, observed_wavelength_vector, observed_continuum_level) -> np.ndarray:
     obs_spec = np.interp(
         observed_wavelength_vector.to_value("nm"),
         atlas.solar_atlas_wavelength.to_value("nm"),
         atlas.solar_atlas_transmission,
     )
 
-    return obs_spec
+    return obs_spec * observed_continuum_level
 
 
 @pytest.fixture(scope="session")
-def observed_continuum_level(observed_spectrum) -> float:
-    return np.nanpercentile(observed_spectrum, 75)
+def observed_continuum_level() -> float:
+    return 6.28
 
 
 @pytest.fixture(scope="session")

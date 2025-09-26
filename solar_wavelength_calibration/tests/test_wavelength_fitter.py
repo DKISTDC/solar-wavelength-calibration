@@ -2,6 +2,7 @@ import astropy.units as u
 import numpy as np
 import pytest
 from astropy.units import Quantity
+from astropy.wcs import WCS
 from lmfit.minimizer import MinimizerResult
 from pydantic import ValidationError
 
@@ -118,6 +119,7 @@ def test_fit_results(
     test_dispersion,
     test_parameters_dict,
     observed_wavelength_vector,
+    observed_continuum_level,
     with_weights,
 ):
     """
@@ -140,17 +142,27 @@ def test_fit_results(
     assert isinstance(fit_result.wavelength_parameters, WavelengthParameters)
     assert isinstance(fit_result.wavelength_parameters.to_header(1), dict)
     assert isinstance(fit_result.minimizer_result, MinimizerResult)
+    assert fit_result.num_wave_pix == observed_spectrum.size
+
     np.testing.assert_array_equal(fit_result.input_wavelength_vector, observed_wavelength_vector)
     np.testing.assert_array_equal(fit_result.input_spectrum, observed_spectrum)
 
     weight_data = weights if with_weights else np.ones_like(observed_spectrum)
     expected_prepared_weights = np.sqrt(weight_data / np.sum(weight_data))
     expected_best_fit_atlas = (
-        observed_spectrum - fit_result.minimizer_result.residual / expected_prepared_weights
+        observed_spectrum / observed_continuum_level
+        - fit_result.minimizer_result.residual / expected_prepared_weights
     )
-
+    wcs = WCS(fit_result.wavelength_parameters.to_header(axis_num=1))
+    expected_best_fit_wave = wcs.spectral.pixel_to_world(
+        np.arange(observed_spectrum.size)
+    ).to_value(u.nm)
     np.testing.assert_array_equal(fit_result.prepared_weights, expected_prepared_weights)
-    np.testing.assert_array_equal(fit_result.best_fit_atlas, expected_best_fit_atlas)
+    np.testing.assert_almost_equal(
+        fit_result.best_fit_continuum, observed_continuum_level, decimal=2
+    )
+    np.testing.assert_array_equal(fit_result.best_fit_wavelength_vector, expected_best_fit_wave)
+    np.testing.assert_almost_equal(fit_result.best_fit_atlas, expected_best_fit_atlas)
 
 
 def test_custom_continuum_function(
