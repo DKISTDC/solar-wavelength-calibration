@@ -1,6 +1,7 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 
 import logging
+from functools import cached_property
 from typing import Callable
 
 import astropy.units as u
@@ -92,8 +93,9 @@ class FitResult(BaseModel):
     input_wavelength_vector: u.Quantity
     input_spectrum: np.ndarray
     spectral_weights: None | np.ndarray = None
+    continuum_function: Callable[[np.ndarray, Parameters], np.ndarray] = scalar_continuum_function
 
-    @property
+    @cached_property
     def prepared_weights(self) -> np.ndarray:
         """
         Return the weights as-used for fitting.
@@ -110,7 +112,39 @@ class FitResult(BaseModel):
 
         return prepared_weights
 
-    @property
+    @cached_property
+    def num_wave_pix(self) -> int:
+        """Return the number of spectral pixels in the input spectrum."""
+        return self.input_spectrum.size
+
+    @cached_property
+    def best_fit_wavelength_vector(self) -> np.ndarray:
+        """
+        Compute a wavelength vector given the parameterization in `wavelength_parameters`.
+
+        The parameterization of the grating equation is via `astropy.wcs.WCS`, which follows section 5 of
+        `Greisen et al (2006) <https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract>`_.
+
+        Returns
+        -------
+        best_fit_wavelength
+            Wavelength vector corresponding to the `wavelength_parameters`. Units are nm.
+        """
+        wcs = WCS(self.wavelength_parameters.to_header(axis_num=1))
+        return wcs.spectral.pixel_to_world(np.arange(self.num_wave_pix)).to_value(u.nm)
+
+    @cached_property
+    def best_fit_continuum(self) -> np.ndarray:
+        """
+        Return the best-fit continuum value(s).
+
+        This is equal to `continuum_function(self.best_fit_wavelength_vector, self.minimizer_result.params)`
+        """
+        return self.continuum_function(
+            self.best_fit_wavelength_vector, self.minimizer_result.params
+        )
+
+    @cached_property
     def best_fit_atlas(self) -> np.ndarray:
         """
         Return the best-fit combined Solar and Telluric atlas.
@@ -119,7 +153,7 @@ class FitResult(BaseModel):
         best fit.
         """
         residuals = self.minimizer_result.residual / self.prepared_weights
-        best_fit_atlas = self.input_spectrum - residuals
+        best_fit_atlas = self.input_spectrum / self.best_fit_continuum - residuals
 
         return best_fit_atlas
 
@@ -328,6 +362,7 @@ class WavelengthCalibrationFitter(BaseModel):
             input_wavelength_vector=input_wavelength_vector,
             input_spectrum=input_spectrum,
             spectral_weights=spectral_weights,
+            continuum_function=continuum_function,
         )
 
 
