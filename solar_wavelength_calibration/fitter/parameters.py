@@ -187,7 +187,7 @@ class WavelengthCalibrationParameters(BaseModel):
 
         Specifically, we need parameters that result in an invertible grating equation. Simplifying Eq. (84) from
         `Greisen et al (2006) <https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract>`_ for the case of a
-        diffraction grating in air, the refracted angle, :math:`\gamma`, is given by
+        reflection grating in air, the diffracted angle, :math:`\gamma`, is given by
 
         .. math::
             \gamma = \sin^{-1}(\lambda G m - \sin\alpha),
