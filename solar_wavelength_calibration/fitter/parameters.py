@@ -192,10 +192,10 @@ class WavelengthCalibrationParameters(BaseModel):
         .. math::
             \gamma = \sin^{-1}(\lambda G m - \sin\alpha),
 
-        where :math:`\lambda` is `crval`, :math:`G` is `grating_constant`, :math:`m` is `order`, and :math:`\alpha` is
-        `incident_light_angle`. The arcsine is only valid for inputs in the range [-1, 1] and so a combination of
-        `crval`, `grating_constant`, `order`, and `incident_light_angle` that fall outside of this range are considered
-        invalid and will raise an Error.
+        where :math:`\lambda` is `crval`, :math:`G` is `grating_constant` (in 1 / mm), :math:`m` is `order`, and
+        :math:`\alpha` is `incident_light_angle`. The arcsine is only valid for inputs in the range [-1, 1] and so a
+        combination of `crval`, `grating_constant`, `order`, and `incident_light_angle` that fall outside of this range
+        are considered invalid and will raise an Error.
         """
         if abs(self.delta) > 1:
             raise ValueError(
@@ -215,7 +215,7 @@ class WavelengthCalibrationParameters(BaseModel):
         .. math::
             -1 \leq \lambda G m - \sin\alpha \leq 1
 
-        where :math:`G` (`grating_constant`) and :math:`m` (`order`) are fixed parameters while
+        where :math:`G` (`grating_constant` in 1 / mm) and :math:`m` (`order`) are fixed parameters while
         :math:`\lambda` (`crval`) and :math:`\alpha` (`incident_light_angle`) are free in the fit.
 
         As suggested by `lmfit <https://lmfit.github.io/lmfit-py/constraints.html#using-inequality-constraints>`_ we
