@@ -149,11 +149,11 @@ class FitResult(BaseModel):
         """
         Return the best-fit combined Solar and Telluric atlas.
 
-        This is the exact atlas combination (with absorption and doppler-shift corrections applied) that produced the
-        best fit.
+        This is the exact atlas combination (with absorption, doppler-shift, straylight, resolving power, and continuum
+        corrections applied) that produced the best fit.
         """
         residuals = self.minimizer_result.residual / self.prepared_weights
-        best_fit_atlas = self.input_spectrum / self.best_fit_continuum - residuals
+        best_fit_atlas = self.input_spectrum - residuals
 
         return best_fit_atlas
 
@@ -206,9 +206,9 @@ class WavelengthCalibrationFitter(BaseModel):
             Array of weights to apply to the residuals during fitting. If None, no weights are applied.
 
         continuum_function
-            Function that defines the continuum to be removed from the input spectrum. Must take the currently fit
+            Function that defines the continuum to be applied to the atlas spectrum. Must take the currently fit
             wavelength vector and fit `lmfit.Parameters` as its only two arguments and return a value that can be
-            broadcast in division to the input spectrum. Default is a scalar value (the value of the
+            broadcast in multiplication to the combined atlas spectrum. Default is a scalar value (the value of the
             `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.continuum_level` parameter).
 
         **minimize_kwargs
@@ -564,9 +564,9 @@ def fitting_model(
         which is equal to the standard weighted chi-squared when :math:`\sum_i w_i = 1`.
 
     continuum_function:
-        Function that defines the continuum to be removed from the input spectrum. Must take the currently fit
-        wavelength vector and fit `lmfit.Parameters` as its only two arguments and return a value that can be
-        broadcast in division to the input spectrum. Default is a scalar value (the value of the
+        Function that defines the continuum to be applied to the atlas spectrum. Must take the currently fit wavelength
+        vector and fit `lmfit.Parameters` as its only two arguments and return a value that can be broadcast in
+        multiplication to the combined atlas spectrum. Default is a scalar value (the value of the
         `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.continuum_level` parameter).
 
     Returns
@@ -595,16 +595,18 @@ def fitting_model(
         crval=crval,
     )
 
-    combined_atlas_spectrum_w_straylight = telluric_transmission * solar_transmission
-    combined_atlas_spectrum_w_straylight = (
-        combined_atlas_spectrum_w_straylight + straylight_fraction
-    ) / (1 + straylight_fraction)
-
-    fts_final_spectrum = apply_resolving_power(
-        spectrum=combined_atlas_spectrum_w_straylight,
+    combined_atlas_spectrum = telluric_transmission * solar_transmission
+    degraded_atlas_spectrum = apply_resolving_power(
+        spectrum=combined_atlas_spectrum,
         crval=crval,
         resolving_power=resolving_power,
         dispersion=dispersion,
+    )
+
+    # Divide by 1 + straylight_fraction so the continuum level is preserved at 1. We don't want the straylight fraction
+    # to couple with the continuum fit.
+    atlas_spectrum_w_straylight = (degraded_atlas_spectrum + straylight_fraction) / (
+        1 + straylight_fraction
     )
 
     try:
@@ -613,10 +615,9 @@ def fitting_model(
         raise RuntimeError(
             f"The continuum function has produced an unrecoverable error. The error is '{e}'"
         )
+    final_atlas_spectrum = atlas_spectrum_w_straylight * continuum
 
-    # Calculate residual amplitude
-    res_amplitude = input_spectrum / continuum - fts_final_spectrum
-
+    res_amplitude = input_spectrum - final_atlas_spectrum
     res_amplitude *= prepared_weights
 
     return res_amplitude

@@ -123,9 +123,10 @@ def test_fit_results(
     with_weights,
 ):
     """
-    Given: The correct WavelengthCalibrationFitter inputs (data, models, and fit parameters)
-    When: Initializing a WavelengthCalibrationFitter object with these inputs
-    Then: Everything needed for the fit is correctly set up
+    Given: The correct `WavelengthCalibrationFitter` inputs (data, models, and fit parameters)
+    When: Producing a `FitResult` object by fitting
+    Then: The properties of the `FitResult` object have the types we expect and the computed properties are calculated
+           correctly.
     """
     fitter = WavelengthCalibrationFitter(
         input_parameters=parameters,
@@ -150,8 +151,7 @@ def test_fit_results(
     weight_data = weights if with_weights else np.ones_like(observed_spectrum)
     expected_prepared_weights = np.sqrt(weight_data / np.sum(weight_data))
     expected_best_fit_atlas = (
-        observed_spectrum / observed_continuum_level
-        - fit_result.minimizer_result.residual / expected_prepared_weights
+        observed_spectrum - fit_result.minimizer_result.residual / expected_prepared_weights
     )
     wcs = WCS(fit_result.wavelength_parameters.to_header(axis_num=1))
     expected_best_fit_wave = wcs.spectral.pixel_to_world(
