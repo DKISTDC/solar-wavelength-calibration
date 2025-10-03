@@ -1,4 +1,4 @@
-image: python:3.11
+image: python:3.12
 definitions:
   steps:
     - step: &download_execute_script
@@ -53,6 +53,7 @@ definitions:
           - tox -e py312-min
 
     - step: &test311
+        image: python:3.11
         caches:
           - pip
         name: Test Python 3.11
@@ -62,6 +63,7 @@ definitions:
           - tox -e py311
 
     - step: &test311-min
+        image: python:3.11
         caches:
           - pip
         name: Test Python 3.11 with minimum dependencies
