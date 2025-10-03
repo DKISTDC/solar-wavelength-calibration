@@ -1,0 +1,1 @@
+Add tox tests with python 3.12 to BitBucket pipelines
