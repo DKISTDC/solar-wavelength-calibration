@@ -1,0 +1,3 @@
+Add the ability to fit a user-parameterizable continuum function as part of the solar atlas fit. The function is passed to the
+``continuum_function`` kwarg when calling an instantiated `WavelengthCalibrationFitter` and likely requires a custom
+subclass of `WavelengthCalibrationParameters` to hold any parameters associated with the continuum function.
