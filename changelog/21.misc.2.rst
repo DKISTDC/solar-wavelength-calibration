@@ -1,0 +1,2 @@
+Bump `pydantic` minimum version to v2.7.2 to avoid build error on python >= 3.12.
+See https://github.com/pydantic/pydantic-core/issues/1366 and https://github.com/pyupio/safety/issues/620 for more info.
