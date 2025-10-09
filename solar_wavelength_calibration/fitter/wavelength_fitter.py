@@ -598,9 +598,7 @@ def fitting_model(
     try:
         continuum = continuum_function(linear_wave, params)
     except Exception as e:
-        raise RuntimeError(
-            f"The continuum function has produced an unrecoverable error. The error is '{e}'"
-        )
+        raise RuntimeError("The continuum function has produced an unrecoverable error.") from e
     final_atlas_spectrum = atlas_spectrum_w_straylight * continuum
 
     res_amplitude = input_spectrum - final_atlas_spectrum

@@ -232,10 +232,9 @@ def test_fit_with_custom_continuum_function_error(
     )
 
     with pytest.raises(
-        RuntimeError,
-        match="The continuum function has produced an unrecoverable error. The error is 'Not sure why I was even looking for a file'",
+        RuntimeError, match="The continuum function has produced an unrecoverable error."
     ):
-        fit_result = fitter(
+        fitter(
             input_wavelength_vector=observed_wavelength_vector,
             input_spectrum=observed_spectrum,
         )
