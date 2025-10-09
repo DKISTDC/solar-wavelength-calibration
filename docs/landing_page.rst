@@ -102,7 +102,7 @@ at the time of observations. For now we'll just set this velocity to 0.
 
 Next let's define valid ranges for our fit parameters. This step isn't *strictly* necessary, but is generally good practice.
 The more information we can give the fitter the better! Valid ranges are also required for certain fitting methods, like
-`differential_evolution`. We define the ranges using the `~solar_wavelength_calibration.BoundsModel` class:
+`differential_evolution`. We define the ranges using the `~solar_wavelength_calibration.fitter.parameters.BoundsModel` class:
 
 .. code:: python
 
@@ -116,7 +116,7 @@ The more information we can give the fitter the better! Valid ranges are also re
         )
 
 As discussed above, there are non-linear parameters that we are going to ignore for the time being. To do this we will
-use the `~solar-wavelength-calibration.FitFlagsModel` to tell the fitter which parameters should be free or fixed in the fit.
+use the `~solar_wavelength_calibration.fitter.parameters.FitFlagsModel` to tell the fitter which parameters should be free or fixed in the fit.
 
 .. code:: python
 
@@ -130,7 +130,7 @@ use the `~solar-wavelength-calibration.FitFlagsModel` to tell the fitter which p
         continuum_level=True
         )
 
-Now we can set up the final pieces needed to perform the fit. The `~solar-wavelength-calibration.WavelengthCalibrationParameters`
+Now we can set up the final pieces needed to perform the fit. The `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters`
 object holds all of our prior knowledge that we just discussed
 
 .. code:: python
