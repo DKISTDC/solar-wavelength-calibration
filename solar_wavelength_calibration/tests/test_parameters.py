@@ -1,4 +1,5 @@
 import re
+from inspect import signature
 
 import astropy.units as u
 import numpy as np
@@ -22,6 +23,7 @@ from solar_wavelength_calibration import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.parameters import angle_quantity
 from solar_wavelength_calibration.fitter.parameters import inverse_length_quantity
 from solar_wavelength_calibration.fitter.parameters import length_quantity
+from solar_wavelength_calibration.tests.conftest import user_defined_continuum_function
 
 
 class WCSValidityParams(BaseModel):
@@ -774,3 +776,53 @@ def test_bounds_given_as_dict(test_parameters_dict):
     np.testing.assert_allclose(
         input_params.bounds.crval.min, test_parameters_dict["crval"] - (0.3 * u.nm)
     )
+
+
+def test_custom_continuum_function(wavecal_params_with_extra_continuum_param, parameters):
+    """
+    Given: A subclass of `WavelengthCalibrationParameters` that defines a custom continuum function with extra args
+    When: Accessing the `reduced_continuum_function` and `lmfit_parameters` properties
+    Then: The correct values are returned
+    """
+    expected_signature = signature(user_defined_continuum_function)
+    exponent_value = 99.9
+    parameter_obj = wavecal_params_with_extra_continuum_param(
+        continuum_exponent=exponent_value, **parameters.model_dump()
+    )
+
+    full_signature = signature(parameter_obj.continuum_function)
+
+    # Test that the property was properly defined and has the right return type
+    for arg in expected_signature.parameters:
+        assert (
+            expected_signature.parameters[arg].annotation
+            is full_signature.parameters[arg].annotation
+        )
+    assert expected_signature.return_annotation is full_signature.return_annotation
+
+    # Test that the reduced version of the continuum function has the correct signature
+    # We also test that the assignment to `constant_parameters["continuum_function"] was correct in the same way
+    for reduced_func in [
+        parameter_obj.reduced_continuum_function,
+        parameter_obj.constant_parameters["continuum_function"],
+    ]:
+        reduced_signature = signature(reduced_func)
+        arg_types = iter(reduced_signature.parameters.values())
+
+        # Test that the first two arguments have the correct type and no defaults
+        wave_arg = next(arg_types)
+        assert wave_arg.kind is wave_arg.POSITIONAL_OR_KEYWORD
+        assert wave_arg.annotation is np.ndarray
+        assert wave_arg.default is wave_arg.empty
+
+        param_arg = next(arg_types)
+        assert param_arg.kind is param_arg.POSITIONAL_OR_KEYWORD
+        assert param_arg.annotation is Parameters
+        assert param_arg.default is param_arg.empty
+        assert reduced_signature.return_annotation is np.ndarray
+
+        # The way `partial` works is to make default kwargs with the extra args. So here we test that they are KEYWORD_ONLY
+        # (i.e., come after `*` in the function signature) and have default values.
+        for extra_arg in arg_types:
+            assert extra_arg.kind is extra_arg.KEYWORD_ONLY
+            assert extra_arg.default is not extra_arg.empty

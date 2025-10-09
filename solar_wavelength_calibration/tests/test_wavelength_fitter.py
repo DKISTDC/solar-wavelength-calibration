@@ -1,4 +1,3 @@
-from typing import Any
 from typing import Callable
 
 import astropy.units as u
@@ -65,34 +64,6 @@ def fitting_model_setup(parameters, observed_spectrum, synthetic_local_atlas):
         "order": order,
         "doppler_velocity": doppler_velocity,
     }
-
-
-def user_defined_continuum_function(input_wave, params, not_used):
-    return (np.ones_like(input_wave) * params["continuum_level"]) ** params["continuum_exponent"]
-
-
-@pytest.fixture
-def wavecal_params_with_extra_continuum_param():
-    # AKA an example of how a user might add a custom continuum function
-    class NewWaveCalParams(WavelengthCalibrationParameters):
-
-        continuum_exponent: float
-
-        @property
-        def continuum_function(self) -> Callable[[np.ndarray, Parameters, ...], np.ndarray]:
-            return user_defined_continuum_function
-
-        @property
-        def extra_continuum_func_kwargs(self) -> dict[str, Any]:
-            return {"not_used": False}
-
-        @property
-        def lmfit_parameters(self):
-            params = super().lmfit_parameters
-            params.add("continuum_exponent", value=self.continuum_exponent, vary=True)
-            return params
-
-    return NewWaveCalParams
 
 
 @pytest.fixture
@@ -205,7 +176,7 @@ def test_fit_results(
     np.testing.assert_almost_equal(fit_result.best_fit_atlas, expected_best_fit_atlas)
 
 
-def test_custom_continuum_function(
+def test_fit_with_custom_continuum_function(
     wavecal_params_with_extra_continuum_param,
     parameters: WavelengthCalibrationParameters,
     observed_spectrum,
@@ -237,7 +208,7 @@ def test_custom_continuum_function(
     assert fit_result.minimizer_result.params["continuum_exponent"] != starting_value
 
 
-def test_custom_continuum_function_error(
+def test_fit_with_custom_continuum_function_error(
     wavecal_params_with_broken_continuum_func,
     parameters: WavelengthCalibrationParameters,
     observed_spectrum,

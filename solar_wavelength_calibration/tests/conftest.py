@@ -1,3 +1,6 @@
+from typing import Any
+from typing import Callable
+
 import astropy.units as u
 import numpy as np
 import pytest
@@ -168,7 +171,7 @@ def parameters(
     test_doppler_velocity,
     test_order,
     atlas: AtlasBase,
-) -> Parameters:
+) -> WavelengthCalibrationParameters:
     params = WavelengthCalibrationParameters(
         crval=test_crval,
         dispersion=test_dispersion,
@@ -181,3 +184,33 @@ def parameters(
         order=test_order,
     )
     return params
+
+
+def user_defined_continuum_function(
+    input_wave: np.ndarray, params: Parameters, not_used: bool
+) -> np.ndarray:
+    return (np.ones_like(input_wave) * params["continuum_level"]) ** params["continuum_exponent"]
+
+
+@pytest.fixture
+def wavecal_params_with_extra_continuum_param():
+    # AKA an example of how a user might add a custom continuum function
+    class NewWaveCalParams(WavelengthCalibrationParameters):
+
+        continuum_exponent: float
+
+        @property
+        def continuum_function(self) -> Callable[[np.ndarray, Parameters, ...], np.ndarray]:
+            return user_defined_continuum_function
+
+        @property
+        def extra_continuum_func_kwargs(self) -> dict[str, Any]:
+            return {"not_used": False}
+
+        @property
+        def lmfit_parameters(self):
+            params = super().lmfit_parameters
+            params.add("continuum_exponent", value=self.continuum_exponent, vary=True)
+            return params
+
+    return NewWaveCalParams

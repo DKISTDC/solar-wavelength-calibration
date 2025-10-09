@@ -571,10 +571,10 @@ class WavelengthCalibrationParameters(BaseModel):
         return param
 
     @property
-    def constant_parameters(self) -> dict:
+    def constant_parameters(self) -> dict[str, Any]:
         """Create a single dictionary with correct starting values for the constant instrument specific parameters that will not vary."""
         # Initialize a dict to hold the constant parameters and their values
-        constant_params = {}
+        constant_params = dict()
         constant_params["grating_constant"] = self.grating_constant.value
         constant_params["doppler_velocity"] = self.doppler_velocity
         constant_params["order"] = self.order
