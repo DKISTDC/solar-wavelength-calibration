@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import logging
 from functools import cached_property
+from functools import partial
 from typing import Annotated
+from typing import Any
 from typing import Callable
+from typing import Concatenate
 
 import astropy.units as u
 import numpy as np
@@ -139,6 +142,11 @@ class FitFlagsModel(BaseModel):
     continuum_level: bool = True
 
 
+def scalar_continuum_function(wavelength: np.ndarray, parameters: Parameters) -> np.ndarray:
+    """Return a constant valued continuum level; the value of the "continuum_level" parameter."""
+    return parameters["continuum_level"].value
+
+
 class WavelengthCalibrationParameters(BaseModel):
     """
     Object for initializing the fit parameters prior to a fit.
@@ -161,6 +169,51 @@ class WavelengthCalibrationParameters(BaseModel):
     straylight_fraction: FiniteFloat = 0.0
     fit_flags: FitFlagsModel = FitFlagsModel()
     bounds: BoundsModel = BoundsModel()
+
+    @property
+    def continuum_function(self) -> Callable[Concatenate[np.ndarray, Parameters, ...], np.ndarray]:
+        """
+        Return a callable that produces the continuum to be applied to the atlas spectrum.
+
+        Must take the currently fit wavelength vector and fit `~lmfit.parameter.Parameters` as the first two arguments
+        and return a value that can be broadcast in multiplication to the combined atlas spectrum. Default is a scalar
+        value (the value of the `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.continuum_level`
+        parameter).
+
+        Extra arguments are allowed, but they *must* be pre-defined at instantiation time in the
+        `extra_continuum_func_kwargs` property.
+        """
+        return scalar_continuum_function
+
+    @property
+    def extra_continuum_func_kwargs(self) -> dict[str, Any]:
+        """
+        Define extra kwargs to be passed to `continuum_function` beyond the wavelength and Parameter arguments.
+
+        For example, if a continuum function has signature
+
+        .. code-block:: python
+
+            def custom_continuum_func(wavelength: np.ndarray,
+                                      parameters: Parameters,
+                                      extra_arg1: int) -> np.ndarray:
+              ...
+
+        then this property should be ``{"extra_arg1": 37}`` or whatever value makes sense for the current data.
+
+        NOTE: The extra arguments are *static* during the fit. Any parameters that change during the fit must be
+        defined in `lmfit_parameters` and accessed by the continuum function through the ``parameters`` argument.
+        """
+        return dict()
+
+    @property
+    def reduced_continuum_function(self) -> Callable[[np.ndarray, Parameters], np.ndarray]:
+        """
+        Fix the `continuum_function`'s extra arguments to their given value to produce the function to be used in the fit.
+
+        This is exactly equal to `partial(self.continuum_function, **self.extra_continuum_func_kwargs)`.
+        """
+        return partial(self.continuum_function, **self.extra_continuum_func_kwargs)
 
     @field_validator("bounds")
     @classmethod
@@ -525,4 +578,5 @@ class WavelengthCalibrationParameters(BaseModel):
         constant_params["grating_constant"] = self.grating_constant.value
         constant_params["doppler_velocity"] = self.doppler_velocity
         constant_params["order"] = self.order
+        constant_params["continuum_function"] = self.reduced_continuum_function
         return constant_params

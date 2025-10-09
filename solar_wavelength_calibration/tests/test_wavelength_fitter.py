@@ -1,8 +1,12 @@
+from typing import Any
+from typing import Callable
+
 import astropy.units as u
 import numpy as np
 import pytest
 from astropy.units import Quantity
 from astropy.wcs import WCS
+from lmfit import Parameters
 from lmfit.minimizer import MinimizerResult
 from pydantic import ValidationError
 
@@ -63,11 +67,47 @@ def fitting_model_setup(parameters, observed_spectrum, synthetic_local_atlas):
     }
 
 
+def user_defined_continuum_function(input_wave, params, not_used):
+    return (np.ones_like(input_wave) * params["continuum_level"]) ** params["continuum_exponent"]
+
+
 @pytest.fixture
 def wavecal_params_with_extra_continuum_param():
+    # AKA an example of how a user might add a custom continuum function
     class NewWaveCalParams(WavelengthCalibrationParameters):
 
         continuum_exponent: float
+
+        @property
+        def continuum_function(self) -> Callable[[np.ndarray, Parameters, ...], np.ndarray]:
+            return user_defined_continuum_function
+
+        @property
+        def extra_continuum_func_kwargs(self) -> dict[str, Any]:
+            return {"not_used": False}
+
+        @property
+        def lmfit_parameters(self):
+            params = super().lmfit_parameters
+            params.add("continuum_exponent", value=self.continuum_exponent, vary=True)
+            return params
+
+    return NewWaveCalParams
+
+
+@pytest.fixture
+def wavecal_params_with_broken_continuum_func():
+    # AKA an example of how a user might add a custom continuum function
+    class NewWaveCalParams(WavelengthCalibrationParameters):
+
+        continuum_exponent: float
+
+        @property
+        def continuum_function(self) -> Callable[[np.ndarray, Parameters, ...], np.ndarray]:
+            def user_defined_continuum_function(input_wave, parameters):
+                raise FileNotFoundError("Not sure why I was even looking for a file")
+
+            return user_defined_continuum_function
 
         @property
         def lmfit_parameters(self):
@@ -184,11 +224,6 @@ def test_custom_continuum_function(
         continuum_exponent=starting_value, **parameters.model_dump()
     )
 
-    def user_defined_continuum_function(input_wave, params):
-        return (np.ones_like(input_wave) * params["continuum_level"]) ** params[
-            "continuum_exponent"
-        ]
-
     fitter = WavelengthCalibrationFitter(
         input_parameters=new_parameters,
         atlas=atlas,
@@ -197,14 +232,13 @@ def test_custom_continuum_function(
     fit_result = fitter(
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
-        continuum_function=user_defined_continuum_function,
     )
     assert "continuum_exponent" in fit_result.minimizer_result.params
     assert fit_result.minimizer_result.params["continuum_exponent"] != starting_value
 
 
 def test_custom_continuum_function_error(
-    wavecal_params_with_extra_continuum_param,
+    wavecal_params_with_broken_continuum_func,
     parameters: WavelengthCalibrationParameters,
     observed_spectrum,
     atlas: AtlasBase,
@@ -217,12 +251,9 @@ def test_custom_continuum_function_error(
     When: Calling the fitter with a custom continuum function that hits an Error
     Then: The error in the continuum function is correctly reported
     """
-    new_parameters = wavecal_params_with_extra_continuum_param(
+    new_parameters = wavecal_params_with_broken_continuum_func(
         continuum_exponent=1.0, **parameters.model_dump()
     )
-
-    def user_defined_continuum_function(input_wave, parameters):
-        raise FileNotFoundError("Not sure why I was even looking for a file")
 
     fitter = WavelengthCalibrationFitter(
         input_parameters=new_parameters,
@@ -236,7 +267,6 @@ def test_custom_continuum_function_error(
         fit_result = fitter(
             input_wavelength_vector=observed_wavelength_vector,
             input_spectrum=observed_spectrum,
-            continuum_function=user_defined_continuum_function,
         )
 
 
