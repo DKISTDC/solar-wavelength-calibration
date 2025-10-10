@@ -242,3 +242,39 @@ that can be inserted directly into an existing FITS header in order to apply the
     # Profit
     my_great_header.update(solution_header_entries)
 
+Helper Functions
+----------------
+
+The following functions are not required to run a fit, but may be useful in setting everything up.
+
+Computing An Initial CRVAL Guess
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Good initial guesses can greatly improve the performance and accuracy of a fit. In particular, the initial guess of the
+reference wavelength (`crval`) can ruin a fit if it is too far off. In cases where the reference wavelength is not well
+known the `~solar_wavelength_calibration.fitter.wavelength_fitter.calculate_initial_crval_guess` function may be helpful.
+This function does a brute-force minimization of only a single parameter (`crval`) to match an input spectrum with a given
+`Atlas`. The `negative_limit`, `positive_limit`, and `num_steps` arguments define the range of values considered.
+
+Note that, because this function only "fits" `crval`, it requires a somewhat good match between the input data and `Atlas`
+in terms of dispersion and spectral resolution.
+
+Generate A Wavelength Vector
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There are many cases where generating a wavelength vector from a given set of
+`~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` is useful (e.g., making the
+`input_wavelength_vector` for a call to a `fitter`) and the `~solar_wavelength_calibration.fitter.wavelength_fitter.calculate_linear_wave`
+function does just this. This function is primarily used internally, so it's calling signature is a little unusual. Given
+a `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` called `my_wavecal_parameters` here
+is how to use it (note in particular the conversion of `grating_constant` to 1 / m):
+
+.. code-block:: python
+
+    num_wave = raw_spec.size
+    init_wave_vec = calculate_linear_wave(
+        params=my_wavecal_parameters_object.lmfit_parameters,
+        number_of_wave_pix=num_wave,
+        grating_constant=my_wavecal_parameters_object.grating_constant.to_value(1 / u.m),
+        order=my_wavecal_parameters_object.order
+        )
