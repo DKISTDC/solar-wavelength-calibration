@@ -18,8 +18,10 @@ from raw pixel index to an absolute wavelength value. It has the following featu
 * Uses `scipy.optimize` under the hood, and built on top of `lmfit <https://lmfit.github.io/lmfit-py/index.html>`_; easily change the fitting method, bounds, etc.
 * Output that is fully compliant with FITS definitions for spectral WCS
 
+.. _quickstart:
+
 Quickstart / Example
---------------------
+====================
 
 First, let's import packages we'll need. We will be using the `dkist <https://docs.dkist.nso.edu/projects/python-tools/en/stable/>`_
 only to download example data. If you have your own spectra you can skip this import.

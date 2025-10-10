@@ -4,7 +4,8 @@
     :maxdepth: 2
     :hidden:
 
-    self
+    Overview <self>
+    basic_usage
     autoapi/index
     requirements_table
     changelog
