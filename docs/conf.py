@@ -51,3 +51,7 @@ if is_release:
 # Extensions so we can create the reqmts table
 extensions += ["dkist_sphinx_theme.create_requirements_table"]
 autoapi_options.remove("imported-members")
+
+# Because the landing page is `include`'d in index.rst. This avoids double references because sphinx is stoopid
+# See https://stackoverflow.com/questions/16262163/sphinxs-include-directive-and-duplicate-label-warnings
+exclude_patterns += ["landing_page.rst"]
