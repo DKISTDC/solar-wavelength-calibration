@@ -5,6 +5,7 @@
     :hidden:
 
     Overview <self>
+    physical_model
     basic_usage
     autoapi/index
     requirements_table
