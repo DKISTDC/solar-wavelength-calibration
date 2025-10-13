@@ -356,13 +356,15 @@ def calculate_linear_wave(
 def resample_telluric_transmission_with_absorption_correction(
     linear_wave: np.ndarray, cropped_atlas: LocalAtlas, opacity_factor: float
 ) -> np.ndarray:
-    """
+    r"""
     Resample the telluric transmission spectrum onto a linear wavelength grid and apply an absorption correction using the Beer–Lambert Law.
 
-    This function interpolates the telluric transmission data from the provided atlas onto a linear wavelength vector, then modifies the transmission by applying an absorption scaling based on the
-    Beer–Lambert Law:
+    This function interpolates the telluric transmission data from the provided atlas onto a linear wavelength vector,
+    then scales the assumed optical depth by value of `opacity_factor`, :math:`T` such that
 
-        I(λ) = I(λ) ** opacity_factor
+    .. math::
+
+        I(\lambda) = I_0(\lambda)^T
 
     This scaling simulates the attenuation of light due to atmospheric absorption, where the `opacity_factor` adjusts the strength of absorption across the spectrum.
 
