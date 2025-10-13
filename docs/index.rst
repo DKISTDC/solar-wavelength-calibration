@@ -6,6 +6,7 @@
 
     Overview <self>
     physical_model
+    gotchas
     basic_usage
     autoapi/index
     requirements_table
