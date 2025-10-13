@@ -54,7 +54,7 @@ Let's load and plot an example spectrum from the DKIST's ViSP instrument (a slit
     ax.set_xlabel("Pixel")
     ax.set_ylabel("Normalized Signal")
 
-.. figure:: images/raw_visp_spectrum.png
+.. figure:: images/raw_visp_spectrum.jpg
     :alt: Raw spectrum
 
     Raw spectrum with no wavelength axis
@@ -218,7 +218,7 @@ Let's also plot our spectrum (with fit wavelengths) against the best-fit atlas t
     ax.set_ylabel("Normalized Signal")
     ax.legend(loc=0)
 
-.. figure:: images/fit_visp_spectrum.png
+.. figure:: images/fit_visp_spectrum.jpg
     :alt: Fit spectrum
 
     Input spectrum with fit wavelength axis and best-fit atlas spectrum
