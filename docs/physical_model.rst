@@ -10,21 +10,23 @@ Wavelength WCS Parameterization
 This package uses the parameterization of `Greisen et al (2006) <https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract>`_
 (see section 5 in particular) to encode non-linear spectral axes in FITS headers. Specifically, the physical model used
 here is currently limited to reflection gratings in air. This results in the standard linear parameters (CRVAL, CRPIX,
-CDELT, etc.) combined with the non-linear parameters defined in Greisen's Table 6. The full set of parameters that
-describe a wavelength axis, along with constant values and units enforced by this package, is
+CDELT, etc.) combined with the non-linear parameters defined in Greisen's Table 6. The parameters that describe a
+wavelength axis, along with constant values and units enforced by this package are found in the folloing table
 
-========== =========================== ======= ==========
-Header Key Description                 Units   Value
-========== =========================== ======= ==========
-CTYPEn     Type of spectral coordinate         "AWAV-GRA"
-CUNITn     Units for CRVALn and CDELn          "nm"
-CRPIXn     Reference pixel
-CRVALn     Reference wavelength        nm
-CDELTn     Linear dispersion           nm / px
-PVn_0      Grating constant            1 / m
-PVn_1      Spectral order
-PVn_2      Incident light angle        deg
-========== =========================== ======= ==========
+.. _header_parameters:
+
+========== ====================== =========================== ======= ==========
+Header Key Variable Name          Description                 Units   Value
+========== ====================== =========================== ======= ==========
+CTYPEn                            Type of spectral coordinate         "AWAV-GRA"
+CUNITn                            Units for CRVALn and CDELn          "nm"
+CRPIXn                            Reference pixel
+CRVALn     `crval`                Reference wavelength        nm
+CDELTn     `dispersion`           Linear dispersion           nm / px
+PVn_0      `grating_constant`     Grating constant            1 / m
+PVn_1      `order`                Spectral order
+PVn_2      `incident_light_angle` Incident light angle        deg
+========== ====================== =========================== ======= ==========
 
 .. note::
 
@@ -45,6 +47,20 @@ Matching Atlas Spectra to Observation Conditions
 In addition to computing a wavelength vector using the parmeterization above we also modify the atlas spectra to match
 characteristics of the observed spectrum as closely as possible. Not only does this improve the accuracy of the wavelength
 fit, but the fit parameter values can also yield insight into the quality of the input spectrum.
+
+The "spectral" parameters used to modify the atlas spectra can be found in the following table
+
+.. _spectral_parameters:
+
+======================= ======================================== =============
+Variable Name           Description                              Units
+======================= ======================================== =============
+`doppler_velocity`      Relative speed between Sun and observer  length / time
+`continuum_level`       Overall continuum scaling
+`resolving_power`       Spectrograph resolving power
+`opacity_factor`        Scaling factor for telluric opacity
+`straylight_fraction`   Fractional additive stray light
+======================= ======================================== =============
 
 For each fit iteration the atlas that is matched to the input spectrum is computed in the following steps, each described
 in detail below:

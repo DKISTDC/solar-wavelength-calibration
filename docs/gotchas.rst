@@ -9,7 +9,7 @@ Atlas Assumptions
 Some aspects of the :doc:`physical model <physical_model>` make assumptions about the nature of the telluric and solar
 atlas spectra provided to a `~solar_wavelength_calibration.fitter.wavelength_fitter.WavelengthCalibrationFitter` instance.
 Violating these assumptions will probably not cause a failure when fitting a wavelength solution, but will change how
-the parameters related to spectral matching are interpreted. The assumptions are:
+the :ref:`parameters related to spectral matching <spectral_parameters>` are interpreted. The assumptions are:
 
 * The continuum level of both the telluric and solar atlases is 1.0
 * Both atlases are fully resolved
@@ -19,7 +19,7 @@ the parameters related to spectral matching are interpreted. The assumptions are
 Physical WCS Constraints and Bounds on CRVAL
 --------------------------------------------
 
-The full set of `FITS header parameters <header_parameters>` are not completely independent. In particular, the `crval`,
+The full set of :ref:`FITS header parameters <header_parameters>` are not completely independent. In particular, the `crval`,
 `incident_light_angle`, `order`, and `grating_constant` parameters are linked as described
 `here <solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.ensure_invertable_WCS>`. A consequence
 of this constraint is that during the fit `crval` is actually fit with the

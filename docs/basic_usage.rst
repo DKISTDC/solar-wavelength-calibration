@@ -31,11 +31,11 @@ argument                description                              units          
 `incident_light_angle`  Grating incident light angle             angle          finite     yes            yes
 `grating_constant`      Grating constant                         1 / length     finite     yes            yes
 `doppler_velocity`      Relative speed between Sun and observer  length / time  finite     no             yes
-`order`                 Spectral order                           -              integer    no             yes
-`continuum_level`       Overall continuum scaling                -              float      yes            no
-`resolving_power`       Spectrograph resolving power             -              int        yes            no
-`opacity_factor`        Scaling factor for telluric opacity      -              finite     yes            no
-`straylight_fraction`   Fractional additive stray light          -              finite     yes            no
+`order`                 Spectral order                                          integer    no             yes
+`continuum_level`       Overall continuum scaling                               float      yes            no
+`resolving_power`       Spectrograph resolving power                            int        yes            no
+`opacity_factor`        Scaling factor for telluric opacity                     finite     yes            no
+`straylight_fraction`   Fractional additive stray light                         finite     yes            no
 ======================= ======================================== ============== ========== ============== =========
 
 .. admonition:: Note on units
