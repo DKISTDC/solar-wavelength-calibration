@@ -45,6 +45,7 @@ class WavelengthParameters(BaseModel):
         ----------
         axis_num
             The axis number for the WCS header (e.g., 1 for the first axis).
+
         add_alternate_keys
             If True, include alternate header keywords (ending with 'A') for compatibility.
 
@@ -318,10 +319,13 @@ def calculate_linear_wave(
     ----------
     params
         Parameters object containing the fitting parameters.
+
     number_of_wave_pix
         Number of wavelength pixels.
+
     grating_constant
         Grating constant of the spectrograph.
+
     order
         Diffraction order.
 
