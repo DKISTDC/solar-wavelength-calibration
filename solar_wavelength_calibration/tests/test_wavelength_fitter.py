@@ -192,7 +192,7 @@ def test_fit_with_custom_continuum_function(
     """
     starting_value = 1.0
     new_parameters = wavecal_params_with_extra_continuum_param(
-        continuum_exponent=starting_value, **parameters.model_dump()
+        continuum_exponent=starting_value, not_used=True, **parameters.model_dump()
     )
 
     fitter = WavelengthCalibrationFitter(
@@ -223,7 +223,7 @@ def test_fit_with_custom_continuum_function_error(
     Then: The error in the continuum function is correctly reported
     """
     new_parameters = wavecal_params_with_broken_continuum_func(
-        continuum_exponent=1.0, **parameters.model_dump()
+        continuum_exponent=1.0, not_used=True, **parameters.model_dump()
     )
 
     fitter = WavelengthCalibrationFitter(

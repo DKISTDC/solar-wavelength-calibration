@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Any
 from typing import Callable
 
@@ -189,7 +190,7 @@ def parameters(
 def user_defined_continuum_function(
     input_wave: np.ndarray, params: Parameters, not_used: bool
 ) -> np.ndarray:
-    return (np.ones_like(input_wave) * params["continuum_level"]) ** params["continuum_exponent"]
+    return (np.ones_like(input_wave) * 3) ** params["continuum_exponent"]
 
 
 @pytest.fixture
@@ -198,18 +199,17 @@ def wavecal_params_with_extra_continuum_param():
     class NewWaveCalParams(WavelengthCalibrationParameters):
 
         continuum_exponent: float
+        not_used: bool
 
         @property
         def continuum_function(self) -> Callable[[np.ndarray, Parameters, ...], np.ndarray]:
-            return user_defined_continuum_function
-
-        @property
-        def extra_continuum_func_kwargs(self) -> dict[str, Any]:
-            return {"not_used": False}
+            return partial(user_defined_continuum_function, not_used=self.not_used)
 
         @property
         def lmfit_parameters(self):
             params = super().lmfit_parameters
+            del params["continuum_level"]
+
             params.add("continuum_exponent", value=self.continuum_exponent, vary=True)
             return params
 

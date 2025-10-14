@@ -341,7 +341,7 @@ class WavelengthCalibrationFitter(BaseModel):
             input_wavelength_vector=input_wavelength_vector,
             input_spectrum=input_spectrum,
             spectral_weights=spectral_weights,
-            continuum_function=self.input_parameters.reduced_continuum_function,
+            continuum_function=self.input_parameters.continuum_function,
         )
 
 
