@@ -116,7 +116,11 @@ The telluric and doppler-corrected solar transmissions are combined by simply mu
 Stray light
 ^^^^^^^^^^^
 
-A contribution from "stray light" is estimated by simply adding a constant factor to the combined atlas spectra.
+A contribution from "stray light" is estimated by simply adding a constant factor to the combined atlas spectra. To avoid
+changing the overall continuum level (and thus coupling the additive and multiplicative scale factors) we normalize
+the continuum after adding the `straylight_fraction` fit parameter such that :math:`T = (T + s) / (1 + s)` where
+:math:`T` is the combined atlas transmission and :math:`s` is the `straylight_fraction`. Note that this assumes the
+continuum level of the atlas spectra is 1.
 
 Continuum
 ^^^^^^^^^
