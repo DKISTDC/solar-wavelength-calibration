@@ -1,6 +1,8 @@
 Advanced Usage
 ==============
 
+.. _custom_continuum_function:
+
 Custom Continuum Parameterization
 ---------------------------------
 
@@ -81,8 +83,6 @@ Note in this example we have added `new_continuum_parameter` to the model fields
 and used that value as the starting value for this parameter. This pattern is not strictly necessary, but does allow
 the initial guess to be set on a per-instance basis of `MyWavelengthCalibrationParameters`, just like all of the base
 parameters.
-
-.. _extra_continuum_args:
 
 Continuum Functions With Extra Arguments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

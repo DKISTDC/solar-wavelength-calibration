@@ -128,6 +128,11 @@ Continuum
 Any multiplicative scaling differences between the atlas and observed spectrum are accounted for with an overall scaling
 factor called `continuum_level`. The combined atlas spectra is simply multiplied by this value.
 
+.. note::
+
+    If a simple scalar does not accurately reflect the continuum of your data, it is also possilbe to
+    :ref:`define and fit your own continuum function <custom_continuum_function>`.
+
 Spectral Resolution
 ^^^^^^^^^^^^^^^^^^^
 
