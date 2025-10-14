@@ -68,7 +68,6 @@ def test_wavecal_fitter(
     atlas: AtlasBase,
     test_dispersion,
     test_parameters_dict,
-    observed_wavelength_vector,
 ):
     """
     Given: The correct WavelengthCalibrationFitter inputs (data, models, and fit parameters)
@@ -80,10 +79,7 @@ def test_wavecal_fitter(
         atlas=atlas,
     )
 
-    fit_result = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
-        input_spectrum=observed_spectrum,
-    )
+    fit_result = fitter(input_spectrum=observed_spectrum)
 
     # test that values have been fit (i.e. changed)
     assert fit_result.wavelength_parameters.dispersion != test_dispersion
@@ -117,7 +113,6 @@ def test_fit_results(
 
     weights = np.random.random(observed_spectrum.size) if with_weights else None
     fit_result = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
         spectral_weights=weights,
     )
@@ -174,7 +169,6 @@ def test_fixing_parameters(
     observed_spectrum,
     observed_continuum_level,
     atlas: AtlasBase,
-    observed_wavelength_vector,
 ):
     """
     Given: A `WavelengthCalibrationFitter` initialized with a `WavelengthCalibrationParameters` with a single fixed parameter
@@ -201,10 +195,7 @@ def test_fixing_parameters(
         atlas=atlas,
     )
 
-    fit_result = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
-        input_spectrum=observed_spectrum,
-    )
+    fit_result = fitter(input_spectrum=observed_spectrum)
     for parameter in fit_result.minimizer_result.params:
         if parameter != fixed_parameter:
             continue
@@ -221,7 +212,7 @@ def test_fixing_parameters(
 
 
 def test_fit_stays_valid_with_fixed_crval(
-    test_parameters_dict, observed_wavelength_vector, observed_spectrum, atlas: AtlasBase
+    test_parameters_dict, observed_spectrum, atlas: AtlasBase
 ):
     """
     Given: A set of input parameters that is on the edge of WCS validity and bounds on `incident_light_angle` that
@@ -269,7 +260,6 @@ def test_fit_stays_valid_with_fixed_crval(
         atlas=atlas,
     )
     _ = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
     )
 
@@ -282,7 +272,6 @@ def test_fit_is_correct(
     test_doppler_velocity,
     test_order,
     observed_spectrum,
-    observed_wavelength_vector,
     atlas: AtlasBase,
     test_parameters_dict,
 ):
@@ -323,7 +312,6 @@ def test_fit_is_correct(
         atlas=atlas,
     )
     fit_result = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
         method="nelder-meade",
     )
@@ -625,7 +613,6 @@ def test_to_header_add_alternate_keys(
     parameters: WavelengthCalibrationParameters,
     observed_spectrum,
     atlas: AtlasBase,
-    observed_wavelength_vector,
 ):
 
     fitter = WavelengthCalibrationFitter(
@@ -634,7 +621,6 @@ def test_to_header_add_alternate_keys(
     )
 
     fit_result = fitter._run_fit(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
         spectral_weights=np.ones(len(observed_spectrum)),
     )

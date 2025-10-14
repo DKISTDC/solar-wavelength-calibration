@@ -138,7 +138,6 @@ class WavelengthCalibrationFitter(BaseModel):
 
     def __call__(
         self,
-        input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
         spectral_weights: None | np.ndarray = None,
         method: str = "leastsq",
@@ -148,9 +147,6 @@ class WavelengthCalibrationFitter(BaseModel):
 
         Parameters
         ----------
-        input_wavelength_vector
-            The wavelength vector corresponding to the input spectrum
-
         input_spectrum
             The input 1D spectrum to be fitted.
 
@@ -176,7 +172,6 @@ class WavelengthCalibrationFitter(BaseModel):
             )
 
         return self._run_fit(
-            input_wavelength_vector,
             input_spectrum,
             spectral_weights,
             method,
@@ -185,13 +180,15 @@ class WavelengthCalibrationFitter(BaseModel):
 
     def _run_fit(
         self,
-        input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
         spectral_weights: np.ndarray,
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
         """Run the fit."""
+        input_wavelength_vector = self._compute_input_wavelength_vector(
+            input_spectrum=input_spectrum
+        )
         cropped_atlas = self._prepare_atlas(input_wavelength_vector)
         fit_result = self._fit_spectrum(
             cropped_atlas=cropped_atlas,
@@ -202,6 +199,21 @@ class WavelengthCalibrationFitter(BaseModel):
             **minimize_kwargs,
         )
         return fit_result
+
+    def _compute_input_wavelength_vector(self, input_spectrum: np.ndarray) -> Quantity:
+        """Compute a wavelength vector given an input spectrum and initial set of parameters."""
+        num_wave_pix = input_spectrum.size
+        order = self.input_parameters.order
+        grating_constant_inverse_m = self.input_parameters.grating_constant.to_value(1 / u.m)
+        init_params = self.input_parameters.lmfit_parameters
+
+        raw_wave = calculate_linear_wave(
+            params=init_params,
+            number_of_wave_pix=num_wave_pix,
+            grating_constant=grating_constant_inverse_m,
+            order=order,
+        )
+        return raw_wave * u.nm
 
     def _prepare_atlas(self, input_wavelength_vector: u.Quantity) -> LocalAtlas:
         """
@@ -324,7 +336,7 @@ def calculate_linear_wave(
         Number of wavelength pixels.
 
     grating_constant
-        Grating constant of the spectrograph.
+        Grating constant of the spectrograph. Must have units 1 / m
 
     order
         Diffraction order.
