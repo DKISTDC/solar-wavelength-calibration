@@ -506,6 +506,8 @@ def fitting_model(
     r"""
     Compute the fitting model function for fitting wavelength calibration parameters.
 
+    See :doc:`this page </physical_model>` for more information.
+
     Parameters
     ----------
     params

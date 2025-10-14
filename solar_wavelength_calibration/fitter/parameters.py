@@ -140,7 +140,12 @@ class FitFlagsModel(BaseModel):
 
 
 class WavelengthCalibrationParameters(BaseModel):
-    """Object for initializing the fit parameters prior to a fit."""
+    """
+    Object for initializing the fit parameters prior to a fit.
+
+    See :ref:`this table <parameters_table>` and the :doc:`discussion </physical_model>` of the physical model for more
+    information about these parameters.
+    """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True)
 
