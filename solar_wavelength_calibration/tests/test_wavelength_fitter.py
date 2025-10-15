@@ -166,6 +166,7 @@ def test_incorrect_atlas(
 def test_fixing_parameters(
     fixed_parameter,
     test_parameters_dict,
+    observed_wavelength_vector,
     observed_spectrum,
     observed_continuum_level,
     atlas: AtlasBase,
@@ -195,7 +196,16 @@ def test_fixing_parameters(
         atlas=atlas,
     )
 
-    fit_result = fitter(input_spectrum=observed_spectrum)
+    # We need to enter via the `._fit_spectrum` method because the init values will make an input_wavelength_vector
+    # so wack it breaks old versions of numpy for some reason???
+    prepared_atlas = fitter._prepare_atlas(input_wavelength_vector=observed_wavelength_vector)
+    fit_result = fitter._fit_spectrum(
+        cropped_atlas=prepared_atlas,
+        input_wavelength_vector=observed_wavelength_vector,
+        input_spectrum=observed_spectrum,
+        method="leastsq",
+        spectral_weights=np.ones_like(observed_spectrum),
+    )
     for parameter in fit_result.minimizer_result.params:
         if parameter != fixed_parameter:
             continue
