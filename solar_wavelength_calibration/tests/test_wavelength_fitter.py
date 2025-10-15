@@ -99,8 +99,8 @@ def test_wavecal_fitter(
 ):
     """
     Given: The correct WavelengthCalibrationFitter inputs (data, models, and fit parameters)
-    When: Initializing a WavelengthCalibrationFitter object with these inputs
-    Then: Everything needed for the fit is correctly set up
+    When: Initializing a WavelengthCalibrationFitter object with these inputs and running a fit
+    Then: The fit runs and values are changed from their starting positions
     """
     fitter = WavelengthCalibrationFitter(
         input_parameters=parameters,
@@ -118,6 +118,32 @@ def test_wavecal_fitter(
         fit_result.wavelength_parameters.crval
         != atlas.telluric_atlas_wavelength[np.size(observed_spectrum) // 2 + 1]
     )
+
+
+def test_calling_wavecal_fitter_bad_weights(
+    parameters: WavelengthCalibrationParameters,
+    observed_spectrum,
+    atlas: AtlasBase,
+    test_dispersion,
+    test_parameters_dict,
+    observed_wavelength_vector,
+):
+    """
+    Given: The correct WavelengthCalibrationFitter inputs (data, models, and fit parameters)
+    When: Initializing a WavelengthCalibrationFitter object with these inputs and calling the fit with wrong-sized weights
+    Then: The correct error is raised
+    """
+    fitter = WavelengthCalibrationFitter(
+        input_parameters=parameters,
+        atlas=atlas,
+    )
+
+    with pytest.raises(ValueError, match="Length of spectral_weights"):
+        fit_result = fitter(
+            input_wavelength_vector=observed_wavelength_vector,
+            input_spectrum=observed_spectrum,
+            spectral_weights=np.random.random(observed_spectrum.size + 5),
+        )
 
 
 @pytest.mark.parametrize(
@@ -391,7 +417,7 @@ def test_fit_is_correct(
     """
     Given: A simulated unfit 1D spectrum with a known shift and dispersion scale.
     When: The WavelengthCalibrationFitter is used to fit the spectrum.
-    Then: The fit parameters that parameterize the WCS header are correct
+    Then: The fit parameters that parametrize the WCS header are correct
     """
 
     parameters = WavelengthCalibrationParameters(
