@@ -143,3 +143,34 @@ where :math:`\lambda_0` is the current value of CRVALn, :math:`R` is the current
 
 .. _weighting:
 
+Goodness of Fit and Weighting
+-----------------------------
+
+The final "residuals" vector is the difference of the input spectrum and the combined and modified atlas spectra.
+A user can choose to apply different weights to different portions of the spectrum by passing an array to the ``weights``
+kwarg of a call to a `WavelengthCalibrationFitter <solar_wavelength_calibration.fitter.wavelength_fitter.WavelengthCalibrationFitter.__call__>`.
+These weights will be multiplied by the residuals array prior to computing the final goodness-of-fit (Chi-squared) value.
+
+Internally, the goodness-of-fit value is just `np.sum(residuals**2)` or :math:`\chi^2 = \sum_i r_i^2`, where :math:`r`
+is `residuals`. To achieve a standard weighted chi-squared (:math:`\chi^2 = \frac{\sum_i w_i r_i^2}{\sum_i w_i}`) the
+input weights are "prepared" by taking the square-root of the normalized weights:
+
+.. math::
+
+    w'_i = \sqrt{
+              \frac
+                {w_{0,i}}
+                {\sum_i w_{0,i}}
+              }
+
+where :math:`w_{0}` are the raw `weights` input to the
+`WavelengthCalibrationFitter <solar_wavelength_calibration.fitter.wavelength_fitter.WavelengthCalibrationFitter.__call__>`.
+The residual values are then multiplied by the prepared weights such that :math:`r_w = r w'`.
+Thus, the goodness-of-fit value then becomes
+
+.. math::
+
+    \chi^2 = \sum_i r_{w,i}^2 = \frac{\sum_i w_{0,i} r_i^2}{\sum_i w_{0,i}},
+
+which is equal to the standard weighted chi-squared. The "prepared" weights used during the fit are made available as
+a propert on the :ref:`FitResults <fit_results>` class.

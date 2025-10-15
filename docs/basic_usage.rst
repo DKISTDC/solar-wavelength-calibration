@@ -200,6 +200,8 @@ The same `fitter` can be used for multiple fits.
 Use Fit Results
 ---------------
 
+.. _fit_results:
+
 The `~solar_wavelength_calibration.fitter.wavelength_fitter.FitResult` Class
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -218,7 +220,7 @@ properties
 
 :spectral_weights: The input weights. Just a copy of what was used in the call to `fitter`.
 
-:prepared_weights: The actual weights used in the fit. See XXXXXX for more information.
+:prepared_weights: The actual weights used in the fit. See :ref:`this section <weighting>` for more information.
 
 :best_fit_atlas: The best-fit combined solar and telluric atlas with all instrumental effects applied.
 
