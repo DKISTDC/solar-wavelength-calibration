@@ -6,7 +6,7 @@ Advanced Usage
 Custom Continuum Parameterization
 ---------------------------------
 
-Sometimes raw data have continuum variations that does not match the atlas continuum (for example, from optical effects
+Sometimes raw data have continuum variations that do not match the atlas continuum (for example, from optical effects
 in the spectrograph) and for these cases this library allows a user to fit a completely custom continuum as a function of
 wavelength simultaneously with the atlas fit. Here's how to do it.
 
@@ -18,13 +18,13 @@ two things: `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrati
 Custom `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.continuum_function`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Choose how you want to parameterize your continuum. This is entirely up to you! Once you have a parameterization write
+Choose how you want to parameterize your continuum. This is entirely up to you! Once you have a parameterization, write
 a python function that computes a continuum array given the wavelength vector and fit parameters. The first two arguments
 of this function *must* be the wavelength vector of the current fit iteration and a `~lmfit.parameter.Parameters` object
 containing the current value of all fit parameters, in that order. All of the fit parameters for the current iteration
 can be accessed via `parameters["PARAM_NAME"].value`. The continuum function also *must* return something that can be
 multiplied by the combined atlas spectrum. The `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.continuum_function`
-property needs to return this function.
+property needs to return this custom function.
 
 For example,
 
@@ -43,7 +43,7 @@ For example,
             return my_great_continuum_function
 
 You can also define the function directly in the body of the `continuum_function` property (as we'll see later). Just
-make sure that this property returns the *function*, not the value of the function.
+make sure that this property returns the function itself, not the value of the function.
 
 .. note::
 
