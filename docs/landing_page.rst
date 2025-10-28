@@ -6,11 +6,11 @@ Accurately determine the wavelength axis of a solar spectrum.
 Overview and Features
 ---------------------
 
-This library is designed to match an observed solar spectrum to a reference Solar atlas in order to produce a mapping
+This library is designed to match an observed solar spectrum to a reference solar atlas in order to produce a mapping
 from raw pixel index to an absolute wavelength value. It has the following features:
 
 * Physically motivated model of spectrograph optics that lead to non-linear wavelength solutions
-* User-definable Solar atlas or a sensible default
+* User-definable solar atlas or a sensible default
 * Support for fitting telluric lines of variable strength with a Doppler offset
 * Degradation of atlas spectral resolution to match spectrograph resolving power
 * Fitted estimation of stray light in the observed spectrum
@@ -152,7 +152,7 @@ object holds all of our prior knowledge that we just discussed
         fit_flags=fit_flags
         )
 
-At this point we also need a Solar Atlas to serve as our reference spectrum. The default atlas that comes with this
+At this point we also need a solar Atlas to serve as our reference spectrum. The default atlas that comes with this
 package is a good starting point.
 
 .. code:: python

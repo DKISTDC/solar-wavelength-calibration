@@ -1,7 +1,7 @@
 Physical Model
 ==============
 
-This page describes the parameterization of the wavelength solution and the model used to degrade a Solar atlas to match
+This page describes the parameterization of the wavelength solution and the model used to degrade a solar atlas to match
 given observing conditions.
 
 Wavelength WCS Parameterization
@@ -104,7 +104,7 @@ Apply Doppler Offset
 ^^^^^^^^^^^^^^^^^^^^
 
 The relative motion of the Sun and the observer (really, the Earth's atmosphere) is accounted for by applying a Doppler
-shift to the Atlas' Solar transmission values. This is done by interpolating the raw transmission vector onto the fit
+shift to the Atlas' solar transmission values. This is done by interpolating the raw transmission vector onto the fit
 wavelength vector with an offset of :math:`v_{obs} \lambda_0 / c`, where :math:`v_{obs}` is the relative motion between
 the Sun and observer (positive for when the observer is moving away from the Sun) and :math:`\lambda_0` is the current
 value of CRVALn.
