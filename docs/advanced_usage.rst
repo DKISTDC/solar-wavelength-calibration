@@ -191,6 +191,5 @@ This class could be used in a fit like this
 
     fitter = WavelengthCalibrationFitter(input_parameters=wavecal_params, atlas=atlas)
 
-    results = fitter(input_wavelength_vector=input_wave,
-                     input_spectrum=input_spec)
+    results = fitter(input_spectrum=input_spec)
 
