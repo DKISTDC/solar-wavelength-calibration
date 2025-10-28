@@ -25,7 +25,7 @@ The full set of :ref:`FITS header parameters <header_parameters>` are not comple
 of this constraint is that during the fit `crval` is actually fit with the
 `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.delta` parameter, which makes strictly
 honoring the bounds on `crval` in `~solar_wavelength_calibration.fitter.parameters.BoundsModel` not completely possible.
-Instead, the accuracy of the bounds are `crval` is determined by the width of the bounds on `incident_light_angle`
+Instead, the accuracy of the bounds on `crval` is determined by the width of the bounds on `incident_light_angle`
 (see `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.delta_bounds_given_crval_bounds`
 for more information).
 

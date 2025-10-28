@@ -77,7 +77,7 @@ in detail below:
 #. Smooth the spectrum with a Gaussian kernel to match the given spectral resolution
 
 The single atlas spectrum that results from these steps is then subtracted from the input spectrum to compute the
-goodness-of-fit (Chi-squared) value.
+goodness-of-fit (chi-squared) value.
 
 Apply Telluric Opacity Factor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -103,15 +103,16 @@ only things needed by the fit.
 Apply Doppler Offset
 ^^^^^^^^^^^^^^^^^^^^
 
-The relative motion of the Sun and Earth's atmosphere/the observer is accounted for by applying a doppler shift to the
-Atlas' Solar transmission values. This is done by interpolating the raw transmission vector onto the fit wavelength vector
-with an offset of :math:`v_{obs} \lambda_0 / c`, where :math:`v_{obs}` is the relative motion between the Sun and
-observer (positive for when the observer is moving away from the Sun) and :math:`\lambda_0` is the current value of CRVALn.
+The relative motion of the Sun and the observer (really, the Earth's atmosphere) is accounted for by applying a Doppler
+shift to the Atlas' Solar transmission values. This is done by interpolating the raw transmission vector onto the fit
+wavelength vector with an offset of :math:`v_{obs} \lambda_0 / c`, where :math:`v_{obs}` is the relative motion between
+the Sun and observer (positive for when the observer is moving away from the Sun) and :math:`\lambda_0` is the current
+value of CRVALn.
 
 Combine Spectra
 ^^^^^^^^^^^^^^^
 
-The telluric and doppler-corrected solar transmissions are combined by simply multiplying them together.
+The telluric and Doppler-corrected solar transmissions are combined by simply multiplying them together.
 
 Stray light
 ^^^^^^^^^^^
@@ -122,7 +123,7 @@ Continuum
 ^^^^^^^^^
 
 Any multiplicative scaling differences between the atlas and observed spectrum are accounted for with an overall scaling
-factor called `continuum_level`. The combined atlas spectra is simply multiplied by this value.
+factor called `continuum_level`. The combined atlas spectrum is simply multiplied by this value.
 
 Spectral Resolution
 ^^^^^^^^^^^^^^^^^^^
@@ -149,7 +150,7 @@ Goodness of Fit and Weighting
 The final "residuals" vector is the difference of the input spectrum and the combined and modified atlas spectra.
 A user can choose to apply different weights to different portions of the spectrum by passing an array to the ``weights``
 kwarg of a call to a `WavelengthCalibrationFitter <solar_wavelength_calibration.fitter.wavelength_fitter.WavelengthCalibrationFitter.__call__>`.
-These weights will be multiplied by the residuals array prior to computing the final goodness-of-fit (Chi-squared) value.
+These weights will be multiplied by the residuals array prior to computing the final goodness-of-fit (chi-squared) value.
 
 Internally, the goodness-of-fit value is just `np.sum(residuals**2)` or :math:`\chi^2 = \sum_i r_i^2`, where :math:`r`
 is `residuals`. To achieve a standard weighted chi-squared (:math:`\chi^2 = \frac{\sum_i w_i r_i^2}{\sum_i w_i}`) the
@@ -173,4 +174,4 @@ Thus, the goodness-of-fit value then becomes
     \chi^2 = \sum_i r_{w,i}^2 = \frac{\sum_i w_{0,i} r_i^2}{\sum_i w_{0,i}},
 
 which is equal to the standard weighted chi-squared. The "prepared" weights used during the fit are made available as
-a propert on the :ref:`FitResults <fit_results>` class.
+a property on the :ref:`FitResults <fit_results>` class.

@@ -12,8 +12,8 @@ from raw pixel index to an absolute wavelength value. It has the following featu
 * Physically motivated model of spectrograph optics that lead to non-linear wavelength solutions
 * User-definable Solar atlas or a sensible default
 * Support for fitting telluric lines of variable strength with a Doppler offset
-* Degrade atlas spectral resolution to match spectrograph resolving power
-* Fit an estimation of stray light in the observed spectrum
+* Degradation of atlas spectral resolution to match spectrograph resolving power
+* Fitted estimation of stray light in the observed spectrum
 * Fully `astropy.units`-aware
 * Uses `scipy.optimize` under the hood, and built on top of `lmfit <https://lmfit.github.io/lmfit-py/index.html>`_; easily change the fitting method, bounds, etc.
 * Output that is fully compliant with FITS definitions for spectral WCS

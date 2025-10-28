@@ -1,7 +1,7 @@
 Basic Usage
 ===========
 
-This page describes all the tools provided by `solar-wavelength-calibration` that are needed to setup and perform a fit.
+This page describes all the tools provided by `solar-wavelength-calibration` that are needed to set up and perform a fit.
 For a quick introduction to most of these tools via example see the :ref:`quickstart <quickstart>`.
 
 Defining Prior Knowledge
@@ -16,7 +16,7 @@ Setting Parameters
 
 The `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` object is a container for all
 initial guesses and spectrograph configuration parameters. In other words, it contains all parameters needed to define
-*a* wavelength solution. Once it has been set up it will passed to the `fitter <solar_wavelength_calibration.fitter.wavelength_fitter.WavelengthCalibrationFitter>`
+*one possible* wavelength solution. Once it has been set up it will be passed to the `fitter <solar_wavelength_calibration.fitter.wavelength_fitter.WavelengthCalibrationFitter>`
 to produce the *best fit* wavelength solution.
 
 `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` has the following inputs:
@@ -40,8 +40,8 @@ argument                description                              units          
 
 .. admonition:: Note on units
 
-    This package uses `astropy.units` in attempt to minimize (and perhaps even eliminate!) errors caused by incorrect units.
-    All inputs that have physical units *must* have astropy units assigned to their variables. The exact unit doesn't
+    This package uses `astropy.units` in an attempt to minimize (and perhaps even eliminate!) errors caused by incorrect
+    units. All inputs that have physical units *must* have astropy units assigned to their variables. The exact unit doesn't
     matter as long as it is the correct type. For example, the `doppler_velocity` could be given as `2 * u.au / u.year`
     with no issue. Errors will be raised if the incorrect unit type is provided.
 
@@ -152,7 +152,7 @@ class. To do so, simply pass the appropriate values to the `telluric_atlas_wavel
 Run The Fit
 -----------
 
-Once we have collected all our prior knowledge and a reference atlas, running a fit is fairly straight-forward. First
+Once we have collected all our prior knowledge and a reference atlas, running a fit is fairly straightforward. First
 we instantiate a `~solar_wavelength_calibration.fitter.wavelength_fitter.WavelengthCalibrationFitter` class with instances
 of `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` and a subclass of
 `~solar_wavelength_calibration.atlas.base.AtlasBase`.
@@ -207,7 +207,7 @@ The `~solar_wavelength_calibration.fitter.wavelength_fitter.FitResult` Class
 
 The output of a call to a `~solar_wavelength_calibration.fitter.wavelength_fitter.WavelengthCalibrationFitter` instance
 is an instance of `~solar_wavelength_calibration.fitter.wavelength_fitter.FitResult`. This object contains the following
-properties
+properties:
 
 :wavelength_parameters: An instance of `~solar_wavelength_calibration.fitter.wavelength_fitter.WavelengthParameters`. See
   the :ref:`following section <wavelength_parameters>` for more information.
@@ -267,8 +267,8 @@ Generate A Wavelength Vector
 There are many cases where generating a wavelength vector from a given set of
 `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` is useful (e.g., making the
 `input_wavelength_vector` for a call to a `fitter`) and the `~solar_wavelength_calibration.fitter.wavelength_fitter.calculate_linear_wave`
-function does just this. This function is primarily used internally, so it's calling signature is a little unusual. Given
-a `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` called `my_wavecal_parameters` here
+function does just this. This function is primarily used internally, so its calling signature is a little unusual. Given
+a `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` called `my_wavecal_parameters`, here
 is how to use it (note in particular the conversion of `grating_constant` to 1 / m):
 
 .. code-block:: python
