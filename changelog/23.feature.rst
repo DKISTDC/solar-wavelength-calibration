@@ -1,0 +1,2 @@
+Remove the `input_wavelength_vector` argument from the call to an instantiated `WavelengthCalibrationFitter` object.
+We now compute this vector from internally from the initial parameters used to set up `WavelengthCalibrationFitter` objects.

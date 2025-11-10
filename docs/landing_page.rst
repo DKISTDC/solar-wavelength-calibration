@@ -168,18 +168,11 @@ We can now initialize our fitter with the known priors (`params`) and our atlas 
         atlas=atlas
         )
 
-Let's do the fit! First, we need an initial wavelength vector
-
-.. code:: python
-
-    init_wave_guess = (np.arange(spectrum.size) -  crpix) * u.pix * cdelt_init + crval_init
-
-Now do the fit. Because we're fitting a lot of parameters we'll use `differential_evolution` with a tight tolerance
+Let's do the fit! Because we're fitting a lot of parameters we'll use `differential_evolution` with a tight tolerance
 
 .. code:: python
 
     fit_result = fitter(
-        input_wavelength_vector=init_wave_guess,
         input_spectrum=spectrum,
         method="differential_evolution",
         tol=1e-10

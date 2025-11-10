@@ -95,7 +95,6 @@ def test_wavecal_fitter(
     atlas: AtlasBase,
     test_dispersion,
     test_parameters_dict,
-    observed_wavelength_vector,
 ):
     """
     Given: The correct WavelengthCalibrationFitter inputs (data, models, and fit parameters)
@@ -107,10 +106,7 @@ def test_wavecal_fitter(
         atlas=atlas,
     )
 
-    fit_result = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
-        input_spectrum=observed_spectrum,
-    )
+    fit_result = fitter(input_spectrum=observed_spectrum)
 
     # test that values have been fit (i.e. changed)
     assert fit_result.wavelength_parameters.dispersion != test_dispersion
@@ -172,7 +168,6 @@ def test_fit_results(
 
     weights = np.random.random(observed_spectrum.size) if with_weights else None
     fit_result = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
         spectral_weights=weights,
     )
@@ -209,7 +204,6 @@ def test_fit_with_custom_continuum_function(
     atlas: AtlasBase,
     test_dispersion,
     test_parameters_dict,
-    observed_wavelength_vector,
 ):
     """
     Given: A `WavelengthCalibrationFitter` with sanely populated data and parameters
@@ -227,7 +221,6 @@ def test_fit_with_custom_continuum_function(
     )
 
     fit_result = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
     )
     assert "continuum_exponent" in fit_result.minimizer_result.params
@@ -241,7 +234,6 @@ def test_fit_with_custom_continuum_function_error(
     atlas: AtlasBase,
     test_dispersion,
     test_parameters_dict,
-    observed_wavelength_vector,
 ):
     """
     Given: A `WavelengthCalibrationFitter` with sanely populated data and parameters
@@ -261,7 +253,6 @@ def test_fit_with_custom_continuum_function_error(
         RuntimeError, match="The continuum function has produced an unrecoverable error."
     ):
         fitter(
-            input_wavelength_vector=observed_wavelength_vector,
             input_spectrum=observed_spectrum,
         )
 
@@ -293,16 +284,16 @@ def test_incorrect_atlas(
         "resolving_power",
         "opacity_factor",
         "straylight_fraction",
-        "continuum_intensity_correction",
+        "continuum_level",
     ],
 )
 def test_fixing_parameters(
     fixed_parameter,
     test_parameters_dict,
+    observed_wavelength_vector,
     observed_spectrum,
     observed_continuum_level,
     atlas: AtlasBase,
-    observed_wavelength_vector,
 ):
     """
     Given: A `WavelengthCalibrationFitter` initialized with a `WavelengthCalibrationParameters` with a single fixed parameter
@@ -320,6 +311,7 @@ def test_fixing_parameters(
         "resolving_power": test_parameters_dict["resolving_power"] + 10,
         "opacity_factor": test_parameters_dict["opacity_factor"] + 0.1,
         "straylight_fraction": test_parameters_dict["straylight_fraction"] + 0.2,
+        "continuum_level": observed_continuum_level * 0.98,
     }
 
     initialized_parameters = WavelengthCalibrationParameters(fit_flags=fit_flags, **init_values)
@@ -329,18 +321,21 @@ def test_fixing_parameters(
         atlas=atlas,
     )
 
-    fit_result = fitter(
+    # We need to enter via the `._fit_spectrum` method because the init values will make an input_wavelength_vector
+    # so wack it breaks old versions of numpy for some reason???
+    prepared_atlas = fitter._prepare_atlas(input_wavelength_vector=observed_wavelength_vector)
+    fit_result = fitter._fit_spectrum(
+        cropped_atlas=prepared_atlas,
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
+        method="leastsq",
+        spectral_weights=np.ones_like(observed_spectrum),
     )
     for parameter in fit_result.minimizer_result.params:
         if parameter != fixed_parameter:
             continue
 
-        if parameter == "continuum_level":
-            init_value = observed_continuum_level
-        else:
-            init_value = init_values[parameter]
+        init_value = init_values[parameter]
 
         if isinstance(init_value, Quantity):
             init_value = init_value.value
@@ -349,7 +344,7 @@ def test_fixing_parameters(
 
 
 def test_fit_stays_valid_with_fixed_crval(
-    test_parameters_dict, observed_wavelength_vector, observed_spectrum, atlas: AtlasBase
+    test_parameters_dict, observed_spectrum, atlas: AtlasBase
 ):
     """
     Given: A set of input parameters that is on the edge of WCS validity and bounds on `incident_light_angle` that
@@ -397,7 +392,6 @@ def test_fit_stays_valid_with_fixed_crval(
         atlas=atlas,
     )
     _ = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
     )
 
@@ -410,7 +404,6 @@ def test_fit_is_correct(
     test_doppler_velocity,
     test_order,
     observed_spectrum,
-    observed_wavelength_vector,
     atlas: AtlasBase,
     test_parameters_dict,
 ):
@@ -451,7 +444,6 @@ def test_fit_is_correct(
         atlas=atlas,
     )
     fit_result = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
         method="nelder-meade",
     )
@@ -724,7 +716,6 @@ def test_to_header_add_alternate_keys(
     parameters: WavelengthCalibrationParameters,
     observed_spectrum,
     atlas: AtlasBase,
-    observed_wavelength_vector,
 ):
 
     fitter = WavelengthCalibrationFitter(
@@ -733,7 +724,6 @@ def test_to_header_add_alternate_keys(
     )
 
     fit_result = fitter._run_fit(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
         spectral_weights=np.ones(len(observed_spectrum)),
     )
