@@ -10,7 +10,7 @@ from typing import Callable
 import astropy.units as u
 import numpy as np
 from astropy.units import Quantity
-from lmfit import Parameters
+from lmfit.parameter import Parameters
 from pydantic import AfterValidator
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -20,16 +20,6 @@ from pydantic import model_validator
 from pydantic_core.core_schema import ValidationInfo
 
 logger = logging.getLogger(__name__)
-
-__all__ = [
-    "WavelengthCalibrationParameters",
-    "BoundsModel",
-    "FitFlagsModel",
-    "UnitlessBoundRange",
-    "LengthBoundRange",
-    "AngleBoundRange",
-    "DispersionBoundRange",
-]
 
 
 def to_nm(value: Quantity) -> Quantity:
@@ -150,7 +140,12 @@ class FitFlagsModel(BaseModel):
 
 
 class WavelengthCalibrationParameters(BaseModel):
-    """Object for initializing the fit parameters prior to a fit."""
+    """
+    Object for initializing the fit parameters prior to a fit.
+
+    See :ref:`this table <parameters_table>` and the :doc:`discussion </physical_model>` of the physical model for more
+    information about these parameters.
+    """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True)
 
@@ -197,15 +192,15 @@ class WavelengthCalibrationParameters(BaseModel):
 
         Specifically, we need parameters that result in an invertible grating equation. Simplifying Eq. (84) from
         `Greisen et al (2006) <https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract>`_ for the case of a
-        diffraction grating in air, the refracted angle, :math:`\gamma`, is given by
+        reflection grating in air, the diffracted angle, :math:`\gamma`, is given by
 
         .. math::
             \gamma = \sin^{-1}(\lambda G m - \sin\alpha),
 
-        where :math:`\lambda` is `crval`, :math:`G` is `grating_constant`, :math:`m` is `order`, and :math:`\alpha` is
-        `incident_light_angle`. The arcsine is only valid for inputs in the range [-1, 1] and so a combination of
-        `crval`, `grating_constant`, `order`, and `incident_light_angle` that fall outside of this range are considered
-        invalid and will raise an Error.
+        where :math:`\lambda` is `crval`, :math:`G` is `grating_constant` (in 1 / mm), :math:`m` is `order`, and
+        :math:`\alpha` is `incident_light_angle`. The arcsine is only valid for inputs in the range [-1, 1] and so a
+        combination of `crval`, `grating_constant`, `order`, and `incident_light_angle` that fall outside of this range
+        are considered invalid and will raise an Error.
         """
         if abs(self.delta) > 1:
             raise ValueError(
@@ -225,7 +220,7 @@ class WavelengthCalibrationParameters(BaseModel):
         .. math::
             -1 \leq \lambda G m - \sin\alpha \leq 1
 
-        where :math:`G` (`grating_constant`) and :math:`m` (`order`) are fixed parameters while
+        where :math:`G` (`grating_constant` in 1 / mm) and :math:`m` (`order`) are fixed parameters while
         :math:`\lambda` (`crval`) and :math:`\alpha` (`incident_light_angle`) are free in the fit.
 
         As suggested by `lmfit <https://lmfit.github.io/lmfit-py/constraints.html#using-inequality-constraints>`_ we
