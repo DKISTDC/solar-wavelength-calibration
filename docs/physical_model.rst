@@ -65,16 +65,12 @@ Variable Name           Description                              Units
 For each fit iteration the atlas that is matched to the input spectrum is computed in the following steps, each described
 in detail below:
 
-.. warning::
-
-    TODO: Swap the order here once we merge in the continuum parameterization branch
-
 #. Apply an opacity scaling factor to the telluric transmission
 #. Apply a Doppler offset between the telluric and solar transmissions
 #. Combine the telluric and solar transmissions
+#. Smooth the spectrum with a Gaussian kernel to match the given spectral resolution
 #. Apply an additive stray light factor
 #. Apply a multiplicative scale factor to account for different continuum scalings
-#. Smooth the spectrum with a Gaussian kernel to match the given spectral resolution
 
 The single atlas spectrum that results from these steps is then subtracted from the input spectrum to compute the
 goodness-of-fit (chi-squared) value.
@@ -114,17 +110,6 @@ Combine Spectra
 
 The telluric and Doppler-corrected solar transmissions are combined by simply multiplying them together.
 
-Stray light
-^^^^^^^^^^^
-
-A contribution from "stray light" is estimated by simply adding a constant factor to the combined atlas spectra.
-
-Continuum
-^^^^^^^^^
-
-Any multiplicative scaling differences between the atlas and observed spectrum are accounted for with an overall scaling
-factor called `continuum_level`. The combined atlas spectrum is simply multiplied by this value.
-
 Spectral Resolution
 ^^^^^^^^^^^^^^^^^^^
 
@@ -141,6 +126,26 @@ pixels is
 
 where :math:`\lambda_0` is the current value of CRVALn, :math:`R` is the current value of `resolving_power`, and
 :math:`d` is the current value of `dispersion`.
+
+Stray light
+^^^^^^^^^^^
+
+A contribution from "stray light" is estimated by simply adding a constant factor to the combined atlas spectra. To avoid
+changing the overall continuum level (and thus coupling the additive and multiplicative scale factors) we normalize
+the continuum after adding the `straylight_fraction` fit parameter such that :math:`T = (T + s) / (1 + s)` where
+:math:`T` is the combined atlas transmission and :math:`s` is the `straylight_fraction`. Note that this assumes the
+continuum level of the atlas spectra is 1.
+
+Continuum
+^^^^^^^^^
+
+Any multiplicative scaling differences between the atlas and observed spectrum are accounted for with an overall scaling
+factor called `continuum_level`. The combined atlas spectra is simply multiplied by this value.
+
+.. note::
+
+    If a simple scalar does not accurately reflect the continuum of your data, it is also possilbe to
+    :ref:`define and fit your own continuum function <custom_continuum_function>`.
 
 .. _weighting:
 

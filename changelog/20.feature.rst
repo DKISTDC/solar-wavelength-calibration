@@ -1,0 +1,2 @@
+Add the ability to fit a user-parameterizable continuum function as part of the solar atlas fit.
+See :ref:`this page <custom_continuum_function>` for more information.

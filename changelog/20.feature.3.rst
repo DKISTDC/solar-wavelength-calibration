@@ -1,0 +1,3 @@
+Change the physical meaning of the ``straylight_fraction`` fit parameter. It is now applied as
+`new_atlas = (old_atlas + straylight_fraction) / (1 + straylight_fraction)`. This renormalization helps decouple the effects
+of ``straylight_fraction`` from ``continuum_level`` or any custom continuum function.
