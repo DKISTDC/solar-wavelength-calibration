@@ -1,0 +1,1 @@
+Add the input data, prepared weights, and best-fit atlas as properties on `FitResult` to help user with post-fit analysis.

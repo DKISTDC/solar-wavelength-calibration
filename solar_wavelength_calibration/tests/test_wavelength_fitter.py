@@ -2,6 +2,7 @@ import astropy.units as u
 import numpy as np
 import pytest
 from astropy.units import Quantity
+from lmfit.minimizer import MinimizerResult
 from pydantic import ValidationError
 
 from solar_wavelength_calibration import AngleBoundRange
@@ -14,6 +15,7 @@ from solar_wavelength_calibration import WavelengthCalibrationFitter
 from solar_wavelength_calibration import WavelengthCalibrationParameters
 from solar_wavelength_calibration.atlas.atlas import LocalAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
+from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthParameters
 from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_initial_crval_guess
 from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_linear_wave
 from solar_wavelength_calibration.fitter.wavelength_fitter import combine_spectra
@@ -89,6 +91,51 @@ def test_wavecal_fitter(
         fit_result.wavelength_parameters.crval
         != atlas.telluric_atlas_wavelength[np.size(observed_spectrum) // 2 + 1]
     )
+
+
+@pytest.mark.parametrize(
+    "with_weights", [pytest.param(True, id="with_weights"), pytest.param(False, id="no_weights")]
+)
+def test_fit_results(
+    parameters: WavelengthCalibrationParameters,
+    observed_spectrum,
+    atlas: AtlasBase,
+    test_dispersion,
+    test_parameters_dict,
+    observed_wavelength_vector,
+    with_weights,
+):
+    """
+    Given: The correct WavelengthCalibrationFitter inputs (data, models, and fit parameters)
+    When: Initializing a WavelengthCalibrationFitter object with these inputs
+    Then: Everything needed for the fit is correctly set up
+    """
+    fitter = WavelengthCalibrationFitter(
+        input_parameters=parameters,
+        atlas=atlas,
+    )
+
+    weights = np.random.random(observed_spectrum.size) if with_weights else None
+    fit_result = fitter(
+        input_wavelength_vector=observed_wavelength_vector,
+        input_spectrum=observed_spectrum,
+        spectral_weights=weights,
+    )
+
+    assert isinstance(fit_result.wavelength_parameters, WavelengthParameters)
+    assert isinstance(fit_result.wavelength_parameters.to_header(1), dict)
+    assert isinstance(fit_result.minimizer_result, MinimizerResult)
+    np.testing.assert_array_equal(fit_result.input_wavelength_vector, observed_wavelength_vector)
+    np.testing.assert_array_equal(fit_result.input_spectrum, observed_spectrum)
+
+    weight_data = weights if with_weights else np.ones_like(observed_spectrum)
+    expected_prepared_weights = np.sqrt(weight_data / np.sum(weight_data))
+    expected_best_fit_atlas = (
+        observed_spectrum - fit_result.minimizer_result.residual / expected_prepared_weights
+    )
+
+    np.testing.assert_array_equal(fit_result.prepared_weights, expected_prepared_weights)
+    np.testing.assert_array_equal(fit_result.best_fit_atlas, expected_best_fit_atlas)
 
 
 def test_incorrect_atlas(
