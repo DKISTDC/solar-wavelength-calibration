@@ -65,16 +65,12 @@ Variable Name           Description                              Units
 For each fit iteration the atlas that is matched to the input spectrum is computed in the following steps, each described
 in detail below:
 
-.. warning::
-
-    TODO: Swap the order here once we merge in the continuum parameterization branch
-
 #. Apply an opacity scaling factor to the telluric transmission
 #. Apply a Doppler offset between the telluric and solar transmissions
 #. Combine the telluric and solar transmissions
+#. Smooth the spectrum with a Gaussian kernel to match the given spectral resolution
 #. Apply an additive stray light factor
 #. Apply a multiplicative scale factor to account for different continuum scalings
-#. Smooth the spectrum with a Gaussian kernel to match the given spectral resolution
 
 The single atlas spectrum that results from these steps is then subtracted from the input spectrum to compute the
 goodness-of-fit (Chi-squared) value.
@@ -113,6 +109,23 @@ Combine Spectra
 
 The telluric and doppler-corrected solar transmissions are combined by simply multiplying them together.
 
+Spectral Resolution
+^^^^^^^^^^^^^^^^^^^
+
+A large mismatch in resolution (:math:`\Delta\lambda/\lambda`) between the atlas and observed spectra causes a corresponding
+mismatch in line shapes that can negatively impact the accuracy of the wavelength solution (especially the higher-order
+wavelength parameters and the spectral parameters). Under the assumption that the combined atlas spectrum is fully
+resolved, the resolution of the two spectra is matched by degrading the combined atlas spectrum to match the resolution
+of the observed spectrum. This is done by convolving the combined atlas spectrum with a Gaussian filter whose width in
+pixels is
+
+.. math::
+
+    w_{pix} = \frac{\lambda_0}{R d\, 2 \sqrt{\ln 2}}
+
+where :math:`\lambda_0` is the current value of CRVALn, :math:`R` is the current value of `resolving_power`, and
+:math:`d` is the current value of `dispersion`.
+
 Stray light
 ^^^^^^^^^^^
 
@@ -132,23 +145,6 @@ factor called `continuum_level`. The combined atlas spectra is simply multiplied
 
     If a simple scalar does not accurately reflect the continuum of your data, it is also possilbe to
     :ref:`define and fit your own continuum function <custom_continuum_function>`.
-
-Spectral Resolution
-^^^^^^^^^^^^^^^^^^^
-
-A large mismatch in resolution (:math:`\Delta\lambda/\lambda`) between the atlas and observed spectra causes a corresponding
-mismatch in line shapes that can negatively impact the accuracy of the wavelength solution (especially the higher-order
-wavelength parameters and the spectral parameters). Under the assumption that the combined atlas spectrum is fully
-resolved, the resolution of the two spectra is matched by degrading the combined atlas spectrum to match the resolution
-of the observed spectrum. This is done by convolving the combined atlas spectrum with a Gaussian filter whose width in
-pixels is
-
-.. math::
-
-    w_{pix} = \frac{\lambda_0}{R d\, 2 \sqrt{\ln 2}}
-
-where :math:`\lambda_0` is the current value of CRVALn, :math:`R` is the current value of `resolving_power`, and
-:math:`d` is the current value of `dispersion`.
 
 .. _weighting:
 
