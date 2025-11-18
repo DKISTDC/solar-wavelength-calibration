@@ -167,6 +167,9 @@ to construct the fit parameters (the actual polynomial coefficients).
                 params.add(
                     f"poly_coeff_{o:02n}",
                     vary=True,
+
+                    # You may want to add some logic to have smarter initial value and bounds
+                    # for the different coefficients.
                     value=0,
                     min=-1,
                     max=1,
