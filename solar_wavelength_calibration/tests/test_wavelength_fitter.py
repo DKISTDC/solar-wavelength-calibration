@@ -591,10 +591,15 @@ def test_fitting_model_with_weights(fitting_model_setup):
     )
 
 
+@pytest.mark.parametrize(
+    "normalization_percentile",
+    [pytest.param(95, id="normalization"), pytest.param(None, id="no_normalization")],
+)
 def test_calculate_initial_crval_guess_returns_reasonable_value(
     atlas: AtlasBase,
     observed_spectrum: np.ndarray,
     observed_wavelength_vector: Quantity,
+    normalization_percentile,
 ):
     """
     Given: A realistic observed spectrum and wavelength vector based on a shifted solar atlas,
@@ -603,10 +608,14 @@ def test_calculate_initial_crval_guess_returns_reasonable_value(
     Then: The estimated CRVAL is within the range of the input wavelengths,
           and is greater than the center of the observed vector, consistent with shift correction.
     """
+    if normalization_percentile is not None:
+        observed_spectrum = observed_spectrum * 37.2
+
     estimated_crval = calculate_initial_crval_guess(
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
         atlas=atlas,
+        normalization_percentile=normalization_percentile,
     )
 
     # Ensure output is a Quantity with correct unit

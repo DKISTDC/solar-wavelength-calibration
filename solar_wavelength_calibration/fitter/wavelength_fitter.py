@@ -586,9 +586,10 @@ def calculate_initial_crval_guess(
     input_wavelength_vector: u.Quantity,
     input_spectrum: np.ndarray,
     atlas: AtlasBase,
-    negative_limit=-2 * u.nm,
-    positive_limit=2 * u.nm,
-    num_steps=550,
+    negative_limit: Quantity = -2 * u.nm,
+    positive_limit: Quantity = 2 * u.nm,
+    num_steps: int = 550,
+    normalization_percentile: float | None = None,
 ) -> u.Quantity:
     """
     Estimate the initial guess for the `crval` parameter by aligning the input wavelength vector with the atlas data.
@@ -600,7 +601,9 @@ def calculate_initial_crval_guess(
 
     Note
     ----
-    This function does not perform any continuum matching between the input spectrum and the atlas spectra.
+    By default this function does not perform any continuum matching between the input spectrum and the atlas spectra.
+    If there is a large difference in continuum level between the two you can either normalize them outside of this function
+    or set the `normalization_percentile` kwarg to a number between 1 and 100.
 
     Parameters
     ----------
@@ -622,11 +625,31 @@ def calculate_initial_crval_guess(
     num_steps
         The number of steps to evaluate in the shift range (default: 550).
 
+    normalization_percentile
+        If not `None` then the atlas will be normalized by the ratio of `np.nanpercentile` called on the input spectrum
+        and atlas, respectively. This allows for a good estimation when the overall scaling of the two spectra is vastly
+        different and approximates a "fit" to continuum scaling. This parameter is the percentile passed to `np.nanpercentile`.
+
     Returns
     -------
     crval_init
         The estimated initial value for the `crval` parameter, representing the reference wavelength
     """
+    atlas_normalization = 1.0
+    if normalization_percentile is not None:
+        atlas_idx = np.where(
+            (atlas.solar_atlas_wavelength >= input_wavelength_vector.min())
+            & (atlas.solar_atlas_wavelength <= input_wavelength_vector.max())
+        )
+        input_norm = np.nanpercentile(input_spectrum, normalization_percentile)
+        atlas_norm = np.nanpercentile(
+            atlas.solar_atlas_transmission[atlas_idx], normalization_percentile
+        )
+        atlas_normalization = input_norm / atlas_norm
+        logger.info(
+            f"Normalizing atlas and input at {normalization_percentile}%. Normalization is {atlas_normalization:.2f}"
+        )
+
     shifts = np.linspace(negative_limit, positive_limit, num_steps)
     merit = np.zeros(len(shifts))
     for n, shift in enumerate(shifts):
@@ -640,7 +663,7 @@ def calculate_initial_crval_guess(
             atlas.telluric_atlas_transmission,
         )
         # calculate a merit value to be minimized
-        merit[n] = np.sum((input_spectrum - fts_solar * fts_telluric) ** 2)
+        merit[n] = np.sum((input_spectrum - fts_solar * fts_telluric * atlas_normalization) ** 2)
 
     # get minimum
     shift = shifts[np.argmin(merit)]
