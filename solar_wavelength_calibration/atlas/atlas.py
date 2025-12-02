@@ -16,8 +16,6 @@ DEFAULT_POOCH_CACHE_DIR = "pooch_solar_wave_cal"
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["Atlas", "DownloadConfig"]
-
 
 class DownloadConfig(BaseModel):
     """Configuration for downloading the reference atlas files."""
