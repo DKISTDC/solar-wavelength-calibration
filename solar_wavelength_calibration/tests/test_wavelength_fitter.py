@@ -243,7 +243,7 @@ def test_fit_with_custom_continuum_function_error(
     Then: The error in the continuum function is correctly reported
     """
     new_parameters = wavecal_params_with_broken_continuum_func(
-        continuum_exponent=1.0, not_used=True, **parameters.model_dump()
+        continuum_exponent=1.0, **parameters.model_dump()
     )
 
     fitter = WavelengthCalibrationFitter(
@@ -313,7 +313,7 @@ def test_fixing_parameters(
         "resolving_power": test_parameters_dict["resolving_power"] + 10,
         "opacity_factor": test_parameters_dict["opacity_factor"] + 0.1,
         "straylight_fraction": test_parameters_dict["straylight_fraction"] + 0.2,
-        "continuum_level": observed_continuum_level * 0.98,
+        "continuum_level": test_parameters_dict["continuum_level"] * 1.1,
     }
 
     initialized_parameters = WavelengthCalibrationParameters(fit_flags=fit_flags, **init_values)

@@ -375,6 +375,31 @@ def test_missing_parameters(test_only_required_parameters_dict):
         assert key in str(excinfo.value)
 
 
+def test_extra_parameters_not_allowed(test_parameters_dict):
+    """
+    Given: The `WavelengthCalibrationParameters`, `BoundsModel`, and `FitFlagsModel` classes
+    When: Instantiating the classes with parameters not defined in the model
+    Then: The correct Error is raised
+    """
+    with pytest.raises(ValidationError, match="continuum_levl\n  Extra inputs are not permitted"):
+        WavelengthCalibrationParameters(
+            crval=test_parameters_dict["crval"],
+            dispersion=test_parameters_dict["dispersion"],
+            incident_light_angle=test_parameters_dict["incident_light_angle"],
+            opacity_factor=test_parameters_dict["opacity_factor"],
+            grating_constant=test_parameters_dict["grating_constant"],
+            doppler_velocity=test_parameters_dict["doppler_velocity"],
+            order=test_parameters_dict["order"],
+            continuum_levl=34.0,  # Misspelling is a common source of this error
+        )
+
+    with pytest.raises(ValidationError, match="foo\n  Extra inputs are not permitted"):
+        FitFlagsModel(foo=False)
+
+    with pytest.raises(ValidationError, match="bar\n  Extra inputs are not permitted"):
+        BoundsModel(bar=0.0)
+
+
 def test_parameter_outside_bounds_range():
     """
     Given: A WavelengthCalibrationParameters class where the input value of a parameter is outside of its bounds
@@ -637,7 +662,7 @@ def test_angle_bounds(
 def test_insane_angle_values_when_crval_fixed(test_parameters_dict, angle_bounds):
     """
     Given: A set of parameters where the `incident_light_angle` or its bounds are outside the range [0, 360]
-    When: Instantiatin a `WavelengthCalibrationParameters` object with `crval` fixed in the fit
+    When: Instantiation a `WavelengthCalibrationParameters` object with `crval` fixed in the fit
     Then: The correct error is raised
     """
     err_str = "With `crval` fixed in the fit the `incident_light_angle"
