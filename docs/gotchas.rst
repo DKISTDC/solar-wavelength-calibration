@@ -21,7 +21,7 @@ Physical WCS Constraints and Bounds on CRVAL
 
 The full set of :ref:`FITS header parameters <header_parameters>` are not completely independent. In particular, the `crval`,
 `incident_light_angle`, `order`, and `grating_constant` parameters are linked as described
-`here <solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.ensure_invertable_WCS>`. A consequence
+`here <solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.ensure_invertible_WCS>`. A consequence
 of this constraint is that during the fit `crval` is actually fit with the
 `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.delta` parameter, which makes strictly
 honoring the bounds on `crval` in `~solar_wavelength_calibration.fitter.parameters.BoundsModel` not completely possible.
