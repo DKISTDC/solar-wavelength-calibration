@@ -165,12 +165,12 @@ of `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParamet
         )
 
 This fitter can then be used to fit any number of raw spectra by calling it once for each fit. There are many options
-here, but the only two required arguments are the spectrum to be fit and a corresponding initial wavelength vector.
+here, but the only required argument is the spectrum to be fit.
 
 .. code-block:: python
 
     # This will run a fit
-    fit_result = fitter(input_wavelength_vector=input_wave, input_spectrum=raw_spec)
+    fit_result = fitter(input_spectrum=raw_spec)
 
 The two other named kwargs available are `method` and `spectral_weights`. `method` is used to define the minimization
 algorithm used. See the `lmfit documentation <https://lmfit.github.io/lmfit-py/fitting.html#lmfit.minimizer.minimize>`_
@@ -187,7 +187,6 @@ For example, we can use the ``differential_evolution`` method and pass kwargs th
 .. code-block:: python
 
     fit_result = fitter(
-        input_wavelength=input_wave,
         input_spectrum=raw_spec,
         method="differential_evolution",
         popsize=1,
@@ -214,7 +213,7 @@ properties:
 
 :minimizer_result: An instance of `lmfit.minimizer.MinimizerResult`. This object contains statistics and information about the running of the fit.
 
-:input_wavelength_vector: The input wavelength vector. Just a copy of what was used in the call to `fitter`.
+:input_wavelength_vector: Wavelength vector computed from the input parameter values.
 
 :input_spectrum: The input spectrum. Just a copy of what was used in the call to `fitter`.
 
@@ -265,11 +264,11 @@ Generate A Wavelength Vector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 There are many cases where generating a wavelength vector from a given set of
-`~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` is useful (e.g., making the
-`input_wavelength_vector` for a call to a `fitter`) and the `~solar_wavelength_calibration.fitter.wavelength_fitter.calculate_linear_wave`
-function does just this. This function is primarily used internally, so its calling signature is a little unusual. Given
-a `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` called `my_wavecal_parameters`, here
-is how to use it (note in particular the conversion of `grating_constant` to 1 / m):
+`~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` is useful and the
+`~solar_wavelength_calibration.fitter.wavelength_fitter.calculate_linear_wave` function does just this. This function is
+primarily used internally, so it's calling signature is a little unusual. Given a
+`~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` called `my_wavecal_parameters` here is
+how to use it (note in particular the conversion of `grating_constant` to 1 / m):
 
 .. code-block:: python
 
