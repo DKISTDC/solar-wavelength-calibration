@@ -1,0 +1,2 @@
+Add `normalization_percentile` kwarg to `calculate_initial_crval_guess` function. This allows a good guess when the atlas
+and input spectra have vastly different normalizations.

@@ -1,7 +1,12 @@
+from typing import Callable
+
 import astropy.units as u
 import numpy as np
 import pytest
 from astropy.units import Quantity
+from astropy.wcs import WCS
+from lmfit import Parameters
+from lmfit.minimizer import MinimizerResult
 from pydantic import ValidationError
 
 from solar_wavelength_calibration import AngleBoundRange
@@ -14,17 +19,18 @@ from solar_wavelength_calibration import WavelengthCalibrationFitter
 from solar_wavelength_calibration import WavelengthCalibrationParameters
 from solar_wavelength_calibration.atlas.atlas import LocalAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
+from solar_wavelength_calibration.fitter.wavelength_fitter import WavelengthParameters
+from solar_wavelength_calibration.fitter.wavelength_fitter import apply_resolving_power
 from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_initial_crval_guess
 from solar_wavelength_calibration.fitter.wavelength_fitter import calculate_linear_wave
-from solar_wavelength_calibration.fitter.wavelength_fitter import combine_spectra
 from solar_wavelength_calibration.fitter.wavelength_fitter import fitting_model
-from solar_wavelength_calibration.fitter.wavelength_fitter import normalize_and_convolve
 from solar_wavelength_calibration.fitter.wavelength_fitter import (
     resample_solar_transmission_with_doppler_shift,
 )
 from solar_wavelength_calibration.fitter.wavelength_fitter import (
     resample_telluric_transmission_with_absorption_correction,
 )
+from solar_wavelength_calibration.fitter.wavelength_fitter import scalar_continuum_function
 from solar_wavelength_calibration.tests.conftest import test_incident_light_angle
 
 
@@ -60,7 +66,57 @@ def fitting_model_setup(parameters, observed_spectrum, synthetic_local_atlas):
     }
 
 
+@pytest.fixture
+def wavecal_params_with_broken_continuum_func():
+    # AKA an example of how a user might add a custom continuum function
+    class NewWaveCalParams(WavelengthCalibrationParameters):
+
+        continuum_exponent: float
+
+        @property
+        def continuum_function(self) -> Callable[[np.ndarray, Parameters, ...], np.ndarray]:
+            def user_defined_continuum_function(input_wave, parameters):
+                raise FileNotFoundError("Not sure why I was even looking for a file")
+
+            return user_defined_continuum_function
+
+        @property
+        def lmfit_parameters(self):
+            params = super().lmfit_parameters
+            params.add("continuum_exponent", value=self.continuum_exponent, vary=True)
+            return params
+
+    return NewWaveCalParams
+
+
 def test_wavecal_fitter(
+    parameters: WavelengthCalibrationParameters,
+    observed_spectrum,
+    atlas: AtlasBase,
+    test_dispersion,
+    test_parameters_dict,
+):
+    """
+    Given: The correct WavelengthCalibrationFitter inputs (data, models, and fit parameters)
+    When: Initializing a WavelengthCalibrationFitter object with these inputs and running a fit
+    Then: The fit runs and values are changed from their starting positions
+    """
+    fitter = WavelengthCalibrationFitter(
+        input_parameters=parameters,
+        atlas=atlas,
+    )
+
+    fit_result = fitter(input_spectrum=observed_spectrum)
+
+    # test that values have been fit (i.e. changed)
+    assert fit_result.wavelength_parameters.dispersion != test_dispersion
+    assert (
+        fit_result.wavelength_parameters.crval
+        != atlas.telluric_atlas_wavelength[np.size(observed_spectrum) // 2 + 1]
+    )
+
+
+def test_calling_wavecal_fitter_bad_weights(
     parameters: WavelengthCalibrationParameters,
     observed_spectrum,
     atlas: AtlasBase,
@@ -70,25 +126,137 @@ def test_wavecal_fitter(
 ):
     """
     Given: The correct WavelengthCalibrationFitter inputs (data, models, and fit parameters)
-    When: Initializing a WavelengthCalibrationFitter object with these inputs
-    Then: Everything needed for the fit is correctly set up
+    When: Initializing a WavelengthCalibrationFitter object with these inputs and calling the fit with wrong-sized weights
+    Then: The correct error is raised
     """
     fitter = WavelengthCalibrationFitter(
         input_parameters=parameters,
         atlas=atlas,
     )
 
-    fit_result = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
-        input_spectrum=observed_spectrum,
+    with pytest.raises(ValueError, match="Length of spectral_weights"):
+        fit_result = fitter(
+            input_wavelength_vector=observed_wavelength_vector,
+            input_spectrum=observed_spectrum,
+            spectral_weights=np.random.random(observed_spectrum.size + 5),
+        )
+
+
+@pytest.mark.parametrize(
+    "with_weights", [pytest.param(True, id="with_weights"), pytest.param(False, id="no_weights")]
+)
+def test_fit_results(
+    parameters: WavelengthCalibrationParameters,
+    observed_spectrum,
+    atlas: AtlasBase,
+    test_dispersion,
+    test_parameters_dict,
+    observed_wavelength_vector,
+    observed_continuum_level,
+    with_weights,
+):
+    """
+    Given: The correct `WavelengthCalibrationFitter` inputs (data, models, and fit parameters)
+    When: Producing a `FitResult` object by fitting
+    Then: The properties of the `FitResult` object have the types we expect and the computed properties are calculated
+           correctly.
+    """
+    fitter = WavelengthCalibrationFitter(
+        input_parameters=parameters,
+        atlas=atlas,
     )
 
-    # test that values have been fit (i.e. changed)
-    assert fit_result.wavelength_parameters.dispersion != test_dispersion
-    assert (
-        fit_result.wavelength_parameters.crval
-        != atlas.telluric_atlas_wavelength[np.size(observed_spectrum) // 2 + 1]
+    weights = np.random.random(observed_spectrum.size) if with_weights else None
+    fit_result = fitter(
+        input_spectrum=observed_spectrum,
+        spectral_weights=weights,
     )
+
+    assert isinstance(fit_result.wavelength_parameters, WavelengthParameters)
+    assert isinstance(fit_result.wavelength_parameters.to_header(1), dict)
+    assert isinstance(fit_result.minimizer_result, MinimizerResult)
+    assert fit_result.num_wave_pix == observed_spectrum.size
+
+    np.testing.assert_array_equal(fit_result.input_wavelength_vector, observed_wavelength_vector)
+    np.testing.assert_array_equal(fit_result.input_spectrum, observed_spectrum)
+
+    weight_data = weights if with_weights else np.ones_like(observed_spectrum)
+    expected_prepared_weights = np.sqrt(weight_data / np.sum(weight_data))
+    expected_best_fit_atlas = (
+        observed_spectrum - fit_result.minimizer_result.residual / expected_prepared_weights
+    )
+    wcs = WCS(fit_result.wavelength_parameters.to_header(axis_num=1))
+    expected_best_fit_wave = wcs.spectral.pixel_to_world(
+        np.arange(observed_spectrum.size)
+    ).to_value(u.nm)
+    np.testing.assert_array_equal(fit_result.prepared_weights, expected_prepared_weights)
+    np.testing.assert_almost_equal(
+        fit_result.best_fit_continuum, observed_continuum_level, decimal=2
+    )
+    np.testing.assert_array_equal(fit_result.best_fit_wavelength_vector, expected_best_fit_wave)
+    np.testing.assert_almost_equal(fit_result.best_fit_atlas, expected_best_fit_atlas)
+
+
+def test_fit_with_custom_continuum_function(
+    wavecal_params_with_extra_continuum_param,
+    parameters: WavelengthCalibrationParameters,
+    observed_spectrum,
+    atlas: AtlasBase,
+    test_dispersion,
+    test_parameters_dict,
+    observed_wavelength_vector,
+):
+    """
+    Given: A `WavelengthCalibrationFitter` with sanely populated data and parameters
+    When: Calling the fitter with a custom continuum function
+    Then: No errors occur
+    """
+    starting_value = 1.0
+    new_parameters = wavecal_params_with_extra_continuum_param(
+        continuum_exponent=starting_value, not_used=True, **parameters.model_dump()
+    )
+
+    fitter = WavelengthCalibrationFitter(
+        input_parameters=new_parameters,
+        atlas=atlas,
+    )
+
+    fit_result = fitter(
+        input_spectrum=observed_spectrum,
+    )
+    assert "continuum_exponent" in fit_result.minimizer_result.params
+    assert fit_result.minimizer_result.params["continuum_exponent"] != starting_value
+
+
+def test_fit_with_custom_continuum_function_error(
+    wavecal_params_with_broken_continuum_func,
+    parameters: WavelengthCalibrationParameters,
+    observed_spectrum,
+    atlas: AtlasBase,
+    test_dispersion,
+    test_parameters_dict,
+    observed_wavelength_vector,
+):
+    """
+    Given: A `WavelengthCalibrationFitter` with sanely populated data and parameters
+    When: Calling the fitter with a custom continuum function that hits an Error
+    Then: The error in the continuum function is correctly reported
+    """
+    new_parameters = wavecal_params_with_broken_continuum_func(
+        continuum_exponent=1.0, **parameters.model_dump()
+    )
+
+    fitter = WavelengthCalibrationFitter(
+        input_parameters=new_parameters,
+        atlas=atlas,
+    )
+
+    with pytest.raises(
+        RuntimeError, match="The continuum function has produced an unrecoverable error."
+    ):
+        fitter(
+            input_spectrum=observed_spectrum,
+        )
 
 
 def test_incorrect_atlas(
@@ -124,10 +292,10 @@ def test_incorrect_atlas(
 def test_fixing_parameters(
     fixed_parameter,
     test_parameters_dict,
+    observed_wavelength_vector,
     observed_spectrum,
     observed_continuum_level,
     atlas: AtlasBase,
-    observed_wavelength_vector,
 ):
     """
     Given: A `WavelengthCalibrationFitter` initialized with a `WavelengthCalibrationParameters` with a single fixed parameter
@@ -155,9 +323,15 @@ def test_fixing_parameters(
         atlas=atlas,
     )
 
-    fit_result = fitter(
+    # We need to enter via the `._fit_spectrum` method because the init values will make an input_wavelength_vector
+    # so wack it breaks old versions of numpy for some reason???
+    prepared_atlas = fitter._prepare_atlas(input_wavelength_vector=observed_wavelength_vector)
+    fit_result = fitter._fit_spectrum(
+        cropped_atlas=prepared_atlas,
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
+        method="leastsq",
+        spectral_weights=np.ones_like(observed_spectrum),
     )
     for parameter in fit_result.minimizer_result.params:
         if parameter != fixed_parameter:
@@ -172,7 +346,7 @@ def test_fixing_parameters(
 
 
 def test_fit_stays_valid_with_fixed_crval(
-    test_parameters_dict, observed_wavelength_vector, observed_spectrum, atlas: AtlasBase
+    test_parameters_dict, observed_spectrum, atlas: AtlasBase
 ):
     """
     Given: A set of input parameters that is on the edge of WCS validity and bounds on `incident_light_angle` that
@@ -220,7 +394,6 @@ def test_fit_stays_valid_with_fixed_crval(
         atlas=atlas,
     )
     _ = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
     )
 
@@ -233,14 +406,13 @@ def test_fit_is_correct(
     test_doppler_velocity,
     test_order,
     observed_spectrum,
-    observed_wavelength_vector,
     atlas: AtlasBase,
     test_parameters_dict,
 ):
     """
     Given: A simulated unfit 1D spectrum with a known shift and dispersion scale.
     When: The WavelengthCalibrationFitter is used to fit the spectrum.
-    Then: The fit parameters that parameterize the WCS header are correct
+    Then: The fit parameters that parametrize the WCS header are correct
     """
 
     parameters = WavelengthCalibrationParameters(
@@ -274,7 +446,6 @@ def test_fit_is_correct(
         atlas=atlas,
     )
     fit_result = fitter(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
         method="nelder-meade",
     )
@@ -416,53 +587,21 @@ def test_apply_doppler_shift(parameters, synthetic_local_atlas):
         assert np.all(solar_transmission >= 0)
 
 
-def test_combine_spectra():
+def test_apply_resolving_power(parameters):
     """
-    Given: Two transmission spectra (telluric and solar) and a straylight fraction.
-    When: The `combine_spectra` function is called.
-    Then: It returns a combined spectrum as a numpy array with non-negative values and the same length as the input spectra.
-    """
-    telluric_transmission = np.linspace(0.8, 1.0, 100)
-    solar_transmission = np.linspace(0.9, 1.0, 100)
-
-    # Test with valid straylight fraction
-    straylight_fraction = 0.1
-    combined_spectrum = combine_spectra(
-        telluric_transmission, solar_transmission, straylight_fraction
-    )
-    assert isinstance(combined_spectrum, np.ndarray)
-    assert len(combined_spectrum) == len(telluric_transmission)
-    assert np.all(combined_spectrum >= 0)
-
-    # Test with extreme straylight fractions
-    for straylight_fraction in [0, 1]:
-        combined_spectrum = combine_spectra(
-            telluric_transmission, solar_transmission, straylight_fraction
-        )
-        assert isinstance(combined_spectrum, np.ndarray)
-        assert len(combined_spectrum) == len(telluric_transmission)
-        assert np.all(combined_spectrum >= 0)
-
-
-def test_normalize_and_convolve(parameters):
-    """
-    Given: A spectrum, continuum level, reference wavelength, resolving power, and dispersion.
-    When: The `normalize_and_convolve` function is called.
-    Then: It returns a normalized and convolved spectrum as a numpy array with non-negative values and the same length as the input spectrum.
+    Given: A spectrum, reference wavelength, resolving power, and dispersion.
+    When: The `apply_resolving_power` function is called.
+    Then: It returns a convolved spectrum as a numpy array with the same length as the input spectrum.
     """
     spectrum = np.linspace(0.8, 1.0, 100)
-    continuum_level = 1.0
     crval = parameters.lmfit_parameters["crval"].value
     resolving_power = parameters.lmfit_parameters["resolving_power"].value
     dispersion = parameters.lmfit_parameters["dispersion"].value
 
-    normalized_spectrum = normalize_and_convolve(
-        spectrum, continuum_level, crval, resolving_power, dispersion
-    )
+    adjusted_spectrum = apply_resolving_power(spectrum, crval, resolving_power, dispersion)
 
-    assert isinstance(normalized_spectrum, np.ndarray)
-    assert len(normalized_spectrum) == len(spectrum)
-    assert np.all(normalized_spectrum >= 0)
+    assert isinstance(adjusted_spectrum, np.ndarray)
+    assert len(adjusted_spectrum) == len(spectrum)
 
 
 def test_fitting_model(fitting_model_setup):
@@ -482,6 +621,7 @@ def test_fitting_model(fitting_model_setup):
         setup["order"],
         setup["doppler_velocity"],
         weights,
+        continuum_function=scalar_continuum_function,
     )
     assert isinstance(residuals, np.ndarray)
     assert len(residuals) == len(setup["input_spectrum"])
@@ -516,6 +656,7 @@ def test_fitting_model_with_weights(fitting_model_setup):
         order,
         doppler_velocity,
         prepared_weights=prepared_weights,
+        continuum_function=scalar_continuum_function,
     )
 
     # Undo the weighting caused by the default weights
@@ -534,6 +675,7 @@ def test_fitting_model_with_weights(fitting_model_setup):
         order,
         doppler_velocity,
         prepared_weights=prepared_weights,
+        continuum_function=scalar_continuum_function,
     )
 
     weighted_chisq = np.sum(residuals_weighted**2)
@@ -542,10 +684,15 @@ def test_fitting_model_with_weights(fitting_model_setup):
     )
 
 
+@pytest.mark.parametrize(
+    "normalization_percentile",
+    [pytest.param(95, id="normalization"), pytest.param(None, id="no_normalization")],
+)
 def test_calculate_initial_crval_guess_returns_reasonable_value(
     atlas: AtlasBase,
     observed_spectrum: np.ndarray,
     observed_wavelength_vector: Quantity,
+    normalization_percentile,
 ):
     """
     Given: A realistic observed spectrum and wavelength vector based on a shifted solar atlas,
@@ -554,10 +701,14 @@ def test_calculate_initial_crval_guess_returns_reasonable_value(
     Then: The estimated CRVAL is within the range of the input wavelengths,
           and is greater than the center of the observed vector, consistent with shift correction.
     """
+    if normalization_percentile is not None:
+        observed_spectrum = observed_spectrum * 37.2
+
     estimated_crval = calculate_initial_crval_guess(
         input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
         atlas=atlas,
+        normalization_percentile=normalization_percentile,
     )
 
     # Ensure output is a Quantity with correct unit
@@ -576,7 +727,6 @@ def test_to_header_add_alternate_keys(
     parameters: WavelengthCalibrationParameters,
     observed_spectrum,
     atlas: AtlasBase,
-    observed_wavelength_vector,
 ):
 
     fitter = WavelengthCalibrationFitter(
@@ -585,7 +735,6 @@ def test_to_header_add_alternate_keys(
     )
 
     fit_result = fitter._run_fit(
-        input_wavelength_vector=observed_wavelength_vector,
         input_spectrum=observed_spectrum,
         spectral_weights=np.ones(len(observed_spectrum)),
     )

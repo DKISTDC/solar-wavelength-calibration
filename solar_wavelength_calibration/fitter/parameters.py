@@ -5,12 +5,13 @@ from __future__ import annotations
 import logging
 from functools import cached_property
 from typing import Annotated
+from typing import Any
 from typing import Callable
 
 import astropy.units as u
 import numpy as np
 from astropy.units import Quantity
-from lmfit import Parameters
+from lmfit.parameter import Parameters
 from pydantic import AfterValidator
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -20,16 +21,6 @@ from pydantic import model_validator
 from pydantic_core.core_schema import ValidationInfo
 
 logger = logging.getLogger(__name__)
-
-__all__ = [
-    "WavelengthCalibrationParameters",
-    "BoundsModel",
-    "FitFlagsModel",
-    "UnitlessBoundRange",
-    "LengthBoundRange",
-    "AngleBoundRange",
-    "DispersionBoundRange",
-]
 
 
 def to_nm(value: Quantity) -> Quantity:
@@ -151,8 +142,18 @@ class FitFlagsModel(BaseModel):
     continuum_level: bool = True
 
 
+def scalar_continuum_function(wavelength: np.ndarray, parameters: Parameters) -> np.ndarray:
+    """Return a constant valued continuum level; the value of the "continuum_level" parameter."""
+    return parameters["continuum_level"].value
+
+
 class WavelengthCalibrationParameters(BaseModel):
-    """Object for initializing the fit parameters prior to a fit."""
+    """
+    Object for initializing the fit parameters prior to a fit.
+
+    See :ref:`this table <parameters_table>` and the :doc:`discussion </physical_model>` of the physical model for more
+    information about these parameters.
+    """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, validate_default=True, extra="forbid")
 
@@ -168,6 +169,20 @@ class WavelengthCalibrationParameters(BaseModel):
     straylight_fraction: FiniteFloat = 0.0
     fit_flags: FitFlagsModel = FitFlagsModel()
     bounds: BoundsModel = BoundsModel()
+
+    @property
+    def continuum_function(self) -> Callable[[np.ndarray, Parameters], np.ndarray]:
+        """
+        Return a callable that produces the continuum to be applied to the atlas spectrum.
+
+        Must take the currently fit wavelength vector and fit `~lmfit.parameter.Parameters` as its only arguments
+        and return a value that can be broadcast in multiplication to the combined atlas spectrum. Default is a scalar
+        value (the value of the `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.continuum_level`
+        parameter).
+
+        If extra arguments are needed then consider using `functools.partial` to construct to proper signature.
+        """
+        return scalar_continuum_function
 
     @field_validator("bounds")
     @classmethod
@@ -199,15 +214,15 @@ class WavelengthCalibrationParameters(BaseModel):
 
         Specifically, we need parameters that result in an invertible grating equation. Simplifying Eq. (84) from
         `Greisen et al (2006) <https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract>`_ for the case of a
-        diffraction grating in air, the refracted angle, :math:`\gamma`, is given by
+        reflection grating in air, the diffracted angle, :math:`\gamma`, is given by
 
         .. math::
             \gamma = \sin^{-1}(\lambda G m - \sin\alpha),
 
-        where :math:`\lambda` is `crval`, :math:`G` is `grating_constant`, :math:`m` is `order`, and :math:`\alpha` is
-        `incident_light_angle`. The arcsine is only valid for inputs in the range [-1, 1] and so a combination of
-        `crval`, `grating_constant`, `order`, and `incident_light_angle` that fall outside of this range are considered
-        invalid and will raise an Error.
+        where :math:`\lambda` is `crval`, :math:`G` is `grating_constant` (in 1 / mm), :math:`m` is `order`, and
+        :math:`\alpha` is `incident_light_angle`. The arcsine is only valid for inputs in the range [-1, 1] and so a
+        combination of `crval`, `grating_constant`, `order`, and `incident_light_angle` that fall outside of this range
+        are considered invalid and will raise an Error.
         """
         if abs(self.delta) > 1:
             raise ValueError(
@@ -227,7 +242,7 @@ class WavelengthCalibrationParameters(BaseModel):
         .. math::
             -1 \leq \lambda G m - \sin\alpha \leq 1
 
-        where :math:`G` (`grating_constant`) and :math:`m` (`order`) are fixed parameters while
+        where :math:`G` (`grating_constant` in 1 / mm) and :math:`m` (`order`) are fixed parameters while
         :math:`\lambda` (`crval`) and :math:`\alpha` (`incident_light_angle`) are free in the fit.
 
         As suggested by `lmfit <https://lmfit.github.io/lmfit-py/constraints.html#using-inequality-constraints>`_ we
@@ -525,11 +540,12 @@ class WavelengthCalibrationParameters(BaseModel):
         return param
 
     @property
-    def constant_parameters(self) -> dict:
+    def constant_parameters(self) -> dict[str, Any]:
         """Create a single dictionary with correct starting values for the constant instrument specific parameters that will not vary."""
         # Initialize a dict to hold the constant parameters and their values
-        constant_params = {}
+        constant_params = dict()
         constant_params["grating_constant"] = self.grating_constant.value
         constant_params["doppler_velocity"] = self.doppler_velocity
         constant_params["order"] = self.order
+        constant_params["continuum_function"] = self.continuum_function
         return constant_params

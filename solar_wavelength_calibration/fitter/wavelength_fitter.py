@@ -1,6 +1,8 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 
 import logging
+from functools import cached_property
+from typing import Callable
 
 import astropy.units as u
 import lmfit.parameter
@@ -9,8 +11,8 @@ from astropy import constants as const
 from astropy.stats import gaussian_fwhm_to_sigma
 from astropy.units import Quantity
 from astropy.wcs import WCS
-from lmfit import Parameters
 from lmfit.minimizer import MinimizerResult
+from lmfit.parameter import Parameters
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -21,10 +23,9 @@ from solar_wavelength_calibration.atlas.atlas import Atlas
 from solar_wavelength_calibration.atlas.atlas import LocalAtlas
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
+from solar_wavelength_calibration.fitter.parameters import scalar_continuum_function
 
 logger = logging.getLogger(__name__)
-
-__all__ = ["WavelengthCalibrationFitter"]
 
 
 class WavelengthParameters(BaseModel):
@@ -45,16 +46,17 @@ class WavelengthParameters(BaseModel):
 
         Parameters
         ----------
-        axis_num : int
+        axis_num
             The axis number for the WCS header (e.g., 1 for the first axis).
-        add_alternate_keys : bool, optional
+
+        add_alternate_keys
             If True, include alternate header keywords (ending with 'A') for compatibility.
 
         Returns
         -------
-        dict
-            A dictionary representing the WCS header with keys corresponding to
-            FITS header keywords and values derived from the wavelength parameters.
+        header dictionary
+            A dictionary representing the WCS header with keys corresponding to FITS header keywords and values derived
+            from the wavelength parameters.
         """
         header = {
             f"CTYPE{axis_num}": self.ctype,
@@ -85,6 +87,72 @@ class FitResult(BaseModel):
 
     wavelength_parameters: WavelengthParameters
     minimizer_result: MinimizerResult
+    input_wavelength_vector: u.Quantity
+    input_spectrum: np.ndarray
+    spectral_weights: None | np.ndarray = None
+    continuum_function: Callable[[np.ndarray, Parameters], np.ndarray] = scalar_continuum_function
+
+    @cached_property
+    def prepared_weights(self) -> np.ndarray:
+        """
+        Return the weights as-used for fitting.
+
+        Specifically, return the square-root of the weights after normalizing their sum to 1. See
+        `fitting_model` for more information.
+        """
+        weight_data = (
+            np.ones(self.input_wavelength_vector.size)
+            if self.spectral_weights is None
+            else self.spectral_weights
+        )
+        prepared_weights = np.sqrt(weight_data / np.sum(weight_data))
+
+        return prepared_weights
+
+    @cached_property
+    def num_wave_pix(self) -> int:
+        """Return the number of spectral pixels in the input spectrum."""
+        return self.input_spectrum.size
+
+    @cached_property
+    def best_fit_wavelength_vector(self) -> np.ndarray:
+        """
+        Compute a wavelength vector given the parameterization in `wavelength_parameters`.
+
+        The parameterization of the grating equation is via `astropy.wcs.WCS`, which follows section 5 of
+        `Greisen et al (2006) <https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract>`_.
+
+        Returns
+        -------
+        best_fit_wavelength
+            Wavelength vector corresponding to the `wavelength_parameters`. Units are nm.
+        """
+        wcs = WCS(self.wavelength_parameters.to_header(axis_num=1))
+        return wcs.spectral.pixel_to_world(np.arange(self.num_wave_pix)).to_value(u.nm)
+
+    @cached_property
+    def best_fit_continuum(self) -> np.ndarray:
+        """
+        Return the best-fit continuum value(s).
+
+        This is equal to `continuum_function(self.best_fit_wavelength_vector, self.minimizer_result.params)`
+        """
+        return self.continuum_function(
+            self.best_fit_wavelength_vector, self.minimizer_result.params
+        )
+
+    @cached_property
+    def best_fit_atlas(self) -> np.ndarray:
+        """
+        Return the best-fit combined Solar and Telluric atlas.
+
+        This is the exact atlas combination (with absorption, doppler-shift, straylight, resolving power, and continuum
+        corrections applied) that produced the best fit.
+        """
+        residuals = self.minimizer_result.residual / self.prepared_weights
+        best_fit_atlas = self.input_spectrum - residuals
+
+        return best_fit_atlas
 
 
 class WavelengthCalibrationFitter(BaseModel):
@@ -106,9 +174,8 @@ class WavelengthCalibrationFitter(BaseModel):
 
     def __call__(
         self,
-        input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
-        spectral_weights: np.ndarray | None = None,
+        spectral_weights: None | np.ndarray = None,
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
@@ -116,16 +183,16 @@ class WavelengthCalibrationFitter(BaseModel):
 
         Parameters
         ----------
-        input_wavelength_vector: (u.Quantity)
-            The wavelength vector corresponding to the input spectrum
-
-        input_spectrum: (np.ndarray)
+        input_spectrum
             The input 1D spectrum to be fitted.
 
-        method: (str, optional)
+        spectral_weights
+            Array of weights to apply to the residuals during fitting. If None, no weights are applied.
+
+        method
             The optimization method to use. Defaults to "leastsq".
 
-        spectral_weights: (np.ndarray, optional)
+        spectral_weights
             Array of weights to apply to the residuals during fitting. If None, no weights are applied.
 
         **minimize_kwargs
@@ -134,10 +201,7 @@ class WavelengthCalibrationFitter(BaseModel):
         Returns
         -------
         fit_result:
-            An instance of `FitResult` containing:
-            - `wavelength_parameters` (WavelengthParameters): The fitted parameters.
-            - `minimizer_result` (MinimizerResult): The result returned by the lmfit minimizer.
-
+            An instance of `FitResult`
         """
         if spectral_weights is None:
             spectral_weights = np.ones(len(input_spectrum))
@@ -147,27 +211,48 @@ class WavelengthCalibrationFitter(BaseModel):
             )
 
         return self._run_fit(
-            input_wavelength_vector,
-            input_spectrum,
-            spectral_weights,
-            method,
+            input_spectrum=input_spectrum,
+            spectral_weights=spectral_weights,
+            method=method,
             **minimize_kwargs,
         )
 
     def _run_fit(
         self,
-        input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
         spectral_weights: np.ndarray,
         method: str = "leastsq",
         **minimize_kwargs,
     ) -> FitResult:
         """Run the fit."""
+        input_wavelength_vector = self._compute_input_wavelength_vector(
+            input_spectrum=input_spectrum
+        )
         cropped_atlas = self._prepare_atlas(input_wavelength_vector)
         fit_result = self._fit_spectrum(
-            cropped_atlas, input_spectrum, method, spectral_weights, **minimize_kwargs
+            cropped_atlas=cropped_atlas,
+            input_wavelength_vector=input_wavelength_vector,
+            input_spectrum=input_spectrum,
+            method=method,
+            spectral_weights=spectral_weights,
+            **minimize_kwargs,
         )
         return fit_result
+
+    def _compute_input_wavelength_vector(self, input_spectrum: np.ndarray) -> Quantity:
+        """Compute a wavelength vector given an input spectrum and initial set of parameters."""
+        num_wave_pix = input_spectrum.size
+        order = self.input_parameters.order
+        grating_constant_inverse_m = self.input_parameters.grating_constant.to_value(1 / u.m)
+        init_params = self.input_parameters.lmfit_parameters
+
+        raw_wave = calculate_linear_wave(
+            params=init_params,
+            number_of_wave_pix=num_wave_pix,
+            grating_constant=grating_constant_inverse_m,
+            order=order,
+        )
+        return raw_wave * u.nm
 
     def _prepare_atlas(self, input_wavelength_vector: u.Quantity) -> LocalAtlas:
         """
@@ -211,6 +296,7 @@ class WavelengthCalibrationFitter(BaseModel):
     def _fit_spectrum(
         self,
         cropped_atlas: LocalAtlas,
+        input_wavelength_vector: u.Quantity,
         input_spectrum: np.ndarray,
         method: str,
         spectral_weights: np.ndarray,
@@ -226,7 +312,7 @@ class WavelengthCalibrationFitter(BaseModel):
         prepared_weights = np.sqrt(normalized_weights)
 
         fitting_model_kwargs = self.input_parameters.constant_parameters | {
-            "prepared_weights": prepared_weights
+            "prepared_weights": prepared_weights,
         }
 
         number_of_wave_pix = np.size(input_spectrum)
@@ -262,33 +348,42 @@ class WavelengthCalibrationFitter(BaseModel):
         )
 
         return FitResult(
-            wavelength_parameters=wavelength_parameters, minimizer_result=minimizer_result
+            wavelength_parameters=wavelength_parameters,
+            minimizer_result=minimizer_result,
+            input_wavelength_vector=input_wavelength_vector,
+            input_spectrum=input_spectrum,
+            spectral_weights=spectral_weights,
+            continuum_function=self.input_parameters.continuum_function,
         )
 
 
 def calculate_linear_wave(
     params: lmfit.parameter.Parameters, number_of_wave_pix: int, grating_constant: float, order: int
 ) -> np.ndarray:
-    """Calculate the linear wavelength vector.
+    """Calculate a linearly sampled wavelength vector given parameters describing a non-linear spectral WCS.
 
-    References about representing spectral coordinate in FITS:
-    https://specreduce.readthedocs.io/en/latest/api/specreduce.utils.synth_data.make_2d_arc_image.html
-    Greisen et al (2006) https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract (section 5)
+    We use `astropy.wcs.WCS`, which follows the parameterization of
+    `Greisen et al (2006) <https://ui.adsabs.harvard.edu/abs/2006A%26A...446..747G/abstract>`_ (see section 5). In
+    particular, the parameterization used here assumes a reflection grating in air so that higher-order terms above
+    ``PVk_2`` can be ignored.
 
     Parameters
     ----------
-    params:
+    params
         Parameters object containing the fitting parameters.
-    number_of_wave_pix:
+
+    number_of_wave_pix
         Number of wavelength pixels.
-    grating_constant:
-        Grating constant of the spectrograph.
-    order:
+
+    grating_constant
+        Grating constant of the spectrograph. Must have units 1 / m
+
+    order
         Diffraction order.
 
     Returns
     -------
-    linear_wave: np.ndarray
+    linear_wave
         Linear wavelength vector in nanometers.
     """
     non_linear_header = WavelengthParameters(
@@ -313,30 +408,32 @@ def calculate_linear_wave(
 def resample_telluric_transmission_with_absorption_correction(
     linear_wave: np.ndarray, cropped_atlas: LocalAtlas, opacity_factor: float
 ) -> np.ndarray:
-    """
+    r"""
     Resample the telluric transmission spectrum onto a linear wavelength grid and apply an absorption correction using the Beer–Lambert Law.
 
-    This function interpolates the telluric transmission data from the provided atlas onto a linear wavelength vector, then modifies the transmission by applying an absorption scaling based on the
-    Beer–Lambert Law:
+    This function interpolates the telluric transmission data from the provided atlas onto a linear wavelength vector,
+    then scales the assumed optical depth by value of `opacity_factor`, :math:`T` such that
 
-        I(λ) = I(λ) ** opacity_factor
+    .. math::
+
+        I(\lambda) = I_0(\lambda)^T
 
     This scaling simulates the attenuation of light due to atmospheric absorption, where the `opacity_factor` adjusts the strength of absorption across the spectrum.
 
     Parameters
     ----------
-    linear_wave : np.ndarray
+    linear_wave
         1D array of linearly spaced wavelengths (in nanometers) onto which the telluric transmission will be interpolated.
 
-    cropped_atlas : LocalAtlas
+    cropped_atlas
         Object containing the telluric atlas data, including wavelength and transmission arrays cropped to the relevant spectral region.
 
-    opacity_factor : float
-        Factor controlling the strength of telluric absorption. Values <1 reduce absorption, while values >1 increase it.
+    opacity_factor
+        Factor controlling the strength of telluric absorption. Values < 1 reduce absorption, while values > 1 increase it.
 
     Returns
     -------
-    np.ndarray
+    telluric spectrum
         The resampled and absorption-corrected telluric transmission spectrum.
     """
     linear_fts_telluric_transmission = np.interp(
@@ -356,18 +453,21 @@ def resample_solar_transmission_with_doppler_shift(
 
     Parameters
     ----------
-    linear_wave : np.ndarray
+    linear_wave
         Linear wavelength vector in nanometers.
-    cropped_atlas : LocalAtlas
+
+    cropped_atlas
         Cropped atlas containing telluric and solar atlas data.
-    doppler_velocity : Quantity
+
+    doppler_velocity
         Doppler velocity in km/s.
-    crval : float
+
+    crval
         Reference wavelength in nanometers.
 
     Returns
     -------
-    np.ndarray
+    solar spectrum
         Solar transmission spectrum after applying the Doppler shift.
     """
     fts_wave_doppler_corrected = (
@@ -381,62 +481,37 @@ def resample_solar_transmission_with_doppler_shift(
     )
 
 
-def combine_spectra(
-    telluric_transmission: np.ndarray, solar_transmission: np.ndarray, straylight_fraction: float
-) -> np.ndarray:
-    """
-    Combine the telluric and solar spectra with straylight contamination.
-
-    Parameters
-    ----------
-    telluric_transmission : np.ndarray
-        Telluric transmission spectrum.
-    solar_transmission : np.ndarray
-        Solar transmission spectrum.
-    straylight_fraction : float
-        Fraction of straylight contamination.
-
-    Returns
-    -------
-    np.ndarray
-        Combined spectrum with straylight contamination.
-    """
-    fts_solar_atmos_corr = telluric_transmission * solar_transmission
-    return fts_solar_atmos_corr + straylight_fraction
-
-
-def normalize_and_convolve(
+def apply_resolving_power(
     spectrum: np.ndarray,
-    continuum_level: float,
     crval: float,
     resolving_power: float,
     dispersion: float,
 ) -> np.ndarray:
     """
-    Normalize the spectrum and apply convolution for the spectrograph line spread function.
+    Apply convolution for the spectrograph line spread function.
 
     Parameters
     ----------
-    spectrum : np.ndarray
+    spectrum
         The input spectrum to be normalized and convolved.
-    continuum_level : float
-        The continuum level to scale the spectrum.
-    crval : float
+
+    crval
         Reference wavelength in nanometers.
-    resolving_power : float
+
+    resolving_power
         Resolving power of the spectrograph.
-    dispersion : float
+
+    dispersion
         Dispersion in nanometers per pixel.
 
     Returns
     -------
-    np.ndarray
+    modified spectrum
         The normalized and convolved spectrum.
     """
-    fts_solar_normalized = spectrum * continuum_level
     sigma_wavelength = (crval / resolving_power) * gaussian_fwhm_to_sigma
     sigma_pix = sigma_wavelength / np.abs(dispersion)
-    return gaussian_filter1d(fts_solar_normalized, np.abs(sigma_pix))
+    return gaussian_filter1d(spectrum, np.abs(sigma_pix))
 
 
 def fitting_model(
@@ -448,27 +523,37 @@ def fitting_model(
     order: int,
     doppler_velocity: Quantity,
     prepared_weights: np.ndarray,
+    continuum_function: Callable[[np.ndarray, Parameters], np.ndarray],
 ) -> np.ndarray:
     r"""
     Compute the fitting model function for fitting wavelength calibration parameters.
 
+    See :doc:`this page </physical_model>` for more information.
+
     Parameters
     ----------
-    params : Parameters
+    params
         Parameters object containing the fitting parameters.
-    input_spectrum : np.ndarray
+
+    input_spectrum
         The observed 1D spectrum to be fitted.
-    cropped_atlas : LocalAtlas
+
+    cropped_atlas
         Cropped atlas containing telluric and solar atlas data.
-    number_of_wave_pix : int
+
+    number_of_wave_pix
         Number of wavelength pixels.
-    grating_constant : float
+
+    grating_constant
         Grating constant of the spectrograph.
-    order : int
+
+    order
         Diffraction order.
-    doppler_velocity : Quantity
+
+    doppler_velocity
         Doppler velocity in km/s.
-    prepared_weights : np.ndarray
+
+    prepared_weights
         Array of prepared weights (square roots of normalized spectral weights) to apply to the residuals to ensure proper weighting in the fit.
         The lmfit minimizer computes chi-squared as the sum of squared residuals, i.e., :math:`\chi^2 = \sum_i r_i^2`,
         where :math:`r`, the residuals, are the result of this function. To achieve a standard weighted chi-squared,
@@ -476,44 +561,59 @@ def fitting_model(
         :math:`r_w = r \sqrt{w_i}`. The lmfit goodness-of-fit then becomes :math:`\chi^2 = \sum_i r_{w,i}^2 = \sum_i w_i r_i^2`,
         which is equal to the standard weighted chi-squared when :math:`\sum_i w_i = 1`.
 
+    continuum_function:
+        Function that defines the continuum to be applied to the atlas spectrum. Must take the currently fit wavelength
+        vector and fit `lmfit.Parameters` as its only two arguments and return a value that can be broadcast in
+        multiplication to the combined atlas spectrum. Default is a scalar value (the value of the
+        `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters.continuum_level` parameter).
+
     Returns
     -------
-    np.ndarray
+    residuals
         Residual amplitude between the observed spectrum and the fitted model.
     """
     crval = params["crval"].value
     dispersion = params["dispersion"].value
     opacity_factor = params["opacity_factor"].value
     straylight_fraction = params["straylight_fraction"].value
-    continuum_level = params["continuum_level"].value
     resolving_power = params["resolving_power"].value
 
     # Calculate the linear wavelength vector
     linear_wave = calculate_linear_wave(params, number_of_wave_pix, grating_constant, order)
 
-    # Apply telluric absorption
+    # Resample telluric and solar atlases onto `linear_wave` and apply absorption and doppler shift corrections,
+    # respectively
     telluric_transmission = resample_telluric_transmission_with_absorption_correction(
-        linear_wave, cropped_atlas, opacity_factor
+        linear_wave=linear_wave, cropped_atlas=cropped_atlas, opacity_factor=opacity_factor
     )
-
-    # Apply Doppler shift
     solar_transmission = resample_solar_transmission_with_doppler_shift(
-        linear_wave, cropped_atlas, doppler_velocity, crval
+        linear_wave=linear_wave,
+        cropped_atlas=cropped_atlas,
+        doppler_velocity=doppler_velocity,
+        crval=crval,
     )
 
-    # Combine spectra
-    combined_spectrum = combine_spectra(
-        telluric_transmission, solar_transmission, straylight_fraction
+    combined_atlas_spectrum = telluric_transmission * solar_transmission
+    degraded_atlas_spectrum = apply_resolving_power(
+        spectrum=combined_atlas_spectrum,
+        crval=crval,
+        resolving_power=resolving_power,
+        dispersion=dispersion,
     )
 
-    # Normalize and convolve
-    fts_final_spectrum = normalize_and_convolve(
-        combined_spectrum, continuum_level, crval, resolving_power, dispersion
+    # Divide by 1 + straylight_fraction so the continuum level is preserved at 1. We don't want the straylight fraction
+    # to couple with the continuum fit.
+    atlas_spectrum_w_straylight = (degraded_atlas_spectrum + straylight_fraction) / (
+        1 + straylight_fraction
     )
 
-    # Calculate residual amplitude
-    res_amplitude = input_spectrum - fts_final_spectrum
+    try:
+        continuum = continuum_function(linear_wave, params)
+    except Exception as e:
+        raise RuntimeError("The continuum function has produced an unrecoverable error.") from e
+    final_atlas_spectrum = atlas_spectrum_w_straylight * continuum
 
+    res_amplitude = input_spectrum - final_atlas_spectrum
     res_amplitude *= prepared_weights
 
     return res_amplitude
@@ -523,9 +623,10 @@ def calculate_initial_crval_guess(
     input_wavelength_vector: u.Quantity,
     input_spectrum: np.ndarray,
     atlas: AtlasBase,
-    negative_limit=-2 * u.nm,
-    positive_limit=2 * u.nm,
-    num_steps=550,
+    negative_limit: Quantity = -2 * u.nm,
+    positive_limit: Quantity = 2 * u.nm,
+    num_steps: int = 550,
+    normalization_percentile: float | None = None,
 ) -> u.Quantity:
     """
     Estimate the initial guess for the `crval` parameter by aligning the input wavelength vector with the atlas data.
@@ -537,28 +638,55 @@ def calculate_initial_crval_guess(
 
     Note
     ----
-    This function does not perform any continuum matching between the input spectrum and the atlas spectra.
+    By default this function does not perform any continuum matching between the input spectrum and the atlas spectra.
+    If there is a large difference in continuum level between the two you can either normalize them outside of this function
+    or set the `normalization_percentile` kwarg to a number between 1 and 100.
 
     Parameters
     ----------
-    input_wavelength_vector : u.Quantity
+    input_wavelength_vector
         The preliminary wavelength vector corresponding to the input spectrum.
-    input_spectrum : np.ndarray
+
+    input_spectrum
         The observed 1D spectrum to be fitted.
-    atlas : AtlasBase
+
+    atlas
         The atlas object containing solar and telluric wavelength and transmission data.
-    negative_limit : Quantity, optional
+
+    negative_limit
         The lower bound of the wavelength shift range for the initial guess (default: -2 nm).
-    positive_limit : Quantity, optional
+
+    positive_limit
         The upper bound of the wavelength shift range for the initial guess (default: 2 nm).
-    num_steps : int, optional
+
+    num_steps
         The number of steps to evaluate in the shift range (default: 550).
+
+    normalization_percentile
+        If not `None` then the atlas will be normalized by the ratio of `np.nanpercentile` called on the input spectrum
+        and atlas, respectively. This allows for a good estimation when the overall scaling of the two spectra is vastly
+        different and approximates a "fit" to continuum scaling. This parameter is the percentile passed to `np.nanpercentile`.
 
     Returns
     -------
-    u.Quantity
+    crval_init
         The estimated initial value for the `crval` parameter, representing the reference wavelength
     """
+    atlas_normalization = 1.0
+    if normalization_percentile is not None:
+        atlas_idx = np.where(
+            (atlas.solar_atlas_wavelength >= input_wavelength_vector.min())
+            & (atlas.solar_atlas_wavelength <= input_wavelength_vector.max())
+        )
+        input_norm = np.nanpercentile(input_spectrum, normalization_percentile)
+        atlas_norm = np.nanpercentile(
+            atlas.solar_atlas_transmission[atlas_idx], normalization_percentile
+        )
+        atlas_normalization = input_norm / atlas_norm
+        logger.info(
+            f"Normalizing atlas and input at {normalization_percentile}%. Normalization is {atlas_normalization:.2f}"
+        )
+
     shifts = np.linspace(negative_limit, positive_limit, num_steps)
     merit = np.zeros(len(shifts))
     for n, shift in enumerate(shifts):
@@ -572,7 +700,7 @@ def calculate_initial_crval_guess(
             atlas.telluric_atlas_transmission,
         )
         # calculate a merit value to be minimized
-        merit[n] = np.sum((input_spectrum - fts_solar * fts_telluric) ** 2)
+        merit[n] = np.sum((input_spectrum - fts_solar * fts_telluric * atlas_normalization) ** 2)
 
     # get minimum
     shift = shifts[np.argmin(merit)]

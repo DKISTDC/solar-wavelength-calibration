@@ -1,4 +1,4 @@
-image: python:3.11
+image: python:3.12
 definitions:
   steps:
     - step: &download_execute_script
@@ -33,7 +33,27 @@ definitions:
         script:
           - ./ci_scripts/latest/execute_script.sh check_changelog.sh
 
+    - step: &test312
+        caches:
+          - pip
+        name: Test Python 3.12
+        script:
+          - pip install -U pip
+          - pip install tox
+          - tox -e py312
+          - ./ci_scripts/latest/execute_script.sh upload_coverage.sh
+
+    - step: &test312-min
+        caches:
+          - pip
+        name: Test Python 3.12 with minimum dependencies
+        script:
+          - pip install -U pip
+          - pip install tox
+          - tox -e py312-min
+
     - step: &test311
+        image: python:3.11
         caches:
           - pip
         name: Test Python 3.11
@@ -41,9 +61,9 @@ definitions:
           - pip install -U pip
           - pip install tox
           - tox -e py311
-          - ./ci_scripts/latest/execute_script.sh upload_coverage.sh
 
     - step: &test311-min
+        image: python:3.11
         caches:
           - pip
         name: Test Python 3.11 with minimum dependencies
@@ -73,6 +93,8 @@ pipelines:
       - step: *lint
       - step: *changelog
     - parallel:
+      - step: *test312
+      - step: *test312-min
       - step: *test311
       - step: *test311-min
       - step: *docs
@@ -85,6 +107,8 @@ pipelines:
           - step: *changelog
       - parallel:
           - step: *scan
+          - step: *test312
+          - step: *test312-min
           - step: *test311
           - step: *test311-min
           - step: *docs

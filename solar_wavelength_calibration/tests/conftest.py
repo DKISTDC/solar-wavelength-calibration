@@ -1,3 +1,7 @@
+from functools import partial
+from typing import Any
+from typing import Callable
+
 import astropy.units as u
 import numpy as np
 import pytest
@@ -97,19 +101,19 @@ def observed_wavelength_vector(test_WCS_header, num_wave_pix) -> Quantity:
 
 
 @pytest.fixture(scope="session")
-def observed_spectrum(atlas, observed_wavelength_vector) -> np.ndarray:
+def observed_spectrum(atlas, observed_wavelength_vector, observed_continuum_level) -> np.ndarray:
     obs_spec = np.interp(
         observed_wavelength_vector.to_value("nm"),
         atlas.solar_atlas_wavelength.to_value("nm"),
         atlas.solar_atlas_transmission,
     )
 
-    return obs_spec
+    return obs_spec * observed_continuum_level
 
 
 @pytest.fixture(scope="session")
-def observed_continuum_level(observed_spectrum) -> float:
-    return np.nanpercentile(observed_spectrum, 75)
+def observed_continuum_level() -> float:
+    return 6.28
 
 
 @pytest.fixture(scope="session")
@@ -168,7 +172,7 @@ def parameters(
     test_doppler_velocity,
     test_order,
     atlas: AtlasBase,
-) -> Parameters:
+) -> WavelengthCalibrationParameters:
     params = WavelengthCalibrationParameters(
         crval=test_crval,
         dispersion=test_dispersion,
@@ -181,3 +185,32 @@ def parameters(
         order=test_order,
     )
     return params
+
+
+def user_defined_continuum_function(
+    input_wave: np.ndarray, params: Parameters, not_used: bool
+) -> np.ndarray:
+    return (np.ones_like(input_wave) * 3) ** params["continuum_exponent"]
+
+
+@pytest.fixture
+def wavecal_params_with_extra_continuum_param():
+    # AKA an example of how a user might add a custom continuum function
+    class NewWaveCalParams(WavelengthCalibrationParameters):
+
+        continuum_exponent: float
+        not_used: bool
+
+        @property
+        def continuum_function(self) -> Callable[[np.ndarray, Parameters, ...], np.ndarray]:
+            return partial(user_defined_continuum_function, not_used=self.not_used)
+
+        @property
+        def lmfit_parameters(self):
+            params = super().lmfit_parameters
+            del params["continuum_level"]
+
+            params.add("continuum_exponent", value=self.continuum_exponent, vary=True)
+            return params
+
+    return NewWaveCalParams
