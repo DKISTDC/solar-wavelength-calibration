@@ -8,6 +8,7 @@
     physical_model
     gotchas
     basic_usage
+    advanced_usage
     autoapi/index
     requirements_table
     changelog
