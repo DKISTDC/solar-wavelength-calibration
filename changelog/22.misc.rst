@@ -1,2 +1,0 @@
-Remove usage of `__all__` in modules. Instead, just import the given objects directly. This shouldn't change the API at all;
-it's required by Sphinx auto-api.

@@ -1,1 +1,0 @@
-Add `best_fit_wavelength_vector` and `best_fit_continuum` properties to `FitResult`.

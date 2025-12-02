@@ -1,2 +1,0 @@
-`BoundsModel`, `FitFlagsModel`, and `WavelengthCalibrationParameters` models no longer allow extra fields to be passed during instantiation.
-Any extra arguments should be defined explicitly on a subclass.
