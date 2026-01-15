@@ -1,0 +1,1 @@
+‘model_fields’ needs to be accessed through the BaseModel class instead of the class instance. This change arose due to a deprecation warning.
