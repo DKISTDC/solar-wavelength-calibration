@@ -36,7 +36,7 @@ class DownloadConfig(BaseModel):
 
 
 default_config = DownloadConfig(
-    base_url="doi:10.5281/zenodo.14646787/",
+    base_url="doi:10.7910/DVN/JUSYJM",
     telluric_reference_atlas_file_name="telluric_reference_atlas.npy",
     telluric_reference_atlas_hash_id="md5:8db5e12508b293bca3495d81a0747447",
     solar_reference_atlas_file_name="solar_reference_atlas.npy",
