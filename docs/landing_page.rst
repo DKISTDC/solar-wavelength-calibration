@@ -10,7 +10,7 @@ This library is designed to match an observed solar spectrum to a reference sola
 from raw pixel index to an absolute wavelength value. It has the following features:
 
 * Physically motivated model of spectrograph optics that lead to non-linear wavelength solutions
-* User-definable solar atlas or a sensible default
+* User-definable solar atlas or a `sensible default <https://doi.org/10.7910/DVN/JUSYJM>`_.
 * Support for fitting telluric lines of variable strength with a Doppler offset
 * Degradation of atlas spectral resolution to match spectrograph resolving power
 * Fitted estimation of stray light in the observed spectrum
