@@ -1,5 +1,4 @@
 from functools import partial
-from typing import Any
 from typing import Callable
 
 import astropy.units as u
@@ -7,6 +6,7 @@ import numpy as np
 import pytest
 from astropy.units import Quantity
 from astropy.wcs import WCS
+from filelock import FileLock
 from lmfit import Parameters
 
 from solar_wavelength_calibration.atlas.atlas import Atlas
@@ -26,8 +26,20 @@ def config(request) -> DownloadConfig | None:
 
 
 @pytest.fixture(scope="session")
-def atlas(config: DownloadConfig | None) -> Atlas:
-    return Atlas(config=config)
+def atlas(config: DownloadConfig | None, tmp_path_factory) -> Atlas:
+    """Fixture that guarantees the Atlas is only downloaded once, regardless of the number of xdist workers."""
+    # Taking inspiration from https://pytest-xdist.readthedocs.io/en/latest/how-to.html#making-session-scoped-fixtures-execute-only-once
+    root_tmp_dir = tmp_path_factory.getbasetemp().parent
+    lock_name = root_tmp_dir / "atlas_download.lock"
+
+    with FileLock(lock_name):
+        atlas = Atlas(config=config)
+
+        # Actually trigger the download by accessing these properties
+        telluric = atlas._telluric_atlas
+        solar = atlas._solar_atlas
+
+    return atlas
 
 
 @pytest.fixture(scope="session")
