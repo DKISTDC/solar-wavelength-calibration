@@ -8,6 +8,7 @@ import numpy as np
 import pooch
 import pydantic
 import pytest
+from filelock import FileLock
 
 from solar_wavelength_calibration import Atlas
 from solar_wavelength_calibration import WavelengthCalibrationFitter
@@ -53,14 +54,25 @@ def function_config(request) -> DownloadConfig | None:
 
 
 @pytest.fixture()
-def function_atlas(cache_dir: Path, function_config: DownloadConfig | None) -> Atlas:
-    return Atlas(config=function_config)
+def function_atlas(
+    cache_dir: Path, function_config: DownloadConfig | None, atlas_lock_file_path
+) -> Atlas:
+    # See session scoped `atlas` in conftest for more info
+    with FileLock(atlas_lock_file_path):
+        atlas = Atlas(config=function_config)
+
+        telluric = atlas._telluric_atlas
+        solar = atlas._solar_atlas
+
+    return atlas
 
 
 def test_atlas(function_atlas: Atlas, cache_dir: Path):
-    """Given: an Atlas object
+    """
+    Given: an Atlas object
     When: the object is created
-    Then: the object should have the correct attributes."""
+    Then: the object should have the correct attributes.
+    """
     assert isinstance(function_atlas.telluric_atlas_wavelength, np.ndarray)
     assert isinstance(function_atlas.telluric_atlas_transmission, np.ndarray)
     assert isinstance(function_atlas.solar_atlas_wavelength, np.ndarray)
@@ -68,21 +80,23 @@ def test_atlas(function_atlas: Atlas, cache_dir: Path):
     assert function_atlas.pooch.path == cache_dir
 
 
-def test_atlas_repr():
-    """Given: an Atlas object
+def test_atlas_repr(atlas):
+    """
+    Given: an Atlas object
     When: the object is printed
-    Then: the object should have the correct representation."""
-    atlas = Atlas()
+    Then: the object should have the correct representation.
+    """
     assert isinstance(eval(repr(atlas)), Atlas)
 
 
-def test_solar_wavelength_non_monotonic(parameters):
-    """Given: an Atlas object with non-monotonically increasing solar wavelength
+def test_solar_wavelength_non_monotonic(function_atlas, parameters):
+    """
+    Given: an Atlas object with non-monotonically increasing solar wavelength
     When: instantiating the WavelengthCalibrationFitter
-    Then: a Pydantic ValidationError should be raised."""
-    atlas = Atlas()
+    Then: a Pydantic ValidationError should be raised.
+    """
     # Inject non-monotonic solar wavelength data into the Atlas object
-    atlas._solar_atlas = (
+    function_atlas._solar_atlas = (
         np.array([400, 500, 480, 700]),  # Non-monotonic wavelength
         np.array([1.0, 0.9, 0.8, 0.7]),  # Corresponding transmission
     )
@@ -90,16 +104,17 @@ def test_solar_wavelength_non_monotonic(parameters):
     with pytest.raises(
         pydantic.ValidationError, match="Solar atlas wavelength array is not monotonic."
     ):
-        WavelengthCalibrationFitter(input_parameters=parameters, atlas=atlas)
+        WavelengthCalibrationFitter(input_parameters=parameters, atlas=function_atlas)
 
 
-def test_telluric_wavelength_non_monotonic(parameters):
-    """Given: an Atlas object with non-monotonically increasing telluric wavelength
+def test_telluric_wavelength_non_monotonic(function_atlas, parameters):
+    """
+    Given: an Atlas object with non-monotonically increasing telluric wavelength
     When: instantiating the WavelengthCalibrationFitter
-    Then: a Pydantic ValidationError should be raised."""
-    atlas = Atlas()
+    Then: a Pydantic ValidationError should be raised.
+    """
     # Inject non-monotonic telluric wavelength data into the Atlas object
-    atlas._telluric_atlas = (
+    function_atlas._telluric_atlas = (
         np.array([400, 500, 480, 700]),  # Non-monotonic wavelength
         np.array([1.0, 0.9, 0.8, 0.7]),  # Corresponding transmission
     )
@@ -107,4 +122,4 @@ def test_telluric_wavelength_non_monotonic(parameters):
     with pytest.raises(
         pydantic.ValidationError, match="Telluric atlas wavelength array is not monotonic."
     ):
-        WavelengthCalibrationFitter(input_parameters=parameters, atlas=atlas)
+        WavelengthCalibrationFitter(input_parameters=parameters, atlas=function_atlas)

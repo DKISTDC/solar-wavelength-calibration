@@ -1,4 +1,5 @@
 from functools import partial
+from pathlib import Path
 from typing import Callable
 
 import astropy.units as u
@@ -26,13 +27,17 @@ def config(request) -> DownloadConfig | None:
 
 
 @pytest.fixture(scope="session")
-def atlas(config: DownloadConfig | None, tmp_path_factory) -> Atlas:
+def atlas_lock_file_path(tmp_path_factory) -> Path:
+    root_tmp_dir = tmp_path_factory.getbasetemp().parent
+    lock_path = root_tmp_dir / "atlas_download.lock"
+    return lock_path
+
+
+@pytest.fixture(scope="session")
+def atlas(config: DownloadConfig | None, atlas_lock_file_path) -> Atlas:
     """Fixture that guarantees the Atlas is only downloaded once, regardless of the number of xdist workers."""
     # Taking inspiration from https://pytest-xdist.readthedocs.io/en/latest/how-to.html#making-session-scoped-fixtures-execute-only-once
-    root_tmp_dir = tmp_path_factory.getbasetemp().parent
-    lock_name = root_tmp_dir / "atlas_download.lock"
-
-    with FileLock(lock_name):
+    with FileLock(atlas_lock_file_path):
         atlas = Atlas(config=config)
 
         # Actually trigger the download by accessing these properties
