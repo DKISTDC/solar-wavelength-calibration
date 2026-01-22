@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from typing import Generator
 from unittest import mock
 
 import numpy as np
@@ -17,14 +18,21 @@ from solar_wavelength_calibration.atlas.atlas import DEFAULT_POOCH_CACHE_DIR
 from solar_wavelength_calibration.atlas.atlas import DownloadConfig
 
 
+@pytest.fixture(scope="session")
+def override_cache_path(tmp_path_factory) -> Path:
+    root_tmp_dir = tmp_path_factory.getbasetemp().parent  # shared by all xdist workers
+    cache_dir = root_tmp_dir / "pooch_cache_override"
+    return cache_dir
+
+
 @pytest.fixture(
     params=[pytest.param(True, id="override_cache"), pytest.param(False, id="default_cache")],
 )
-def cache_dir(request, tmp_path) -> Path:
+def cache_dir(request, override_cache_path) -> Generator[Path, None, None]:
     override_cache_dir = request.param
     match override_cache_dir:
         case True:
-            cache_path = tmp_path
+            cache_path = override_cache_path
             environ_dict = {CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR: str(cache_path)}
         case False:
             cache_path = pooch.os_cache(DEFAULT_POOCH_CACHE_DIR)

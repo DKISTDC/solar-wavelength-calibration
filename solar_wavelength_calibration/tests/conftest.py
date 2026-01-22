@@ -28,7 +28,7 @@ def config(request) -> DownloadConfig | None:
 
 @pytest.fixture(scope="session")
 def atlas_lock_file_path(tmp_path_factory) -> Path:
-    root_tmp_dir = tmp_path_factory.getbasetemp().parent
+    root_tmp_dir = tmp_path_factory.getbasetemp().parent  # shared by all xdist workers
     lock_path = root_tmp_dir / "atlas_download.lock"
     return lock_path
 
