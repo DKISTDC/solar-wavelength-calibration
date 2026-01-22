@@ -23,7 +23,6 @@ from solar_wavelength_calibration import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.parameters import angle_quantity
 from solar_wavelength_calibration.fitter.parameters import inverse_length_quantity
 from solar_wavelength_calibration.fitter.parameters import length_quantity
-from solar_wavelength_calibration.tests.conftest import user_defined_continuum_function
 
 
 class WCSValidityParams(BaseModel):
