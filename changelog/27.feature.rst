@@ -1,0 +1,2 @@
+Move default Atlas configuration to use Dataverse instead of Zenodo. This (hopefully) gets around issues caused by new Zenodo
+limits and poor interaction with `pooch`.
