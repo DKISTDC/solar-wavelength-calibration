@@ -16,6 +16,7 @@ from solar_wavelength_calibration import WavelengthCalibrationFitter
 from solar_wavelength_calibration.atlas.atlas import CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR
 from solar_wavelength_calibration.atlas.atlas import DEFAULT_POOCH_CACHE_DIR
 from solar_wavelength_calibration.atlas.atlas import DownloadConfig
+from solar_wavelength_calibration.tests.conftest import test_full_atlas_config
 
 
 @pytest.fixture(scope="session")
@@ -42,8 +43,10 @@ def cache_dir(request, override_cache_path) -> Generator[Path, None, None]:
         yield cache_path
 
 
-test_config = DownloadConfig(
-    base_url="doi:10.7910/DVN/TXTQAL",
+# Version of small atlas hosted at NSO to avoid hammering Dataverse
+# Do we need to test the small atlas anymore?
+test_small_atlas_config = DownloadConfig(
+    base_url="https://share.nso.edu/shared/dkist/DC/solar_wavelength_calibration_atlas/",
     telluric_reference_atlas_file_name="test_telluric_reference_atlas.npy",
     telluric_reference_atlas_hash_id="md5:a06c6923b794479f2b0ac483733402a7",
     solar_reference_atlas_file_name="test_solar_reference_atlas.npy",
@@ -53,8 +56,8 @@ test_config = DownloadConfig(
 
 @pytest.fixture(
     params=[
-        pytest.param(None, id="default_config"),
-        pytest.param(test_config, id="test_config"),
+        pytest.param(test_full_atlas_config, id="full_atlas_config"),
+        pytest.param(test_small_atlas_config, id="small_atlas_config"),
     ],
 )
 def function_config(request) -> DownloadConfig | None:
