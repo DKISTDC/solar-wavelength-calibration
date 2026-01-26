@@ -134,3 +134,19 @@ def test_telluric_wavelength_non_monotonic(function_atlas, parameters):
         pydantic.ValidationError, match="Telluric atlas wavelength array is not monotonic."
     ):
         WavelengthCalibrationFitter(input_parameters=parameters, atlas=function_atlas)
+
+
+def test_public_default_accessible(tmp_path):
+    """
+    Given: The non-testing default Atlas config
+    When: Trying to fetch the files from the service defined in that config
+    Then: The files can be downloaded
+    """
+    # AKA This test will fail if Dataverse or whoever start blocking downloads
+    # This test is more a canary in the coal mine than anything else
+    unique_override_cache_dir = tmp_path
+    environ_dict = {CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR: str(unique_override_cache_dir)}
+    with mock.patch.dict(os.environ, os.environ | environ_dict):
+        atlas = Atlas(config=None)
+        assert atlas.telluric_atlas_wavelength.size
+        assert atlas.solar_atlas_wavelength.size
