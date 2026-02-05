@@ -1,5 +1,5 @@
 Contributing
-------------
+============
 
 We love contributions! This package is open source, built on open source, and we'd love to have you hang out in our community.
 
@@ -22,14 +22,14 @@ Note: This disclaimer was originally written by `Adrienne Lowe <https://github.c
 and was adapted by this package based on its use in the README file for the `MetPy project <https://github.com/Unidata/MetPy>`_.
 
 Report Bugs
-###########
+-----------
 
 If you run into unexpected behavior or run into a bug we urge you to please report it.
 All bugs are kept track of on our `issue tracker <https://bitbucket.org/dkistdc/solar-wavelength-calibration/issues?status=new&status=open>`_.
 Ideally, we would like a short code example so we can reproduce the bug on our own machines.
 
 Provide Code
-############
+------------
 
 If you are interested in contributing fixes, features, or documentation to solar-wavelength-calibration we'd love to have
 your contributions! Below is the recommended workflow for code development:
