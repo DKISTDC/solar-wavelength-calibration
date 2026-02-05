@@ -42,7 +42,7 @@ We will treat those outside our community with the same respect as people within
 Overall, we are good to each other and apply this code of conduct to all community situations online and offline, including mailing lists, forums, social media, conferences, meetings, associated social events, and one-to-one interactions.
 
 We pledge to help the entire community follow the code of conduct, and to not remain silent when we see violations of the code of conduct.
-We will take action when members of our community violate this code such as contacting <confidential@sunpy.org> (all emails sent to this address will be treated with the strictest confidence) or talking privately with the person.
+We will take action when members of our community violate this code.
 
 This code of conduct is mostly a copy of the `sunpy <https://sunpy.org/coc/>`_ code of conduct.
 Parts of this code of conduct have been adapted from the `astropy <https://www.astropy.org/code_of_conduct.html>`_ and the `Python Software Foundation <https://www.python.org/psf/conduct/>`_ codes of conduct.
