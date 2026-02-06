@@ -20,7 +20,7 @@ Considerate
 -----------
 
 Members of the community are considerate of their peers -- other developers, users, etc.
-We are thoughtful when addressing the efforts of others, keeping in mind that often the labour was completed simply for the good of the community.
+We are thoughtful when addressing the efforts of others, keeping in mind that often the labor was completed simply for the good of the community.
 We are attentive in our communications, whether in person or online, and we're tactful when approaching differing views.
 
 We recognize the work made by everyone and ensure the proper acknowledgement/citation of original authors at all times.
