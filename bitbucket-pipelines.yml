@@ -104,8 +104,8 @@ pipelines:
     'v*':
       - step: *download_execute_script
       - parallel:
-          - step: *lint
-          - step: *changelog
+        - step: *lint
+        - step: *changelog
       - parallel:
         - step: *test313
         - step: *test312
