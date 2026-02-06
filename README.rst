@@ -2,7 +2,8 @@ solar-wavelength-calibration
 ----------------------------
 |codecov|
 
-A package for calibrating wavelength data.
+A package for calibrating wavelength data. Please see the `online docs <https://docs.dkist.nso.edu/projects/solar-wavelength-calibration/en/latest/>`_
+for detailed information.
 
 Deployment
 ----------
