@@ -193,7 +193,7 @@ class WavelengthCalibrationParameters(BaseModel):
         This method compares the current model values (from the `info` context) to their associated
         min and max bounds and raises an error if any value falls outside its allowed range.
         """
-        for param in bounds.model_fields.keys():
+        for param in BoundsModel.model_fields.keys():
             try:
                 param_value = info.data[param]
             except KeyError:
