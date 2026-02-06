@@ -1,1 +1,0 @@
-‘model_fields’ needs to be accessed through the `BoundsModel` class instead of a class instance. This change arose due to a deprecation warning.

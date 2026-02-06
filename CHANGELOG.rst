@@ -1,3 +1,30 @@
+v2.0.1 (2026-02-06)
+===================
+
+Features
+--------
+
+- Move default Atlas configuration to use Dataverse instead of Zenodo. This (hopefully) gets around issues caused by new Zenodo
+  limits and poor interaction with `pooch`. (`#27 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/27>`__)
+
+
+Misc
+----
+
+- ‘model_fields’ needs to be accessed through the `BoundsModel` class instead of a class instance. This change arose due to a deprecation warning. (`#26 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/26>`__)
+- Update tests to only download the Atlas cache once for *all* xdist workers. This will reduce the load on external services
+  that host the atlases and hopefully reduce the chance of being blocked or limited. (`#27 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/27>`__)
+- Use NSO-hosted atlas location for all-but-one unit test. (`#27 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/27>`__)
+- Add test coverage for python 3.13 (`#28 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/28>`__)
+
+
+Documentation
+-------------
+
+- Update docstrings and online doc pages to link to default Atlas data. (`#27 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/27>`__)
+- Add CODE_OF_CONDUCT and CONTRIBUTING documents to this repo. (`#29 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/29>`__)
+
+
 v2.0.0 (2025-12-02)
 ===================
 

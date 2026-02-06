@@ -1,2 +1,0 @@
-Update tests to only download the Atlas cache once for *all* xdist workers. This will reduce the load on external services
-that host the atlases and hopefully reduce the chance of being blocked or limited.
