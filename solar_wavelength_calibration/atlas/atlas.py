@@ -1,4 +1,4 @@
-"""Task to load the reference atlas files."""
+"""Atlas classes that either fetch data from the internet or from local variables."""
 
 import logging
 from functools import cached_property
@@ -36,7 +36,8 @@ class DownloadConfig(BaseModel):
 
 
 default_config = DownloadConfig(
-    base_url="doi:10.5281/zenodo.14646787/",
+    # If this changes remember to update the docstring of `Atlas` below
+    base_url="doi:10.7910/DVN/JUSYJM",
     telluric_reference_atlas_file_name="telluric_reference_atlas.npy",
     telluric_reference_atlas_hash_id="md5:8db5e12508b293bca3495d81a0747447",
     solar_reference_atlas_file_name="solar_reference_atlas.npy",
@@ -45,7 +46,12 @@ default_config = DownloadConfig(
 
 
 class Atlas(AtlasBase):
-    """Reference atlas file class."""
+    """
+    Atlas class that retrieves data from an online data repository.
+
+    The location of the data is described with a `DownloadConfig` object. If none is provided then the default is used.
+    The current default is to use the Atlas at https://doi.org/10.7910/DVN/JUSYJM.
+    """
 
     def __init__(
         self,
@@ -65,13 +71,13 @@ class Atlas(AtlasBase):
 
     @cached_property
     def _telluric_atlas(self) -> tuple[np.ndarray, np.ndarray]:
-        """Load and cache the high-resolution telluric atlas with pooch."""
+        """Download, cache, and load the high-resolution telluric atlas with pooch."""
         path = self.pooch.fetch(self.config.telluric_reference_atlas_file_name)
         return np.load(path)
 
     @cached_property
     def _solar_atlas(self) -> tuple[np.ndarray, np.ndarray]:
-        """Load and cache the solar atlas with pooch."""
+        """Download, cache, and load the solar atlas with pooch."""
         path = self.pooch.fetch(self.config.solar_reference_atlas_file_name)
         return np.load(path)
 
@@ -124,7 +130,7 @@ class Atlas(AtlasBase):
 
 
 class LocalAtlas(AtlasBase):
-    """Local version of the atlas."""
+    """Atlas class that is instantiated with numpy arrays."""
 
     def __init__(
         self,

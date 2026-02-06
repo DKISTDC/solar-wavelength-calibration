@@ -111,13 +111,13 @@ user is free to define these properties however they see fit.
 
 In addition to the base class, this package defines two `Atlas` types for common use patterns.
 
-Download Atlas Data From Zenodo
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Download Atlas Data From Dataverse
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Atlas data that have been published on Zenodo can be automatically downloaded and cached with `pooch <https://www.fatiando.org/pooch/latest/>`_
-by using the `~solar_wavelength_calibration.atlas.atlas.Atlas` class. The default configuration assumes the Zenodo record
+Atlas data that have been published on Dataverse can be automatically downloaded and cached with `pooch <https://www.fatiando.org/pooch/latest/>`_
+by using the `~solar_wavelength_calibration.atlas.atlas.Atlas` class. The default configuration assumes the Dataverse record
 contains two "\*.npy" files, one for the telluric atlas and one for the solar atlas. The default values correspond to
-the `atlas provided by DKIST <https://zenodo.org/records/14674504>`_, which covers a wavelength range of 350 nm to 5000 nm.
+the `atlas provided by DKIST <https://doi.org/10.7910/DVN/JUSYJM>`_, which covers a wavelength range of 350 nm to 5000 nm.
 
 To use this default atlas simply instantiate the `~solar_wavelength_calibration.atlas.atlas.Atlas` class with no parameters.
 

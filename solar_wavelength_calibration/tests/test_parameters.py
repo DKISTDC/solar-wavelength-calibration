@@ -23,7 +23,6 @@ from solar_wavelength_calibration import WavelengthCalibrationParameters
 from solar_wavelength_calibration.fitter.parameters import angle_quantity
 from solar_wavelength_calibration.fitter.parameters import inverse_length_quantity
 from solar_wavelength_calibration.fitter.parameters import length_quantity
-from solar_wavelength_calibration.tests.conftest import user_defined_continuum_function
 
 
 class WCSValidityParams(BaseModel):
@@ -759,8 +758,8 @@ def test_custom_fit_flags(test_parameters_dict):
 def test_bounds_given_as_dict(test_parameters_dict):
     """
     Given: Custom bounds given as a dictionary instead of a BoundsModel
-    When:
-    Then:
+    When: Using these bounds to instantiate `WavelengthCalibrationParameters`
+    Then: They are correctly transformed to a `BoundsModel` instance
     """
     bounds = {
         "crval": {
@@ -801,6 +800,7 @@ def test_bounds_given_as_dict(test_parameters_dict):
     np.testing.assert_allclose(
         input_params.bounds.crval.min, test_parameters_dict["crval"] - (0.3 * u.nm)
     )
+    assert isinstance(input_params.bounds, BoundsModel)
 
 
 def test_custom_continuum_function(wavecal_params_with_extra_continuum_param, parameters):

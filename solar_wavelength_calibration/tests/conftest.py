@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Any
+from pathlib import Path
 from typing import Callable
 
 import astropy.units as u
@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 from astropy.units import Quantity
 from astropy.wcs import WCS
+from filelock import FileLock
 from lmfit import Parameters
 
 from solar_wavelength_calibration.atlas.atlas import Atlas
@@ -14,10 +15,19 @@ from solar_wavelength_calibration.atlas.atlas import DownloadConfig
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
+# Version of full atlas hosted at NSO to avoid hammering Dataverse
+test_full_atlas_config = DownloadConfig(
+    base_url="https://share.nso.edu/shared/dkist/DC/solar_wavelength_calibration_atlas",
+    telluric_reference_atlas_file_name="telluric_reference_atlas.npy",
+    telluric_reference_atlas_hash_id="md5:8db5e12508b293bca3495d81a0747447",
+    solar_reference_atlas_file_name="solar_reference_atlas.npy",
+    solar_reference_atlas_hash_id="md5:84ab4c50689ef235fe5ed4f7ee905ca0",
+)
+
 
 @pytest.fixture(
     params=[
-        pytest.param(None, id="default_config"),
+        pytest.param(test_full_atlas_config, id="full_atlas_config"),
     ],
     scope="session",
 )
@@ -26,8 +36,24 @@ def config(request) -> DownloadConfig | None:
 
 
 @pytest.fixture(scope="session")
-def atlas(config: DownloadConfig | None) -> Atlas:
-    return Atlas(config=config)
+def atlas_lock_file_path(tmp_path_factory) -> Path:
+    root_tmp_dir = tmp_path_factory.getbasetemp().parent  # shared by all xdist workers
+    lock_path = root_tmp_dir / "atlas_download.lock"
+    return lock_path
+
+
+@pytest.fixture(scope="session")
+def atlas(config: DownloadConfig | None, atlas_lock_file_path) -> Atlas:
+    """Fixture that guarantees the Atlas is only downloaded once, regardless of the number of xdist workers."""
+    # Taking inspiration from https://pytest-xdist.readthedocs.io/en/latest/how-to.html#making-session-scoped-fixtures-execute-only-once
+    with FileLock(atlas_lock_file_path):
+        atlas = Atlas(config=config)
+
+        # Actually trigger the download by accessing these properties
+        telluric = atlas._telluric_atlas
+        solar = atlas._solar_atlas
+
+    return atlas
 
 
 @pytest.fixture(scope="session")
