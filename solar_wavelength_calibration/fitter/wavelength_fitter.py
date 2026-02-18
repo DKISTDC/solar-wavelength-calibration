@@ -149,9 +149,13 @@ class FitResult(BaseModel):
         This is the exact atlas combination (with absorption, doppler-shift, straylight, resolving power, and continuum
         corrections applied) that produced the best fit.
         """
-        residuals = self.minimizer_result.residual / self.prepared_weights
-        best_fit_atlas = self.input_spectrum - residuals
+        w = np.asarray(self.prepared_weights)
+        resid = np.asarray(self.minimizer_result.residual)
 
+        safe_resid = np.full_like(resid, np.nan, dtype=float)
+        np.divide(resid, w, out=safe_resid, where=w > 0)
+
+        best_fit_atlas = np.asarray(self.input_spectrum) - safe_resid
         return best_fit_atlas
 
 
