@@ -1,0 +1,1 @@
+Handle zero prepared weights safely in wavelength calibration to avoid divide-by-zero runtime warnings when computing residuals and best-fit atlas.
