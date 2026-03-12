@@ -5,26 +5,58 @@ solar-wavelength-calibration
 A package for calibrating wavelength data. Please see the `online docs <https://docs.dkist.nso.edu/projects/solar-wavelength-calibration/en/latest/>`_
 for detailed information.
 
-Deployment
-----------
-solar-wavelength-calibration is deployed to `PyPI <https://pypi.org/project/solar-wavelength-calibration/>`_
-
-Development
------------
-.. code-block:: bash
-
-    git clone git@bitbucket.org:dkistdc/solar-wavelength-calibration.git
-    cd solar-wavelength-calibration
-    pre-commit install
-    pip install -e .[test]
-    pytest -v --cov solar-wavelength-calibration
-
 Installation
 ------------
 .. code:: bash
 
    pip install solar-wavelength-calibration
 
+Development
+-----------
+
+The source repository can be cloned from BitBucket with the following command
+
+.. code-block:: bash
+
+    git clone git@bitbucket.org:dkistdc/solar-wavelength-calibration.git
+
+If you don't have a BitBucket account use `https://bitbucket.org/dkistdc/solar-wavelength-calibration.git` as the URL
+instead.
+
+Linting
+#######
+
+To replicate the standard developement workflow you must also install `pre-commit <https://pre-commit.com/>`_ and set it
+up to run whenever a git commit is made:
+
+.. code-block:: bash
+
+    cd solar-wavelength-calibration
+    pre-commit install
+
+To run `pre-commit` without having to make a commit simply run
+
+.. code-block:: bash
+
+    pre-commit run --all-files
+
+This will check the formatting of all code against the constraints defined in ".pre-commit-config.yaml".
+
+Unit Tests
+###########
+
+Unit tests can be run by installing an editable version and running `pytest`:
+
+.. code-block:: bash
+
+    pip install -e .[test]
+    pytest -v --cov solar-wavelength-calibration
+
+Deployment
+##########
+
+solar-wavelength-calibration is deployed to `PyPI <https://pypi.org/project/solar-wavelength-calibration/>`_ as part of
+BitBucket pipelines that are run on commits to the "main" branch tagged with a version tag (`vX.Y.Z`).
 
 Changelog
 #########
