@@ -1,0 +1,1 @@
+Add badges for pypi version, supported python versions, doc status, and BitBucket pipeline status to README page.
