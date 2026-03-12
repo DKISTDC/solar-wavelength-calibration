@@ -52,12 +52,6 @@ Unit tests can be run by installing an editable version and running `pytest`:
     pip install -e .[test]
     pytest -v --cov solar-wavelength-calibration
 
-Deployment
-##########
-
-solar-wavelength-calibration is deployed to `PyPI <https://pypi.org/project/solar-wavelength-calibration/>`_ as part of
-BitBucket pipelines that are run on commits to the "main" branch tagged with a version tag (`vX.Y.Z`).
-
 Changelog
 #########
 
@@ -114,6 +108,12 @@ then the Bitbucket pipeline will fail. To be able to use the same tag you must d
     # Re-tag with the same version
     git tag vWHATEVER.THE.VERSION
     git push --tags origin main
+
+Deployment
+##########
+
+solar-wavelength-calibration is deployed to `PyPI <https://pypi.org/project/solar-wavelength-calibration/>`_ as part of
+BitBucket pipelines that are run on commits to the "main" branch tagged with a version tag (`vX.Y.Z`).
 
 .. |codecov| image:: https://codecov.io/bb/dkistdc/solar-wavelength-calibration/branch/main/graph/badge.svg
     :target: https://codecov.io/bb/dkistdc/solar-wavelength-calibration
