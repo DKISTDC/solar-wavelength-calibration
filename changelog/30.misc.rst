@@ -1,1 +1,1 @@
-Handle zero prepared weights safely in wavelength calibration to avoid divide-by-zero runtime warnings when computing residuals and best-fit atlas.
+Add a warning filter for zero-valued prepared weights in the FitResult.best_fit_atlas to avoid divide-by-zero runtime warnings when computing residuals and best-fit atlas.
