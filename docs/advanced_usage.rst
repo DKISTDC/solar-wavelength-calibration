@@ -185,14 +185,14 @@ This class could be used in a fit like this
 
 .. code-block:: python
 
-    wavecal_params = WavelengthCalibrationParametersWithContinuum(
-            continuum_poly_fit_order=3,
-            normalized_abscissa=np.linspace(-1, 1, input_spec.size),
-            crval=630 * u.nm,
-            ... # Add the base parameters here
-            )
+    >>> wavecal_params = WavelengthCalibrationParametersWithContinuum(
+    ...        continuum_poly_fit_order=3,
+    ...        normalized_abscissa=np.linspace(-1, 1, input_spec.size),
+    ...        crval=630 * u.nm,
+    ...        # Add the base parameters here
+    ...        )
 
-    fitter = WavelengthCalibrationFitter(input_parameters=wavecal_params, atlas=atlas)
+    >>> fitter = WavelengthCalibrationFitter(input_parameters=wavecal_params, atlas=atlas)
 
-    results = fitter(input_spectrum=input_spec)
+    >>> results = fitter(input_spectrum=input_spec)
 

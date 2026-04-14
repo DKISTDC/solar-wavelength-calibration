@@ -62,11 +62,11 @@ Valid usages of the `*BoundRange` classes are:
 .. code-block:: python
 
     # With no arguments the default bounds are [-inf, inf]. AKA unbounded
-    LengthBoundRange()
+    >>> LengthBoundRange()
 
     # If either `max` or `min` are not given then the upper/lower limit is unbounded (± inf)
-    UnitlessBoundRange(min=-23)
-    DispersionBoundRange(max=34 * u.nm / u.pix)
+    >>> UnitlessBoundRange(min=-23)
+    >>> DispersionBoundRange(max=34 * u.nm / u.pix)
 
 To highlight some of the guard rails provided by the `*BoundRange` classes, here are some examples of range definitions
 that will cause errors:
@@ -74,10 +74,10 @@ that will cause errors:
 .. code-block:: python
 
     # This will error because the units do not describe an angle
-    AngleBoundRange(max=180 * u.km)
+    >>> AngleBoundRange(max=180 * u.km)
 
     # This will error because min > max
-    LengthBoundRange(min=1 * u.m, max=100 * u.mm)
+    >>> LengthBoundRange(min=1 * u.m, max=100 * u.mm)
 
 The `~solar_wavelength_calibration.fitter.parameters.BoundsModel` class then takes a `*BoundRange` for each fit parameter.
 *None* of the inputs to `~solar_wavelength_calibration.fitter.parameters.BoundsModel` are required. If a bound is not
@@ -123,7 +123,7 @@ To use this default atlas simply instantiate the `~solar_wavelength_calibration.
 
 .. code-block:: python
 
-    atlas = Atlas()
+    >>> atlas = Atlas()
 
 Define Atlas Arrays Locally
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -134,15 +134,15 @@ class. To do so, simply pass the appropriate values to the `telluric_atlas_wavel
 
 .. code-block:: python
 
-    solar_wave, solar_spec = my_solar_loader_function()
-    telluric_wave, telluric_spec = my_telluric_loader_function()
+    >>> solar_wave, solar_spec = my_solar_loader_function()
+    >>> telluric_wave, telluric_spec = my_telluric_loader_function()
 
-    atlas = LocalAtlas(
-        telluric_atlas_wavelength=telluric_wave,
-        telluric_atlas_transmission=telluric_spec,
-        solar_atlas_wavelength=solar_wave,
-        solar_atlas_transmission=solar_spec,
-        )
+    >>> atlas = LocalAtlas(
+    ...    telluric_atlas_wavelength=telluric_wave,
+    ...    telluric_atlas_transmission=telluric_spec,
+    ...    solar_atlas_wavelength=solar_wave,
+    ...    solar_atlas_transmission=solar_spec,
+    ...    )
 
 .. note::
 
@@ -159,10 +159,10 @@ of `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParamet
 
 .. code-block:: python
 
-    fitter = WavelengthCalibrationFitter(
-        input_parameters=my_great_wavelength_calibration_parameters_object,
-        atlas=atlas
-        )
+    >>> fitter = WavelengthCalibrationFitter(
+    ...    input_parameters=my_great_wavelength_calibration_parameters_object,
+    ...    atlas=atlas
+    ...    )
 
 This fitter can then be used to fit any number of raw spectra by calling it once for each fit. There are many options
 here, but the only required argument is the spectrum to be fit.
@@ -170,7 +170,7 @@ here, but the only required argument is the spectrum to be fit.
 .. code-block:: python
 
     # This will run a fit
-    fit_result = fitter(input_spectrum=raw_spec)
+    >>> fit_result = fitter(input_spectrum=raw_spec)
 
 The two other named kwargs available are `method` and `spectral_weights`. `method` is used to define the minimization
 algorithm used. See the `lmfit documentation <https://lmfit.github.io/lmfit-py/fitting.html#lmfit.minimizer.minimize>`_
@@ -186,13 +186,13 @@ For example, we can use the ``differential_evolution`` method and pass kwargs th
 
 .. code-block:: python
 
-    fit_result = fitter(
-        input_spectrum=raw_spec,
-        method="differential_evolution",
-        popsize=1,
-        tol=1e-10,
-        init='halton'
-        )
+    >>> fit_result = fitter(
+    ...    input_spectrum=raw_spec,
+    ...    method="differential_evolution",
+    ...    popsize=1,
+    ...    tol=1e-10,
+    ...    init='halton'
+    ...    )
 
 The same `fitter` can be used for multiple fits.
 
@@ -235,13 +235,13 @@ that can be inserted directly into an existing FITS header in order to apply the
 
 .. code-block:: python
 
-    wave_params = fit_result.wavelength_parameters
+    >>> wave_params = fit_result.wavelength_parameters
 
     # Generate FITS keys assuming the spectral axis is the 2nd array dimension
-    solution_header_entries = wave_params.to_header(axis_num=2)
+    >>> solution_header_entries = wave_params.to_header(axis_num=2)
 
     # Profit
-    my_great_header.update(solution_header_entries)
+    >>> my_great_header.update(solution_header_entries)
 
 Helper Functions
 ----------------
@@ -272,10 +272,10 @@ how to use it (note in particular the conversion of `grating_constant` to 1 / m)
 
 .. code-block:: python
 
-    num_wave = raw_spec.size
-    init_wave_vec = calculate_linear_wave(
-        params=my_wavecal_parameters_object.lmfit_parameters,
-        number_of_wave_pix=num_wave,
-        grating_constant=my_wavecal_parameters_object.grating_constant.to_value(1 / u.m),
-        order=my_wavecal_parameters_object.order
-        )
+    >>> num_wave = raw_spec.size
+    >>> init_wave_vec = calculate_linear_wave(
+    ...    params=my_wavecal_parameters_object.lmfit_parameters,
+    ...    number_of_wave_pix=num_wave,
+    ...    grating_constant=my_wavecal_parameters_object.grating_constant.to_value(1 / u.m),
+    ...    order=my_wavecal_parameters_object.order
+    ...    )
