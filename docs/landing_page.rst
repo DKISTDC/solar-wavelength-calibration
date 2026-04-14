@@ -23,8 +23,21 @@ from raw pixel index to an absolute wavelength value. It has the following featu
 Quickstart / Example
 ====================
 
-First, let's import packages we'll need. We will be using the `dkist <https://docs.dkist.nso.edu/projects/python-tools/en/stable/>`_
-only to download example data. If you have your own spectra you can skip this import.
+First we'll need to install the `solar-wavelength-calibration` package, which can be done easily with `pip`:
+
+.. code:: bash
+
+    $ pip install solar-wavelength-calibration
+
+This quickstart also makes use of the `dkist`_ and `matplotlib <https://matplotlib.org/>`_ packages to get example data
+and plot results, respectively. If you want to follow along exactly then make sure they are installed as well. If you
+have your own data then the `dkist`_ install can be skipped.
+
+.. code:: bash
+
+    $ pip install dkist matplotlib
+
+Next, let's import packages we'll need. Again, if you have your own spectra you can skip the import of `dkist`_.
 
 .. code:: python
 
@@ -216,3 +229,5 @@ Let's also plot our spectrum (with fit wavelengths) against the best-fit atlas t
     Input spectrum with fit wavelength axis and best-fit atlas spectrum
 
 Looks good! We've missed a bit on the strength/resolution of some of the lines, but the wavelength solution looks spot on!
+
+.. _dkist: https://docs.dkist.nso.edu/projects/python-tools/en/stable/
