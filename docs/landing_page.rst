@@ -199,7 +199,7 @@ Let's also plot our spectrum (with fit wavelengths) against the best-fit atlas t
 .. code:: python
 
     >>> wcs_obj = WCS(header)
-    >>> best_fit_wavelength = WCS.spectral.pixel_to_world(np.arange(spectrum.size)).to_value(u.nm)
+    >>> best_fit_wavelength = wcs_obj.spectral.pixel_to_world(np.arange(spectrum.size)).to_value(u.nm)
     >>> best_fit_atlas = fit_result.best_fit_atlas
 
     >>> ax = plt.figure(figsize=(6,4)).add_subplot(111)
