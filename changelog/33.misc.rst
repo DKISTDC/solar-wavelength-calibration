@@ -1,0 +1,1 @@
+Exclude "build*" from `setuptools` package finding to avoid infinitely nesting "build/lib/build..." directories when running `pip install` multiple times.
