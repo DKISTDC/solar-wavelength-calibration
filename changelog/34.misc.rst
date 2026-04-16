@@ -1,1 +1,0 @@
-Upgrade Read the Docs LTS build image to Ubuntu 24.04, and Read the Docs python build version to 3.13.

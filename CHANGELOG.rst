@@ -1,3 +1,12 @@
+v2.0.3 (2026-04-16)
+===================
+
+Misc
+----
+
+- Upgrade Read the Docs LTS build image to Ubuntu 24.04, and Read the Docs python build version to 3.13. (`#34 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/34>`__)
+
+
 v2.0.2 (2026-04-15)
 ===================
 
