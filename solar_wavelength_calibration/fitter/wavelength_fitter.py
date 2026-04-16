@@ -1,6 +1,7 @@
 """Machinery to collect data and parameter objects and fit the wavelength axis."""
 
 import logging
+import warnings
 from functools import cached_property
 from typing import Callable
 
@@ -149,9 +150,15 @@ class FitResult(BaseModel):
         This is the exact atlas combination (with absorption, doppler-shift, straylight, resolving power, and continuum
         corrections applied) that produced the best fit.
         """
-        residuals = self.minimizer_result.residual / self.prepared_weights
+        # It is totally valid to have prepared_weights that are 0, so we just need to ignore that warning!
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="invalid value encountered in divide",
+                category=RuntimeWarning,
+            )
+            residuals = self.minimizer_result.residual / self.prepared_weights
         best_fit_atlas = self.input_spectrum - residuals
-
         return best_fit_atlas
 
 

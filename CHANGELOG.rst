@@ -1,3 +1,13 @@
+v2.0.2 (2026-04-15)
+===================
+
+Misc
+----
+
+- Add a warning filter for zero-valued prepared weights in the FitResult.best_fit_atlas to avoid divide-by-zero runtime warnings when computing residuals and best-fit atlas. (`#30 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/30>`__)
+- Exclude "build*" from `setuptools` package finding to avoid infinitely nesting "build/lib/build..." directories when running `pip install` multiple times. (`#33 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/33>`__)
+
+
 v2.0.1 (2026-02-06)
 ===================
 
