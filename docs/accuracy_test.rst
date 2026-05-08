@@ -132,7 +132,11 @@ Test Code
     def single_noise_test(noise_fraction_sigma: float):
         """Run a fit for a given noise fraction and display the results"""
         atlas = Atlas()
-        _, spec = observe_atlas(atlas=atlas, noise_fraction_sigma=noise_fraction_sigma, num_wave_pix=num_wave_pix, **true_values)
+        _, spec = observe_atlas(atlas=atlas,
+                                noise_fraction_sigma=noise_fraction_sigma,
+                                num_wave_pix=num_wave_pix,
+                                **true_values)
+
         bounds = BoundsModel(crval=LengthBoundRange(min=init_values["crval"] * 0.98, max=init_values["crval"] * 1.02),
                          dispersion=DispersionBoundRange(min=init_values["dispersion"] * 0.6, max=init_values["dispersion"]*1.4),
                          incident_light_angle=AngleBoundRange(min=init_values["incident_light_angle"] - 1 * u.deg, max=init_values["incident_light_angle"] + 1* u.deg),
@@ -140,6 +144,7 @@ Test Code
                          opacity_factor=UnitlessBoundRange(min=0.5, max=3),
                          straylight_fraction=UnitlessBoundRange(min=0.0, max=0.8),
                          continuum_level=UnitlessBoundRange(min=3, max=7))
+
         fit_flags = FitFlagsModel(crval=True,
                               dispersion=True,
                               incident_light_angle=True,
@@ -147,6 +152,7 @@ Test Code
                               opacity_factor=True,
                               straylight_fraction=True,
                               continuum_level=True)
+
         params = WavelengthCalibrationParameters(crval=init_values["crval"],
                                              dispersion=init_values["dispersion"],
                                              incident_light_angle=init_values["incident_light_angle"],
@@ -158,6 +164,7 @@ Test Code
                                              continuum_level=init_values["continuum_level"],
                                              bounds=bounds,
                                              fit_flags=fit_flags)
+
         fitter = WavelengthCalibrationFitter(input_parameters = params, atlas=atlas)
         fit_result = fitter(input_spectrum=spec, method="differential_evolution", tol=1e-10)
 
