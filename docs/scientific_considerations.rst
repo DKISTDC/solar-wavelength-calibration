@@ -46,7 +46,7 @@ Fit Accuracy
 ------------
 
 In this section we present general guidelines regarding the fitting accuracy of all the fit parameters. For more information,
-including the code used, please see the accuracy tests page. Given that the results presented on that page represent a
+including the code used, please see the :doc:`accuracy tests <accuracy_test>` page. Given that the results presented on that page represent a
 only single instance of a contrived fit to "observed" atlas data care should be taken to not read too much into the following
 guidelines. Variables specific to each fit (e.g., sampling resolution, spectral range, number of strong spectral features, etc.)
 will affect the accuracy and precision of that fit. It is incumbent on the user, with their detailed knowledge of their
