@@ -5,6 +5,7 @@
     :hidden:
 
     Overview <self>
+    scientific_considerations
     physical_model
     gotchas
     basic_usage

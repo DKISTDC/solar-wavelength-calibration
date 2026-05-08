@@ -75,6 +75,8 @@ in detail below:
 The single atlas spectrum that results from these steps is then subtracted from the input spectrum to compute the
 goodness-of-fit (chi-squared) value.
 
+.. _opacity_factor:
+
 Apply Telluric Opacity Factor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -109,6 +111,8 @@ Combine Spectra
 ^^^^^^^^^^^^^^^
 
 The telluric and Doppler-corrected solar transmissions are combined by simply multiplying them together.
+
+.. _spectral_resolution:
 
 Spectral Resolution
 ^^^^^^^^^^^^^^^^^^^
