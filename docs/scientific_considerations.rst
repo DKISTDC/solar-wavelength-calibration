@@ -42,4 +42,26 @@ solar and telluric lines the solution is to define a custom Atlas that overrides
 or `telluric <solar_wavelength_calibration.atlas.atlas.Atlas.telluric_atlas_transmission>` transmission properties to
 account for this difference.
 
+Fit Accuracy
+------------
+
+In this section we present general guidlines regarding the fitting accuracy of all the fit parameters. For more information,
+including the code used, please see the accuracy tests page. Given that the results presented on that page represent a
+only single instance of a contrived fit to "observed" atlas data care should be taken to not read too much into the following
+guidelines. Variables specific to each fit (e.g., sampling resolution, spectral range, number of strong spectral features, etc.)
+will affect the accuracy and precision of that fit. It is encumbant on the user, with their detailed knowledge of their
+particular fitting scenario, to make their own determination of the quality of their fit results.
+
+To help in assessing a fit, the ``minimizer_result`` attribute of a `~solar_wavelength_calibration.fitter.wavelength_fitter.FitResult`
+instance is an ``lmfit`` `~lmfit.minimizer.MinimizerResult` object that holds many useful fit-quality metrics (the specific set depends on the
+fitting method used). Furthermore, a basic bootstrapping algorithm can provide a good 0th-order estimation of fit uncertainties.
+
+All of that said, these guidelines may help in getting good fits and assesing your own fit results:
+
+#. Above all else, **provide as much knowledge as possible to the fitter**. This will be primarily in the form of good initial guesses and fit bounds.
+#. Related, do not fit variables that you already know. For example, if the ``resolving_power`` is well known then turn off its fit in your `~solar_wavelength_calibration.fitter.parameters.FitFlagsModel` instance.
+#. Provided decent initial guesses, the ``crval`` and ``dispersion`` parameters are generally very well fit, even in the presence of low signal-to-noise.
+#. ``continuum_level``, which provides the overall scale factor, is generally well fit *provided the input spectrum has a flat continuum*. For examples of how to fit a non-flat continuum, see :ref:`here <custom_continuum_function>`.
+#. ``incident_light_angle`` is a difficult parameter to fit accurately and the parameter whose bounds can ruin a fit. If possible, fix this parameter in the fit. If it must be fit then place tight bounds on it.
+#. Line shape parameters (``resolving_power`` and ``opacity_factor``) are both very susceptible to noise, but rarely "ruin" fit. Detailed analysis of fit results should be made before inferring physical properties based on their best-fit values.
 
