@@ -1,7 +1,12 @@
 solar-wavelength-calibration
 ============================
 
-Accurately determine the wavelength axis of a solar spectrum.
+This package is designed to match an observed solar spectrum to a reference solar atlas in order to produce a mapping
+from raw pixel index to an absolute wavelength value. Unlike most other wavelength fitting packages, `solar-wavelength-calibration`
+is designed for Solar spectra and is tailored specifically to this use case. In particular, the use of a Solar atlas
+(as opposed to line lists) and the construction of a composite reference from Solar and telluric spectra are features
+unique to calibrating Solar data. Furthermore, rather than fitting the wavelength solution as a combination of various
+polynomials, we parameterize a non-linear wavelength solution with physical properties of the spectrograph.
 
 Overview and Features
 ---------------------
