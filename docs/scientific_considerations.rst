@@ -1,7 +1,7 @@
 Scientific Considerations
 =========================
 
-The purpose of this page is to provide useful context from a "Science use case" persepective that will hopefully help
+The purpose of this page is to provide useful context from a "Science use case" perspective that will hopefully help
 you get the most our of this package.
 
 Input Data
@@ -9,7 +9,7 @@ Input Data
 
 The ideal input spectrum comes from flat-field calibration data taken soon after or before your science data. A flat-field
 spectrum is preferred because it should be free of "scientific" impacts on the spectral shape and will have a higher
-signal-to-noise (SNR) than science data. If the instrumet in question takes two-dimensional spectra (e.g., a slit spectrograph)
+signal-to-noise (SNR) than science data. If the instrument in question takes two-dimensional spectra (e.g., a slit spectrograph)
 then averaging some or all of the non-spectral dimension into a single spectrum will increase the SNR even further. Note
 that care should be taken during this averaging because many instruments have slightly different line shapes in different regions
 of the detector;an average may artificially degrade the spectral resolution.
@@ -27,7 +27,7 @@ The default `~solar_wavelength_calibration.atlas.atlas.Atlas` used for calibrati
 and the strength of the telluric lines is directly controlled with the :ref:`opacity_factor <opacity_factor>` fit parameter.
 If you want to remove telluric lines entirely it is recommended to either define a custom Atlas by overriding the
 `~solar_wavelength_calibration.atlas.atlas.Atlas.telluric_atlas_transmission` property or simply setting ``opacity_factor = 0``
-in your `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` instance and ``opcaity_factor = False``
+in your `~solar_wavelength_calibration.fitter.parameters.WavelengthCalibrationParameters` instance and ``opacity_factor = False``
 in your `~solar_wavelength_calibration.fitter.parameters.FitFlagsModel` instance.
 
 Relative Line Shapes
@@ -45,18 +45,18 @@ account for this difference.
 Fit Accuracy
 ------------
 
-In this section we present general guidlines regarding the fitting accuracy of all the fit parameters. For more information,
+In this section we present general guidelines regarding the fitting accuracy of all the fit parameters. For more information,
 including the code used, please see the accuracy tests page. Given that the results presented on that page represent a
 only single instance of a contrived fit to "observed" atlas data care should be taken to not read too much into the following
 guidelines. Variables specific to each fit (e.g., sampling resolution, spectral range, number of strong spectral features, etc.)
-will affect the accuracy and precision of that fit. It is encumbant on the user, with their detailed knowledge of their
+will affect the accuracy and precision of that fit. It is incumbent on the user, with their detailed knowledge of their
 particular fitting scenario, to make their own determination of the quality of their fit results.
 
 To help in assessing a fit, the ``minimizer_result`` attribute of a `~solar_wavelength_calibration.fitter.wavelength_fitter.FitResult`
 instance is an ``lmfit`` `~lmfit.minimizer.MinimizerResult` object that holds many useful fit-quality metrics (the specific set depends on the
 fitting method used). Furthermore, a basic bootstrapping algorithm can provide a good 0th-order estimation of fit uncertainties.
 
-All of that said, these guidelines may help in getting good fits and assesing your own fit results:
+All of that said, these guidelines may help in getting good fits and assessing your own fit results:
 
 #. Above all else, **provide as much knowledge as possible to the fitter**. This will be primarily in the form of good initial guesses and fit bounds.
 #. Related, do not fit variables that you already know. For example, if the ``resolving_power`` is well known then turn off its fit in your `~solar_wavelength_calibration.fitter.parameters.FitFlagsModel` instance.
