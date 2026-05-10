@@ -11,9 +11,6 @@ polynomials, we parameterize a non-linear wavelength solution with physical prop
 Overview and Features
 ---------------------
 
-This library is designed to match an observed solar spectrum to a reference solar atlas in order to produce a mapping
-from raw pixel index to an absolute wavelength value. It has the following features:
-
 * Physically motivated model of spectrograph optics that lead to non-linear wavelength solutions
 * User-definable solar atlas or a `sensible default <https://doi.org/10.7910/DVN/JUSYJM>`_.
 * Support for fitting telluric lines of variable strength with a Doppler offset
