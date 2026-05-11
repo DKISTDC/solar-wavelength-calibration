@@ -1,15 +1,15 @@
 Accuracy Tests
 ==============
 
-This page shows an example test designed to test the accuracy of the fitting model in the presence of increasing noise.
-In this test we use the default `~solar_wavelength_calibration.atlas.atlas.Atlas` and "observe" it with the fit model
+This page shows an example test designed to asses the accuracy of the fitting model in the presence of increasing noise.
+In this test we use the default `~solar_wavelength_calibration.atlas.atlas.Atlas` and "observe" it with the :doc:`fit model <physical_model>`
 to produce a synthetic input spectrum. We then apply varying amounts of normally-distributed noise and run a fit; the
 difference between the known "true" parameters and the resulting fit provides a rough estimate of how sensitive each
 parameter is to noise.
 
 Note that these tests do not vary many aspects that are important when considering real data (wavelength range, resolution, etc.),
-and so this page can be considered an example of how to do your own accuracy assessments. Readers are encouraged to perform
-their own tests that more closely align with their specific situation.
+and so this page should be considered only as an *example* of how to do your own accuracy assessments. Readers are encouraged
+to perform their own tests that more closely align with their specific situation.
 
 Test Code
 ---------
@@ -265,4 +265,4 @@ To get a visual sense of these numbers, here is the best-fit in the case of 15% 
 .. figure:: images/observed_atlas_fit_w_noise.jpg
     :alt: Contrived Atlas fit with 15% normally distributed noise.
 
-    "Observe" Atlas fit with 15% normally distributed noise and imperfect initial guesses.
+    "Observed" Atlas fit with 15% normally distributed noise and imperfect initial guesses.
