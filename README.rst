@@ -1,6 +1,6 @@
 solar-wavelength-calibration
 ----------------------------
-|pypiversion| |pyversions| |codecov| |rtdstatus| |bbstatus|
+|pypiversion| |pyversions| |codecov| |rtdstatus| |bbstatus| |pyOS|
 
 A package for calibrating wavelength data. Please see the `online docs <https://docs.dkist.nso.edu/projects/solar-wavelength-calibration/en/latest/>`_
 for detailed information.
@@ -97,3 +97,6 @@ then the Bitbucket pipeline will fail. To be able to use the same tag you must d
 .. |bbstatus| image:: https://img.shields.io/bitbucket/pipelines/dkistdc/solar-wavelength-calibration/main
     :target: https://bitbucket.org/dkistdc/solar-wavelength-calibration/pipelines/results/branch/main/page/1
     :alt: Bitbucket Pipeline Status
+.. |pyOS| image:: https://pyopensci.org/badges/peer-reviewed.svg
+    :target: https://github.com/pyOpenSci/software-submission/issues/283
+    :alt: pyOpenSci Peer-Reviewed
