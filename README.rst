@@ -1,6 +1,6 @@
 solar-wavelength-calibration
 ----------------------------
-|pypiversion| |pyversions| |codecov| |rtdstatus| |bbstatus| |pyOS|
+|pypiversion| |pyversions| |codecov| |rtdstatus| |bbstatus| |pyOS| |zenodo|
 
 A package for calibrating wavelength data. Please see the `online docs <https://docs.dkist.nso.edu/projects/solar-wavelength-calibration/en/latest/>`_
 for detailed information.
@@ -100,3 +100,6 @@ then the Bitbucket pipeline will fail. To be able to use the same tag you must d
 .. |pyOS| image:: https://pyopensci.org/badges/peer-reviewed.svg
     :target: https://github.com/pyOpenSci/software-submission/issues/283
     :alt: pyOpenSci Peer-Reviewed
+.. |zenodo| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.21420012.svg
+    :target: https://doi.org/10.5281/zenodo.21420012
+    :alt: Zenodo DOI
