@@ -1,1 +1,1 @@
-Add badges for pypi version, supported python versions, doc status, and BitBucket pipeline status to README page.
+Add badges for pypi version, supported python versions, doc status, BitBucket pipeline status, pyOpenSci, and Zeonodo to README page.
