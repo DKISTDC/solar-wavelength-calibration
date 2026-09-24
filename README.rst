@@ -11,6 +11,10 @@ solar-wavelength-calibration is deployed to `PyPI <https://pypi.org/project/sola
 
 Development
 -----------
+Install `Git LFS <https://git-lfs.com/>`_ and run ``git lfs install`` once for
+your user account before cloning. With the default LFS settings, ``git clone``
+automatically downloads the complete atlas files.
+
 .. code-block:: bash
 
     git clone git@bitbucket.org:dkistdc/solar-wavelength-calibration.git
@@ -18,6 +22,73 @@ Development
     pre-commit install
     pip install -e .[test]
     pytest -v --cov solar-wavelength-calibration
+
+Reference atlas test data
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use the complete, unmodified solar and telluric atlases in
+``solar_wavelength_calibration/tests/data/full-atlas/`` for scientifically
+meaningful output. These canonical test data are stored with Git LFS; there is
+no intermediate or reduced atlas.
+Use the tiny ``test_*_reference_atlas.npy`` fixtures in
+``solar_wavelength_calibration/tests/data/`` when scientific output is immaterial,
+such as cache, download, configuration, and failure tests. Tiny fixtures remain
+in ordinary Git, retaining the original NSO fixture bytes.
+
+The full files come from
+`doi:10.7910/DVN/JUSYJM <https://doi.org/10.7910/DVN/JUSYJM>`_, Dataverse dataset
+version 1.1, released 2026-01-28, under CC0-1.0. Both upstream file versions are 1.
+The tiny files came from the
+`NSO test fixtures <https://share.nso.edu/shared/dkist/DC/solar_wavelength_calibration_atlas/>`_.
+
+Tests download both fixture sizes over HTTP through Pooch, which follows LFS
+redirects, verifies hashes, and caches the files. Their Bitbucket source API URLs
+pin data commit ``ac3795de15003b7bd1e8c1a5304c294446c0cc62``, retained by the
+permanent tag ``atlas-data-consolidated``. The URLs do not change after merging or
+deleting the feature branch, including after a squash merge.
+Local LFS hydration is not required for tests, so Pipelines disables clone-time
+LFS downloads. Use ``git lfs pull`` if an existing checkout needs the full files.
+Tests do not contact Dataverse; production endpoint availability is not tested
+by this suite. The library's production Dataverse default is unchanged.
+
+Package discovery includes ``solar_wavelength_calibration*`` except the full-atlas directory.
+The ``exclude-package-data`` setting keeps ``tests/data/full-atlas/`` out of wheels;
+``MANIFEST.in`` excludes that directory from sdists, whether the checkout contains
+full files or LFS pointers. Tiny fixtures remain packaged.
+
+Updating the atlases
+^^^^^^^^^^^^^^^^^^^
+
+1. On a feature branch, replace the full files with complete, unmodified upstream
+   files. Verify their SHA-256 and MD5 against the upstream identifiers and update
+   the provenance above. Keep the full files in LFS and tiny fixtures in ordinary
+   Git. Add the required changelog entry.
+2. Commit the data first and push the feature branch; the Git LFS pre-push hook
+   uploads the full objects. Record that data commit's full SHA with
+   ``git rev-parse HEAD``.
+3. Create and push a new annotated, permanent data tag on that commit::
+
+       git tag -a atlas-data-NAME DATA_COMMIT -m "Reference atlas data snapshot"
+       git push origin refs/tags/atlas-data-NAME
+
+   Replace ``NAME`` with a unique descriptive name containing no digits, and
+   ``DATA_COMMIT`` with the full SHA. Digit-free names keep data tags out of
+   setuptools-scm's package-version discovery; do not use release-style ``v*``
+   names. Never move or delete an existing data tag: older tests depend on it
+   retaining their pinned commit even after a squash merge and branch deletion.
+4. In a subsequent commit, update ``test_full_atlas_config`` in
+   ``solar_wavelength_calibration/tests/conftest.py`` and
+   ``test_small_atlas_config`` in ``solar_wavelength_calibration/tests/test_atlas.py``
+   to the published data commit. Keep the source API URL pattern
+   ``https://api.bitbucket.org/2.0/repositories/dkistdc/solar-wavelength-calibration/src/COMMIT/PATH``.
+   Update Pooch's expected hashes for any changed files and the commit/tag above.
+   Do not change the production Dataverse configuration as part of a test-data update.
+5. Verify anonymous downloads from the exact commit URLs, following redirects
+   (for example, ``curl -q --fail --location``), and compare SHA-256, MD5, and sizes.
+   Do not use repository archives, which may contain LFS pointers. Run the atlas
+   and scientific tests with fresh caches so HTTP downloads are exercised, and
+   check that the wheel and sdist exclude the full files and LFS pointers.
+   Push the test changes for review; the commit-pinned URLs are final before merging.
 
 Installation
 ------------
