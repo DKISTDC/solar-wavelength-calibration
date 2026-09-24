@@ -3,7 +3,7 @@ requires = ["setuptools>=64", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-exclude = ["build*"]
+include = ["solar_wavelength_calibration*"]
 
 [tool.setuptools_scm]
 
