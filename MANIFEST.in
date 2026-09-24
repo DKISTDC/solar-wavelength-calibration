@@ -1,1 +1,1 @@
-prune test-data/full-atlas
+prune solar_wavelength_calibration/tests/data/full-atlas

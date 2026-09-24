@@ -1,3 +1,1 @@
-Store complete, unmodified solar and telluric test atlases in Git LFS.
-Retain the tiny fixtures in ordinary Git and exclude complete atlases from
-Python distributions. Tests continue to use HTTP downloads through Pooch.
+Store solar and telluric test atlases in Git LFS.

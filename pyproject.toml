@@ -4,6 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["solar_wavelength_calibration*"]
+exclude = ["solar_wavelength_calibration.tests.data.full-atlas*"]
+
+[tool.setuptools.exclude-package-data]
+"solar_wavelength_calibration.tests.data" = ["full-atlas/*"]
 
 [tool.setuptools_scm]
 
