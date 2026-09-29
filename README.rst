@@ -24,7 +24,7 @@ automatically downloads the complete atlas files.
     pytest -v --cov solar-wavelength-calibration
 
 Reference atlas test data
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use the complete, solar and telluric atlases in
 ``solar_wavelength_calibration/tests/data/full-atlas/`` for scientifically
