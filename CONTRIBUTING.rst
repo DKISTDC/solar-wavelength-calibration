@@ -38,6 +38,7 @@ your contributions! Below is the recommended workflow for code development:
 #. Install the development version as explained in README.rst (don't forget to install `pre-commit`!).
 #. Add/change/fix the code!
 #. Update/create unit tests and make sure `pytest` runs locally.
+#. Add a changelog fragment[s] as described in README.rst
 #. Submit a pull request against the original repo's `main` branch.
 #. Update your branch based on feedback on the pull request.
 #. Bask in our eternal gratitude.

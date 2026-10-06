@@ -6,27 +6,52 @@ A package for matching an observed solar spectrum to a reference solar atlas in 
 index to an absolute wavelength value. Please see the `online docs <https://docs.dkist.nso.edu/projects/solar-wavelength-calibration/en/latest/>`_
 for detailed information.
 
-Deployment
-----------
-solar-wavelength-calibration is deployed to `PyPI <https://pypi.org/project/solar-wavelength-calibration/>`_
-
-Development
------------
-.. code-block:: bash
-
-    # If you don't have a bitbucket account use https://bitbucket.org/dkistdc/solar-wavelength-calibration.git
-    git clone git@bitbucket.org:dkistdc/solar-wavelength-calibration.git
-    cd solar-wavelength-calibration
-    pre-commit install
-    pip install -e .[test]
-    pytest -v --cov solar-wavelength-calibration
-
 Installation
 ------------
 .. code:: bash
 
    pip install solar-wavelength-calibration
 
+Development
+-----------
+
+The source repository can be cloned from BitBucket with the following command
+
+.. code-block:: bash
+
+    git clone git@bitbucket.org:dkistdc/solar-wavelength-calibration.git
+
+If you don't have a BitBucket account use `https://bitbucket.org/dkistdc/solar-wavelength-calibration.git` as the URL
+instead.
+
+Linting
+#######
+
+To replicate the standard developement workflow you must also install `pre-commit <https://pre-commit.com/>`_ and set it
+up to run whenever a git commit is made:
+
+.. code-block:: bash
+
+    cd solar-wavelength-calibration
+    pre-commit install
+
+To run `pre-commit` without having to make a commit simply run
+
+.. code-block:: bash
+
+    pre-commit run --all-files
+
+This will check the formatting of all code against the constraints defined in ".pre-commit-config.yaml".
+
+Unit Tests
+###########
+
+Unit tests can be run by installing an editable version and running `pytest`:
+
+.. code-block:: bash
+
+    pip install -e .[test]
+    pytest -v --cov solar-wavelength-calibration
 
 Changelog
 #########
@@ -84,6 +109,12 @@ then the Bitbucket pipeline will fail. To be able to use the same tag you must d
     # Re-tag with the same version
     git tag vWHATEVER.THE.VERSION
     git push --tags origin main
+
+Deployment
+##########
+
+solar-wavelength-calibration is deployed to `PyPI <https://pypi.org/project/solar-wavelength-calibration/>`_ as part of
+BitBucket pipelines that are run on commits to the "main" branch tagged with a version tag (`vX.Y.Z`).
 
 .. |codecov| image:: https://codecov.io/bb/dkistdc/solar-wavelength-calibration/branch/main/graph/badge.svg
     :target: https://codecov.io/bb/dkistdc/solar-wavelength-calibration
