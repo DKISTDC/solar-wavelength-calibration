@@ -13,6 +13,7 @@ Development
 -----------
 .. code-block:: bash
 
+    # If you don't have a bitbucket account use https://bitbucket.org/dkistdc/solar-wavelength-calibration.git
     git clone git@bitbucket.org:dkistdc/solar-wavelength-calibration.git
     cd solar-wavelength-calibration
     pre-commit install

@@ -1,0 +1,2 @@
+Improve code examples in documentation by fixing bugs and clarifying the difference between python input and output. Also
+add a note about installing `dkist` and `matplotlib` to follow along with the quickstart.
