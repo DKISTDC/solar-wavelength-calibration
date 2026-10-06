@@ -1,6 +1,6 @@
 solar-wavelength-calibration
 ----------------------------
-|codecov|
+|pypiversion| |pyversions| |codecov| |rtdstatus| |bbstatus| |pyOS| |zenodo|
 
 A package for calibrating wavelength data. Please see the `online docs <https://docs.dkist.nso.edu/projects/solar-wavelength-calibration/en/latest/>`_
 for detailed information.
@@ -85,3 +85,21 @@ then the Bitbucket pipeline will fail. To be able to use the same tag you must d
 
 .. |codecov| image:: https://codecov.io/bb/dkistdc/solar-wavelength-calibration/branch/main/graph/badge.svg
     :target: https://codecov.io/bb/dkistdc/solar-wavelength-calibration
+    :alt: Latest Codecov status
+.. |rtdstatus| image:: https://app.readthedocs.com/projects/dkistdc-solar-wavelength-calibration/badge/?version=latest
+    :target: https://docs.dkist.nso.edu/projects/solar-wavelength-calibration/en/latest/
+    :alt: Documentation Status
+.. |pypiversion| image:: https://img.shields.io/pypi/v/solar-wavelength-calibration.svg
+    :target: https://pypi.org/project/solar-wavelength-calibration/
+    :alt: PyPI package
+.. |pyversions| image:: https://img.shields.io/pypi/pyversions/solar-wavelength-calibration
+    :alt: Supported Python Versions
+.. |bbstatus| image:: https://img.shields.io/bitbucket/pipelines/dkistdc/solar-wavelength-calibration/main
+    :target: https://bitbucket.org/dkistdc/solar-wavelength-calibration/pipelines/results/branch/main/page/1
+    :alt: Bitbucket Pipeline Status
+.. |pyOS| image:: https://pyopensci.org/badges/peer-reviewed.svg
+    :target: https://github.com/pyOpenSci/software-submission/issues/283
+    :alt: pyOpenSci Peer-Reviewed
+.. |zenodo| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.21420011.svg
+    :target: https://doi.org/10.5281/zenodo.21420011
+    :alt: Zenodo DOI
