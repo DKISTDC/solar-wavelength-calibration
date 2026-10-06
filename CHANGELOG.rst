@@ -1,3 +1,24 @@
+v2.0.4 (2026-10-06)
+===================
+
+Misc
+----
+
+- Store solar and telluric test atlases in Git LFS. (`#37 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/37>`__)
+
+
+Documentation
+-------------
+
+- Add badges for pypi version, supported python versions, doc status, BitBucket pipeline status, pyOpenSci, and Zeonodo to README page. (`#31 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/31>`__)
+- Update README and CONTRIBUTING to be more clear about the development workflow, especially regarding expectations for
+  the use of `pre-commit` to lint the project. (`#32 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/32>`__)
+- Improve code examples in documentation by fixing bugs and clarifying the difference between python input and output. Also
+  add a note about installing `dkist` and `matplotlib` to follow along with the quickstart. (`#35 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/35>`__)
+- Add "Scientific Considerations" and "Accuracy Tests" doc pages that discuss some best-practices and guidelines for assessing
+  fit results. (`#36 <https://bitbucket.org/dkistdc/solar-wavelength-calibration/pull-requests/36>`__)
+
+
 v2.0.3 (2026-04-16)
 ===================
 

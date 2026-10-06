@@ -1,2 +1,0 @@
-Add "Scientific Considerations" and "Accuracy Tests" doc pages that discuss some best-practices and guidelines for assessing
-fit results.

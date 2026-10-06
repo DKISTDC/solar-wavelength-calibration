@@ -1,2 +1,0 @@
-Update README and CONTRIBUTING to be more clear about the development workflow, especially regarding expectations for
-the use of `pre-commit` to lint the project.
