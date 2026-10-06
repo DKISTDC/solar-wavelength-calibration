@@ -46,6 +46,25 @@ This will check the formatting of all code against the constraints defined in ".
 Unit Tests
 ###########
 
+Reference atlas test data
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Install `Git LFS <https://git-lfs.com/>`_ and run ``git lfs install`` once for
+your user account before cloning. With the default LFS settings, ``git clone``
+automatically downloads the complete atlas files.
+
+Use the complete, solar and telluric atlases in
+``solar_wavelength_calibration/tests/data/full-atlas/`` for scientifically
+meaningful output. These canonical test data are stored with Git LFS.
+
+Use the tiny ``test_*_reference_atlas.npy`` fixtures in
+``solar_wavelength_calibration/tests/data/`` when scientific output is immaterial,
+such as cache, download, configuration, and failure tests. Tiny fixtures remain
+in ordinary Git.
+
+Running Tests
+^^^^^^^^^^^^^
+
 Unit tests can be run by installing an editable version and running `pytest`:
 
 .. code-block:: bash

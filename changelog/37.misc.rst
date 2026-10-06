@@ -1,0 +1,1 @@
+Store solar and telluric test atlases in Git LFS.

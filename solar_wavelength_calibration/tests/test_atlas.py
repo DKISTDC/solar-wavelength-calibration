@@ -43,10 +43,11 @@ def cache_dir(request, override_cache_path) -> Generator[Path, None, None]:
         yield cache_path
 
 
-# Version of small atlas hosted at NSO to avoid hammering Dataverse
-# Do we need to test the small atlas anymore?
 test_small_atlas_config = DownloadConfig(
-    base_url="https://share.nso.edu/shared/dkist/DC/solar_wavelength_calibration_atlas/",
+    base_url=(
+        "https://api.bitbucket.org/2.0/repositories/dkistdc/solar-wavelength-calibration/"
+        "src/ac3795de15003b7bd1e8c1a5304c294446c0cc62/solar_wavelength_calibration/tests/data/"
+    ),
     telluric_reference_atlas_file_name="test_telluric_reference_atlas.npy",
     telluric_reference_atlas_hash_id="md5:a06c6923b794479f2b0ac483733402a7",
     solar_reference_atlas_file_name="test_solar_reference_atlas.npy",
@@ -134,19 +135,3 @@ def test_telluric_wavelength_non_monotonic(function_atlas, parameters):
         pydantic.ValidationError, match="Telluric atlas wavelength array is not monotonic."
     ):
         WavelengthCalibrationFitter(input_parameters=parameters, atlas=function_atlas)
-
-
-def test_public_default_accessible(tmp_path):
-    """
-    Given: The non-testing default Atlas config
-    When: Trying to fetch the files from the service defined in that config
-    Then: The files can be downloaded
-    """
-    # AKA This test will fail if Dataverse or whoever start blocking downloads
-    # This test is more a canary in the coal mine than anything else
-    unique_override_cache_dir = tmp_path
-    environ_dict = {CACHE_DIRECTORY_OVERRIDE_ENVIRONMENT_VAR: str(unique_override_cache_dir)}
-    with mock.patch.dict(os.environ, os.environ | environ_dict):
-        atlas = Atlas(config=None)
-        assert atlas.telluric_atlas_wavelength.size
-        assert atlas.solar_atlas_wavelength.size

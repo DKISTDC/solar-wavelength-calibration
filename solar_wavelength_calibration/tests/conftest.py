@@ -15,9 +15,13 @@ from solar_wavelength_calibration.atlas.atlas import DownloadConfig
 from solar_wavelength_calibration.atlas.base import AtlasBase
 from solar_wavelength_calibration.fitter.parameters import WavelengthCalibrationParameters
 
-# Version of full atlas hosted at NSO to avoid hammering Dataverse
+# Complete atlas pinned to the git LFS commit.
 test_full_atlas_config = DownloadConfig(
-    base_url="https://share.nso.edu/shared/dkist/DC/solar_wavelength_calibration_atlas",
+    base_url=(
+        "https://api.bitbucket.org/2.0/repositories/dkistdc/solar-wavelength-calibration/"
+        "src/ac3795de15003b7bd1e8c1a5304c294446c0cc62/"
+        "solar_wavelength_calibration/tests/data/full-atlas/"
+    ),
     telluric_reference_atlas_file_name="telluric_reference_atlas.npy",
     telluric_reference_atlas_hash_id="md5:8db5e12508b293bca3495d81a0747447",
     solar_reference_atlas_file_name="solar_reference_atlas.npy",
