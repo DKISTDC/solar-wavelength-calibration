@@ -2,7 +2,8 @@ solar-wavelength-calibration
 ----------------------------
 |pypiversion| |pyversions| |codecov| |rtdstatus| |bbstatus| |pyOS| |zenodo|
 
-A package for calibrating wavelength data. Please see the `online docs <https://docs.dkist.nso.edu/projects/solar-wavelength-calibration/en/latest/>`_
+A package for matching an observed solar spectrum to a reference solar atlas in order to produce a mapping from raw pixel
+index to an absolute wavelength value. Please see the `online docs <https://docs.dkist.nso.edu/projects/solar-wavelength-calibration/en/latest/>`_
 for detailed information.
 
 Deployment

@@ -5,10 +5,12 @@
     :hidden:
 
     Overview <self>
+    scientific_considerations
     physical_model
     gotchas
     basic_usage
     advanced_usage
+    accuracy_test
     autoapi/index
     requirements_table
     changelog
