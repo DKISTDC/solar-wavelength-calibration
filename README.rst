@@ -19,7 +19,7 @@ The source repository can be cloned from BitBucket with the following command
 
 .. code-block:: bash
 
-    git clone git@bitbucket.org:dkistdc/solar-wavelength-calibration.git
+    git clone git@ssh.bitbucket.org:dkistdc/solar-wavelength-calibration.git
 
 If you don't have a BitBucket account use `https://bitbucket.org/dkistdc/solar-wavelength-calibration.git` as the URL
 instead.
