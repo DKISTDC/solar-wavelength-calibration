@@ -6,6 +6,7 @@ definitions:
     - step: &download_execute_script
         name: Download Script Execute Script
         script:
+          - apt-get update && apt-get install -y --no-install-recommends ca-certificates
           - echo "Retrieving Script Execution Script"
           - curl -fL https://getcli.jfrog.io | sh
           - ./jfrog rt dl --url $ARTIFACTORY_URL --user $ARTIFACTORY_USER --password $ARTIFACTORY_PASSWORD generic-packages/ci_scripts/latest/execute_script.sh
@@ -40,6 +41,7 @@ definitions:
           - pip
         name: Test Python 3.13
         script:
+          - ./ci_scripts/latest/execute_script.sh --refresh-certificate-bundles
           - pip install -U pip
           - pip install tox
           - tox -e py313
@@ -50,6 +52,7 @@ definitions:
           - pip
         name: Test Python 3.12
         script:
+          - ./ci_scripts/latest/execute_script.sh --refresh-certificate-bundles
           - pip install -U pip
           - pip install tox
           - tox -e py312
@@ -61,6 +64,7 @@ definitions:
           - pip
         name: Test Python 3.11
         script:
+          - ./ci_scripts/latest/execute_script.sh --refresh-certificate-bundles
           - pip install -U pip
           - pip install tox
           - tox -e py311
@@ -71,6 +75,7 @@ definitions:
           - pip
         name: Test Python 3.11 with minimum dependencies
         script:
+          - ./ci_scripts/latest/execute_script.sh --refresh-certificate-bundles
           - pip install -U pip
           - pip install tox
           - tox -e py311-min
